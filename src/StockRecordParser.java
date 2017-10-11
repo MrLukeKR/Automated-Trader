@@ -25,15 +25,15 @@ import java.util.ArrayList;
     }
 
     static public void importDailyMarketData(ArrayList<String> csv, String symbol, DatabaseHandler dh) {
-        importData(csv,"dailystockprices" ,symbol, dh);
+        importData(csv,"dailystockprices" ,symbol, dh, 6);
     }
 
     static public void importDailyMarketData(String[] csv, String symbol, DatabaseHandler dh) {
         List<String> temp = Arrays.asList(csv);
-        importData(new ArrayList<>(temp),"dailystockprices", symbol, dh);
+        importData(new ArrayList<>(temp),"dailystockprices", symbol, dh, 6);
     }
 
-    static public void importData(ArrayList<String> csv, String table, String symbol, DatabaseHandler dh)  {
+    static public void importData(ArrayList<String> csv, String table, String symbol, DatabaseHandler dh, int columns)  {
         String split[] = null;
         Boolean skippedHeader = false;
 
@@ -46,7 +46,7 @@ import java.util.ArrayList;
                 String statement = "INSERT INTO " + table + " VALUES(";
 
                 statement += "'" + symbol + "','" + split[0] + "'";
-                for (int i = 1; i < split.length; i++)
+                for (int i = 1; i < columns ; i++)
                     statement += "," + split[i];
                 statement += ");";
 
@@ -61,11 +61,13 @@ import java.util.ArrayList;
 
      static public void importIntradayMarketData(String[] csv, String symbol, DatabaseHandler dh) {
         List<String> temp = Arrays.asList(csv);
-         importData(new ArrayList<>(temp), "intradaystockprices", symbol, dh);
+         importData(new ArrayList<>(temp), "intradaystockprices", symbol, dh, 6);
      }
 
     static public void importIntradayMarketData(ArrayList<String> csv, String symbol, DatabaseHandler dh) {
+        if(csv == null || csv.isEmpty()) return;
+
         csv.remove(0);
-        importData(csv, "intradaystockprices", symbol, dh);
+        importData(csv, "intradaystockprices", symbol, dh, 6);
     }
 }

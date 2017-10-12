@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
+   <children>
+      <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
+        <tabs>
+          <Tab text="Live Stock">
+               <content>
+                  <BorderPane prefHeight="200.0" prefWidth="200.0">
+                     <center>
+                        <LineChart prefWidth="1598.0" BorderPane.alignment="CENTER">
+                          <xAxis>
+                            <CategoryAxis side="BOTTOM" />
+                          </xAxis>
+                          <yAxis>
+                            <NumberAxis side="LEFT" />
+                          </yAxis>
+                        </LineChart>
+                     </center>
+                     <right>
+                        <VBox prefHeight="851.0" prefWidth="400.0" BorderPane.alignment="CENTER">
+                           <children>
+                              <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0" text="Latest Headlines">
+                                 <content>
+                                    <ScrollPane prefHeight="403.0" prefWidth="398.0">
+                                       <content>
+                                          <VBox prefHeight="200.0" prefWidth="400.0">
+                                             <children>
+                                                <Button fx:id="downloadStockHistoryButton" mnemonicParsing="false" onAction="#initialiseStocks" prefHeight="55.0" prefWidth="393.0" text="Download Stock History" />
+                                                <Button fx:id="startLiveUpdateButton" mnemonicParsing="false" onAction="#startRealTime" prefHeight="55.0" prefWidth="393.0" text="Start Live Update" />
+                                             </children>
+                                          </VBox>
+                                       </content>
+                                    </ScrollPane>
+                                 </content>
+                              </TitledPane>
+                              <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0" text="Latest Tweets">
+                                 <content>
+                                    <ScrollPane />
+                                 </content>
+                              </TitledPane>
+                           </children>
+                        </VBox>
+                     </right>
+                     <bottom>
+                        <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
+                           <children>
+                              <TextArea fx:id="liveStockChart" editable="false" prefHeight="200.0" prefWidth="1920.0" />
+                           </children>
+                        </VBox>
+                     </bottom>
+                     <left>
+                        <TitledPane animated="false" collapsible="false" prefHeight="850.0" prefWidth="250.0" text="Stocks" BorderPane.alignment="CENTER">
+                           <content>
+                              <VBox prefHeight="851.0" prefWidth="250.0">
+                                 <children>
+                                    <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER">
+                                       <content>
+                                          <FlowPane fx:id="stockList" prefHeight="786.0" prefWidth="226.0" />
+                                       </content>
+                                    </ScrollPane>
+                                    <ProgressBar fx:id="liveStockProgressBar" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" progress="0.0" />
+                                 </children>
+                              </VBox>
+                           </content>
+                        </TitledPane>
+                     </left>
+                  </BorderPane>
+               </content>
+            </Tab>
+          <Tab text="Historical Stock Records" />
+        </tabs>
+      </TabPane>
+   </children>
+</AnchorPane>

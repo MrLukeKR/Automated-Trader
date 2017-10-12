@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.chart.CategoryAxis?>
 <?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.NumberAxis?>
-<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Tab?>
@@ -23,9 +21,9 @@
                <content>
                   <BorderPane prefHeight="200.0" prefWidth="200.0">
                      <center>
-                        <LineChart prefWidth="1598.0" BorderPane.alignment="CENTER">
+                        <LineChart fx:id="liveStockChart" animated="false" prefWidth="1598.0" BorderPane.alignment="CENTER">
                           <xAxis>
-                            <CategoryAxis side="BOTTOM" />
+                            <NumberAxis autoRanging="false" label="Minutes" lowerBound="-59" side="BOTTOM" upperBound="0" />
                           </xAxis>
                           <yAxis>
                             <NumberAxis side="LEFT" />
@@ -39,12 +37,7 @@
                                  <content>
                                     <ScrollPane prefHeight="403.0" prefWidth="398.0">
                                        <content>
-                                          <VBox prefHeight="200.0" prefWidth="400.0">
-                                             <children>
-                                                <Button fx:id="downloadStockHistoryButton" mnemonicParsing="false" onAction="#initialiseStocks" prefHeight="55.0" prefWidth="393.0" text="Download Stock History" />
-                                                <Button fx:id="startLiveUpdateButton" mnemonicParsing="false" onAction="#startRealTime" prefHeight="55.0" prefWidth="393.0" text="Start Live Update" />
-                                             </children>
-                                          </VBox>
+                                          <VBox prefHeight="200.0" prefWidth="400.0" />
                                        </content>
                                     </ScrollPane>
                                  </content>
@@ -60,12 +53,12 @@
                      <bottom>
                         <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
                            <children>
-                              <TextArea fx:id="liveStockChart" editable="false" prefHeight="200.0" prefWidth="1920.0" />
+                              <TextArea editable="false" prefHeight="200.0" prefWidth="1920.0" />
                            </children>
                         </VBox>
                      </bottom>
                      <left>
-                        <TitledPane animated="false" collapsible="false" prefHeight="850.0" prefWidth="250.0" text="Stocks" BorderPane.alignment="CENTER">
+                        <TitledPane animated="false" collapsible="false" prefHeight="850.0" prefWidth="300.0" text="Stocks" BorderPane.alignment="CENTER">
                            <content>
                               <VBox prefHeight="851.0" prefWidth="250.0">
                                  <children>

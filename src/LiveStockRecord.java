@@ -1,17 +1,22 @@
-package CustomFX;
-
 import javafx.application.Platform;
 
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.chart.Axis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+
+import java.util.ArrayList;
 
 public class LiveStockRecord {
     String name;
@@ -22,6 +27,10 @@ public class LiveStockRecord {
     Label stockPrice = new Label();
     Label stockChange = new Label();
     ProgressIndicator prog = new ProgressIndicator();
+    LineChart stockChart;
+    XYChart.Series<Number, Number> stockData = new XYChart.Series<>();
+
+    NumberAxis xAxis = new NumberAxis(), yAxis = new NumberAxis();
 
     double price, percentChange;
     double change;
@@ -35,17 +44,24 @@ public class LiveStockRecord {
         Label stockNameLabel = new Label(stockName);
         VBox newStockStats = new VBox();
         stockSymbol = new Label(symbol);
+        stockChart = new LineChart(xAxis, yAxis);
+
+        xAxis.setTickLabelsVisible(false);
+        xAxis.setOpacity(0);
+
+        stockData.setName(symbol);
+
+        stockChart.setMinSize(300,100);
+        stockChart.setMaxSize(300,100);
+        stockChart.getData().add(stockData);
 
         prog.setMaxHeight(35);
         prog.setMaxWidth(35);
         prog.setVisible(false);
 
-            newStock.setMinWidth(125);
-            newStock.setMinHeight(50);
-            newStock.setPrefWidth(125);
-            newStock.setPrefHeight(50);
-            newStock.setMaxWidth(125);
-            newStock.setMinHeight(50);
+            newStock.setMinSize(125,50);
+            newStock.setPrefSize(125,50);
+            newStock.setMaxSize(125,50);
 
             newStockStats.setMinWidth(100);
             newStockStats.setMaxWidth(100);
@@ -78,6 +94,7 @@ public class LiveStockRecord {
             sep.setVisible(false);
             hStock.getChildren().add(sep);
             hStock.getChildren().add(newStockStats);
+            hStock.getChildren().add(stockChart);
             hStock.getChildren().add(prog);
     }
 
@@ -102,6 +119,36 @@ public class LiveStockRecord {
                 stockChange.setText("▲ " + String.format("%.02f",change) + " (" + String.format("%.02f", percentChange) + "%)");
             }
         });
+    }
+
+    public void updateChart(DatabaseHandler dh){
+        ArrayList<String> statistics = null;
+        try {
+            statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE TradeDateTime>(SELECT TradeDate FROM dailystockprices WHERE Symbol='"+ symbol +"' ORDER BY TradeDate DESC LIMIT 1) AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
+
+            for(int time = 0; time < statistics.size(); time++){
+                float price = Float.parseFloat(statistics.get(time));
+                float prevPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' ORDER BY TradeDate DESC LIMIT 2;").get(1));
+                float priceChange = (price - prevPrice) / prevPrice * 100.0f;
+                XYChart.Data<Number, Number> point = new XYChart.Data(time-statistics.size()+1, priceChange);
+                Rectangle rect = new Rectangle(0,0);
+                rect.setVisible(false);
+                point.setNode(rect);
+
+
+                if(stockData.getData().size() > statistics.size())
+                    Platform.runLater(()->stockData.getData().removeAll());
+
+                final int t = time;
+                if(stockData.getData().size() < statistics.size() && time >= stockData.getData().size()){
+                    Platform.runLater(()->stockData.getData().add(t,point));
+                }
+                else
+                    Platform.runLater(()->stockData.getData().set(t, point));
+            }
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void setUpdating(boolean isUpdating) {Platform.runLater(() -> prog.setVisible(isUpdating));}

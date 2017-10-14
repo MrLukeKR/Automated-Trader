@@ -14,8 +14,14 @@ import java.util.ArrayList;
 
         ArrayList<String> csvArray = new ArrayList<>();
 
-        while((curr = br.readLine()) != null)
+        while((curr = br.readLine()) != null){
+            String[] split = curr.split(",");
+            curr = "";
+            for (int i = 0; i < 5; i++)
+                curr += split[i] + ",";
+            curr +=split[6];
             csvArray.add(curr);
+        }
 
         importDailyMarketData(csvArray, symbol, dh);
     }
@@ -37,24 +43,26 @@ import java.util.ArrayList;
         String split[] = null;
         Boolean skippedHeader = false;
 
+        if(csv == null) return;
+
         for(String curr : csv) {
             if(!skippedHeader)
                 skippedHeader = true;
-            else
+            else if(curr != null)
                 {
-                split = curr.split(",");
-                String statement = "INSERT INTO " + table + " VALUES(";
+                    split = curr.split(",");
+                        String statement = "INSERT INTO " + table + " VALUES(";
 
-                statement += "'" + symbol + "','" + split[0] + "'";
-                for (int i = 1; i < columns ; i++)
-                    statement += "," + split[i];
-                statement += ");";
+                        statement += "'" + symbol + "','" + split[0] + "'";
+                        for (int i = 1; i < columns; i++)
+                            statement += "," + split[i];
+                        statement += ");";
 
-                try {
-                    dh.executeCommand(statement);
-                } catch (Exception e) {
-                    //System.out.println(e.getMessage() + " " + statement);
-                }
+                        try {
+                            dh.executeCommand(statement);
+                        } catch (Exception e) {
+                            //System.err.println(e.getMessage() + " " + statement); //TODO: Update values if primary key exists but values are different
+                        }
             }
         }
     }

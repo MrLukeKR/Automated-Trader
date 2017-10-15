@@ -22,6 +22,8 @@ public class Controller {
     ArrayList<LiveStockRecord> records = new ArrayList<>();
     ArrayList<StockClock> clocks = new ArrayList<>();
 
+    final int downloadInterval = 1;
+
     @FXML FlowPane stockList;
     @FXML ProgressBar liveStockProgressBar;
     @FXML FlowPane timePane;
@@ -32,16 +34,24 @@ public class Controller {
 @FXML public void initialize()
 {
     System.out.println("Initialising...");
+
     initialiseFeeds();
     initialiseStocks();
     initialiseClocks();
     initialiseDisplay();
+
+    try { NewsAPIHandler.getLatestNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
+
+    for(LiveStockRecord stock : records) stock.updateChart(dh);
     startRealTime();
 }
 
 private void initialiseFeeds(){
     try { dh.init("agent", "0Y5q0m28pSB9jj2O"); } catch (Exception e) {}
     avh.init("PBATJ7L9N8SNK835");
+
+    NewsAPIHandler.authenticate("be7afde61f5e10bb20393025c35e50c7","1ff9ab03aa8e5bd073345d70d588abde");
+
 }
 
 private void initialiseDisplay(){
@@ -85,14 +95,18 @@ private void updateClocks(){
    @FXML public void startRealTime(){
         new Thread(()-> {
             while (!quit) {
-                try { TimeUnit.MILLISECONDS.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
+                try { TimeUnit.MILLISECONDS.sleep(1000); } catch (InterruptedException e) { e.printStackTrace(); }
 
                 int s = LocalTime.now().getSecond();
+                int m = LocalTime.now().getMinute();
+                int cycle = m % downloadInterval;
 
-                liveStockProgressBar.setProgress((s+1)/60.0f);
+                double progressVal=((s+1) + cycle * 60) / (downloadInterval * 60.0f);
+
+                liveStockProgressBar.setProgress(progressVal);
                 updateClocks();
 
-                if(s == 0)
+                if(cycle == 0 && s == 0)
                     updateStockData();
             }
         }).start();
@@ -105,32 +119,25 @@ private void updateClocks(){
             stocks = dh.executeQuery("SELECT Symbol FROM indices");
         } catch (SQLException e) { e.printStackTrace(); }
 
-           for (String symbol : stocks)
-               threads.add(new Thread(() -> {
-                   File file = new File("res/historicstocks/" + symbol + ".csv");
-                   try {
-                       StockRecordParser.importDailyMarketData(file, symbol, dh);
-                   } catch (IOException e) {
-                       e.printStackTrace();
-                   } catch (SQLException e) {
-                       e.printStackTrace();
-                   }
+           for (String symbol : stocks){
+               File file = new File("res/historicstocks/" + symbol + ".csv");
+               try {
+                   StockRecordParser.importDailyMarketData(file, symbol, dh);
+               } catch (Exception e) { e.printStackTrace(); }
 
-                   System.out.println("Successfully committed complete Yahoo records of " + symbol + " to the database!");
+               System.out.println("Successfully committed complete Yahoo records of " + symbol + " to the database!");
 
-                   ArrayList<String> temp = null;
-                   try {
-                       temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=" + symbol + "&interval=1min&datatype=csv&outputsize=full&apikey=" + avh.getApiKey());
-                   } catch (Exception e) {
-                       e.printStackTrace();
-                   }
+               ArrayList<String> temp = null;
+               try {
+                   temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=" + symbol + "&interval=1min&datatype=csv&outputsize=full&apikey=" + avh.getApiKey());
+               } catch (Exception e) { e.printStackTrace(); }
 
-                   System.out.println("Downloaded intraday history of " + symbol);
+               System.out.println("Downloaded intraday history of " + symbol);
 
-                   StockRecordParser.importIntradayMarketData(temp, symbol, dh);
+               StockRecordParser.importIntradayMarketData(temp, symbol, dh);
 
-                   System.out.println("Successully committed " + symbol + " intraday history to the database!");
-               }));
+               System.out.println("Successully committed " + symbol + " intraday history to the database!");
+           }
 
         for (String symbol : stocks)
             threads.add(new Thread(() -> {
@@ -165,29 +172,28 @@ private void updateClocks(){
     }
 
     @FXML private void updateStockData(){
-        for(LiveStockRecord curr:records){
-                new Thread(()-> {
-                    curr.setUpdating(true);
-                    ArrayList<String> temp = null;
+        new Thread(()-> {
+            for (LiveStockRecord curr : records) {
+                curr.setUpdating(true);
+                ArrayList<String> temp = null;
+                try {
+                    temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=" + curr.getSymbol() + "&interval=1min&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
+                } catch (IOException e) {
+                }
+                if (temp != null && temp.size() >= 2) {
+                    System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update \r\n" + temp.get(1));
+                    StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), dh);
+
                     try {
-                        temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=" + curr.getSymbol() + "&interval=1min&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
-                    } catch (IOException e) {
-                    }
-                    if(temp != null && temp.size() >= 2) {
-                        System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update \r\n" + temp.get(1));
-                        StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), dh);
+                        temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
+                    } catch (IOException e) { }
+                    StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
 
-                        try {
-                            temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
-                        } catch (IOException e) {
-                        }
-                        StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
-
-                        updateRecord(curr);
-                        curr.setUpdating(false);
-                        curr.updateChart(dh);
-                    }
-                }).start();
-        }
+                    updateRecord(curr);
+                    curr.setUpdating(false);
+                    curr.updateChart(dh);
+                }
+            }
+        }).start();
     }
 }

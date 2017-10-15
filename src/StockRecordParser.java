@@ -48,7 +48,7 @@ import java.util.ArrayList;
         for(String curr : csv) {
             if(!skippedHeader)
                 skippedHeader = true;
-            else if(curr != null)
+            else if(curr != null && curr.split(",").length == columns)
                 {
                     split = curr.split(",");
                         String statement = "INSERT INTO " + table + " VALUES(";

@@ -1,6 +1,7 @@
 import javafx.application.Platform;
 
 import javafx.geometry.Orientation;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.chart.Axis;
 import javafx.scene.chart.LineChart;
@@ -55,8 +56,8 @@ public class LiveStockRecord {
         stockChart.setMaxSize(300,100);
         stockChart.getData().add(stockData);
 
-        prog.setMaxHeight(35);
-        prog.setMaxWidth(35);
+        prog.setMaxHeight(75);
+        prog.setMaxWidth(75);
         prog.setVisible(false);
 
             newStock.setMinSize(125,50);

@@ -46,7 +46,7 @@
                         </VBox>
                      </bottom>
                      <left>
-                        <TitledPane animated="false" collapsible="false" prefHeight="751.0" prefWidth="700.0" text="Stocks" BorderPane.alignment="CENTER">
+                        <TitledPane animated="false" collapsible="false" prefHeight="751.0" prefWidth="650.0" text="Stocks" BorderPane.alignment="CENTER">
                            <content>
                               <VBox prefHeight="851.0" prefWidth="250.0">
                                  <children>

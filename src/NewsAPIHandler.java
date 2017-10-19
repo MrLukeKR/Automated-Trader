@@ -33,6 +33,8 @@ public class NewsAPIHandler {
         for(String symbol : stockList) {
             URL url = new URL(INTRINIO_API_CALL + symbol);
 
+            System.out.println("Downloading Latest News for " + symbol);
+
             String doc = null;
             try (InputStream in = url.openStream()) {
                 Scanner s = new Scanner(in).useDelimiter(("\\A"));
@@ -42,9 +44,25 @@ public class NewsAPIHandler {
             try {
                 JSONObject obj = new JSONObject(doc);
                 JSONArray arr = obj.getJSONArray("data");
+                String punctuationRemover = "'";
+
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject ob2 = (JSONObject) arr.get(i);
-                    System.out.println(ob2.getString("title"));
+                    String title = ob2.getString("title").replaceAll(punctuationRemover, "");
+                    String summary = ob2.getString("summary").replaceAll(punctuationRemover, "");
+                    String date = ob2.getString("publication_date").replaceAll(punctuationRemover, "");
+                    String link = ob2.getString("url").replaceAll(punctuationRemover, "");
+                    date = date.split(" ")[0] + " " + date.split(" ")[1];
+
+                    String data = "'" + symbol + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
+
+                    String command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL) VALUES (" + data + ");";
+
+                    String query = "SELECT * FROM newsarticles WHERE headline = '" + title + "'";
+
+                    try {
+                        dh.executeCommand(command);
+                    }catch (Exception e){ }
                 }
             } catch (Exception e) {
                 e.printStackTrace();

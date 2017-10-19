@@ -61,7 +61,7 @@ import java.util.ArrayList;
                         try {
                             dh.executeCommand(statement);
                         } catch (Exception e) {
-                            //System.err.println(e.getMessage() + " " + statement); //TODO: Update values if primary key exists but values are different
+                            System.err.println(e.getMessage() + " " + statement); //TODO: Update values if primary key exists but values are different
                         }
             }
         }
@@ -75,7 +75,6 @@ import java.util.ArrayList;
     static public void importIntradayMarketData(ArrayList<String> csv, String symbol, DatabaseHandler dh) {
         if(csv == null || csv.isEmpty()) return;
 
-        csv.remove(0);
         importData(csv, "intradaystockprices", symbol, dh, 6);
     }
 }

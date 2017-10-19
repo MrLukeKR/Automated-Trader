@@ -1,13 +1,29 @@
-import javax.management.Query;
 import java.sql.*;
 import java.util.ArrayList;
 
 public class DatabaseHandler {
     private Connection connection = null;
 
-    public void init(String username, String password) throws SQLException, ClassNotFoundException {
+    public boolean init(String username, String password) throws SQLException, ClassNotFoundException {
         Class.forName("com.mysql.jdbc.Driver");
-        connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/automated_trader", username, password);
+
+        try {
+            connection = DriverManager.getConnection("jdbc:mysql://localhost", username, password);
+        } catch (SQLException e){
+            System.err.println(e.getMessage());
+            if(e.getErrorCode() == 1045) {
+                System.out.println("Please create an account on the MySQL Server with these credentials:");
+                System.out.println("Username: " + username);
+                System.out.println("Password: " + password);
+            }
+
+            System.exit(-1);
+        }
+
+        if(connection == null)  System.err.println("Failed to initialise database connection!");
+        else                    System.out.println("Initialised database connection");
+
+        return (connection != null);
     }
 
     public Boolean executeCommand(String command) throws SQLException {
@@ -16,7 +32,7 @@ public class DatabaseHandler {
     }
 
     public ArrayList<String> executeQuery(String command) throws SQLException{
-        Statement query = connection.createStatement();
+            Statement query = connection.createStatement();
 
         ArrayList<String> tempArr = new ArrayList<String>();
 

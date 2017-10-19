@@ -33,9 +33,10 @@ public class Controller {
 
 @FXML public void initialize()
 {
-    System.out.println("Initialising...");
+    initialiseConnections();
 
-    initialiseFeeds();
+        initialiseDatabase();
+
     initialiseStocks();
     initialiseClocks();
     initialiseDisplay();
@@ -46,11 +47,29 @@ public class Controller {
     startRealTime();
 }
 
-private void initialiseFeeds(){
-    try { dh.init("agent", "0Y5q0m28pSB9jj2O"); } catch (Exception e) {}
+private void initialiseConnections(){
+    System.out.println("Initialising Connections...");
+    try {
+        dh.init("agent", "0Y5q0m28pSB9jj2O");
+    } catch (Exception e) {}
     avh.init("PBATJ7L9N8SNK835");
 
     NewsAPIHandler.authenticate("be7afde61f5e10bb20393025c35e50c7","1ff9ab03aa8e5bd073345d70d588abde");
+}
+
+private void initialiseDatabase(){
+    System.out.println("Initialising Database...");
+    try{
+        dh.executeCommand("CREATE DATABASE IF NOT EXISTS automated_trader;");//TODO: Allow login of root to create the initial agent user
+        dh.executeCommand("GRANT ALL ON automated_trader.* TO 'agent'@'%';");
+        dh.executeCommand("USE automated_trader");
+        dh.executeCommand("CREATE TABLE IF NOT EXISTS indices (Symbol varchar(7) UNIQUE NOT NULL, Name text NOT NULL, StartedTrading date NOT NULL, CeasedTrading date, TwitterUsername varchar(15), PRIMARY KEY (Symbol))");
+        dh.executeCommand("CREATE TABLE IF NOT EXISTS dailystockprices (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
+        dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
+
+    }catch (SQLException e){
+        System.out.println(e.getMessage());
+    }
 
 }
 
@@ -113,8 +132,6 @@ private void updateClocks(){
     }
 
     @FXML public void initialiseStocks() {
-       ArrayList<Thread> threads = new ArrayList<>();
-
         try {
             stocks = dh.executeQuery("SELECT Symbol FROM indices");
         } catch (SQLException e) { e.printStackTrace(); }
@@ -139,8 +156,7 @@ private void updateClocks(){
                System.out.println("Successully committed " + symbol + " intraday history to the database!");
            }
 
-        for (String symbol : stocks)
-            threads.add(new Thread(() -> {
+        for (String symbol : stocks){
                 ArrayList<String> temp = null;
                 try {
                     temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&datatype=csv&outputsize=full&apikey=" + avh.getApiKey());
@@ -150,13 +166,7 @@ private void updateClocks(){
                 System.out.println("Downloaded full history of " + symbol);
                 StockRecordParser.importDailyMarketData(temp, symbol, dh);
                 System.out.println("Successully committed " + symbol + " full history to the database!");
-            }));
-
-        for(Thread thread : threads)
-            thread.start();
-
-        for(Thread thread:threads)
-            try { thread.join(); } catch (InterruptedException e) { e.printStackTrace(); }
+            };
     }
 
     private void updateRecord(LiveStockRecord record){

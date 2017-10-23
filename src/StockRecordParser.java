@@ -51,7 +51,8 @@ import java.util.ArrayList;
             else if(curr != null && curr.split(",").length == columns)
                 {
                     split = curr.split(",");
-                        String statement = "INSERT INTO " + table + " VALUES(";
+
+                    String statement = "INSERT IGNORE INTO " + table + " VALUES("; //TODO: Update values if primary key exists but values are different
 
                         statement += "'" + symbol + "','" + split[0] + "'";
                         for (int i = 1; i < columns; i++)
@@ -61,7 +62,7 @@ import java.util.ArrayList;
                         try {
                             dh.executeCommand(statement);
                         } catch (Exception e) {
-                            System.err.println(e.getMessage() + " " + statement); //TODO: Update values if primary key exists but values are different
+                            System.err.println(e.getMessage() + " " + statement);
                         }
             }
         }

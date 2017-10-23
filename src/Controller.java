@@ -4,6 +4,7 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.VBox;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,11 +29,14 @@ public class Controller {
     @FXML ProgressBar liveStockProgressBar;
     @FXML FlowPane timePane;
     @FXML TextArea infoBox;
+    @FXML VBox newsBox;
 
  private ArrayList<XYChart.Series<Number, Number>> stockSeries = new ArrayList<>();
 
 @FXML public void initialize()
 {
+    NeuralNetwork myNet = new NeuralNetwork();
+    myNet.init(1,2,3,1);
     initialiseConnections();
 
         initialiseDatabase();
@@ -40,8 +44,7 @@ public class Controller {
     initialiseStocks();
     initialiseClocks();
     initialiseDisplay();
-
-    try { NewsAPIHandler.getLatestNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
+    updateNews();
 
     for(LiveStockRecord stock : records) stock.updateChart(dh);
     startRealTime();
@@ -66,6 +69,7 @@ private void initialiseDatabase(){
         dh.executeCommand("CREATE TABLE IF NOT EXISTS indices (Symbol varchar(7) UNIQUE NOT NULL, Name text NOT NULL, StartedTrading date NOT NULL, CeasedTrading date, TwitterUsername varchar(15), PRIMARY KEY (Symbol))");
         dh.executeCommand("CREATE TABLE IF NOT EXISTS dailystockprices (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
         dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
+        dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content text, Published datetime NOT NULL, URL text, Mood double DEFAULT 0.5, PRIMARY KEY (Symbol,Headline), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
 
     }catch (SQLException e){
         System.out.println(e.getMessage());
@@ -125,16 +129,40 @@ private void updateClocks(){
                 liveStockProgressBar.setProgress(progressVal);
                 updateClocks();
 
-                if(cycle == 0 && s == 0)
+                if(cycle == 0 && s == 0) {
                     updateStockData();
+                    updateNews();
+                }
             }
         }).start();
+    }
+
+    private void updateNews(){
+        try { NewsAPIHandler.getLatestNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
+
+        Platform.runLater(() -> {
+           newsBox.getChildren().clear();
+
+           ArrayList<String> symbols = null;
+           ArrayList<String> headlines = null;
+           try {
+               symbols = dh.executeQuery("SELECT Symbol FROM newsarticles WHERE Published >= CURDATE() ORDER BY Published DESC");
+               headlines = dh.executeQuery("SELECT Headline FROM newsarticles WHERE Published >= CURDATE() ORDER BY Published DESC");
+           } catch (SQLException e) {e.printStackTrace();}
+
+           for(int i = 0 ; i < 10; i++) {
+               NewsRecord temp = new NewsRecord(symbols.get(i), headlines.get(i));
+               newsBox.getChildren().add(temp.getNode());
+           }
+       });
     }
 
     @FXML public void initialiseStocks() {
         try {
             stocks = dh.executeQuery("SELECT Symbol FROM indices");
         } catch (SQLException e) { e.printStackTrace(); }
+
+        if(true) return;
 
            for (String symbol : stocks){
                File file = new File("res/historicstocks/" + symbol + ".csv");

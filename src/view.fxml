@@ -11,7 +11,7 @@
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.VBox?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
    <children>
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
         <tabs>
@@ -25,7 +25,7 @@
                                  <content>
                                     <ScrollPane prefHeight="403.0" prefWidth="398.0">
                                        <content>
-                                          <VBox prefHeight="200.0" prefWidth="400.0" />
+                                          <VBox fx:id="newsBox" prefHeight="330.0" prefWidth="400.0" />
                                        </content>
                                     </ScrollPane>
                                  </content>

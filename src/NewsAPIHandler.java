@@ -32,7 +32,7 @@ public class NewsAPIHandler {
         for(String symbol : stockList) {
             URL url = new URL(INTRINIO_API_CALL + symbol);
 
-            System.out.println("Downloading Latest News for " + symbol);
+            System.out.println("Downloading Latest News for " + symbol + "...");
 
             String doc = null;
             try (InputStream in = url.openStream()) {
@@ -55,13 +55,18 @@ public class NewsAPIHandler {
 
                     String data = "'" + symbol + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
 
-                    String command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL) VALUES (" + data + ");";
+                    String query = "SELECT * FROM newsarticles WHERE headline = '" + title + "' AND Symbol = '" + symbol + "'";
 
-                    String query = "SELECT * FROM newsarticles WHERE headline = '" + title + "'";
+                    ArrayList<String> results = dh.executeQuery(query);
 
-                    try {
-                        dh.executeCommand(command);
-                    }catch (Exception e){ }
+                    if(results.isEmpty()) {
+                        System.out.println(title);
+                        String command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL) VALUES (" + data + ");";
+
+                        try {
+                            dh.executeCommand(command);
+                        }catch (Exception e){ }
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();

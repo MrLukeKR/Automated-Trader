@@ -22,6 +22,7 @@ import java.util.ArrayList;
 public class LiveStockRecord {
     String name;
     String symbol;
+    double prevPrice;
     VBox newStock = new VBox();
     HBox hStock = new HBox();
     Label stockSymbol;
@@ -46,15 +47,18 @@ public class LiveStockRecord {
         VBox newStockStats = new VBox();
         stockSymbol = new Label(symbol);
         stockChart = new LineChart(xAxis, yAxis);
+        Label prevClosePrice = new Label("Prev. Close: " + String.valueOf(prevPrice));
 
         xAxis.setTickLabelsVisible(false);
         xAxis.setOpacity(0);
+        yAxis.setAutoRanging(false);
 
         stockData.setName(symbol);
 
         stockChart.setMinSize(300,100);
         stockChart.setMaxSize(300,100);
         stockChart.getData().add(stockData);
+        stockChart.setAnimated(false);
 
         prog.setMaxHeight(75);
         prog.setMaxWidth(75);
@@ -76,10 +80,13 @@ public class LiveStockRecord {
 
             newStockStats.getChildren().add(stockPrice);
             newStockStats.getChildren().add(stockChange);
+            newStockStats.getChildren().add(prevClosePrice);
 
             stockNameLabel.setFont(Font.font(null, FontWeight.BOLD, 14));
             stockSymbol.setFont(Font.font(null, 12));
-            stockSymbol.setTextFill(Color.GREY);
+        prevClosePrice.setFont(Font.font(null, 12));
+        stockSymbol.setTextFill(Color.GREY);
+        prevClosePrice.setTextFill(Color.BLUE);
 
             stockNameLabel.setMinWidth(100);
             stockNameLabel.setMinHeight(20);
@@ -102,6 +109,7 @@ public class LiveStockRecord {
     public void updateRecord(float currPrice, float prevPrice){
         Platform.runLater(() -> {
             String sCurrPrice = String.valueOf(currPrice);
+            String sPrevPrice = String.valueOf(prevPrice);
 
             change = currPrice - prevPrice;
             percentChange = (change / prevPrice * 100.0f);
@@ -125,14 +133,15 @@ public class LiveStockRecord {
     public void updateChart(DatabaseHandler dh){
         ArrayList<String> statistics = null;
         try {
-            statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE TradeDateTime>(SELECT TradeDate FROM dailystockprices WHERE Symbol='"+ symbol +"' ORDER BY TradeDate DESC LIMIT 1) AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
-
+            statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
+            yAxis.setLowerBound(Integer.MAX_VALUE);
+            yAxis.setUpperBound(Integer.MIN_VALUE);
             for(int time = 0; time < statistics.size(); time++){
                 float price = Float.parseFloat(statistics.get(time));
-                float prevPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' ORDER BY TradeDate DESC LIMIT 2;").get(1));
-                float priceChange = (price - prevPrice) / prevPrice * 100.0f;
-                XYChart.Data<Number, Number> point = new XYChart.Data(time-statistics.size()+1, priceChange);
+                XYChart.Data<Number, Number> point = new XYChart.Data(time-statistics.size()+1, price);
                 Rectangle rect = new Rectangle(0,0);
+                yAxis.setLowerBound(Math.min(yAxis.getLowerBound(),price));
+                yAxis.setUpperBound(Math.max(yAxis.getUpperBound(),price));
                 rect.setVisible(false);
                 point.setNode(rect);
 

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Tab?>
@@ -11,7 +15,7 @@
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.VBox?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
    <children>
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
         <tabs>
@@ -64,6 +68,40 @@
                      <top>
                         <FlowPane fx:id="timePane" prefHeight="100.0" prefWidth="1920.0" BorderPane.alignment="CENTER" />
                      </top>
+                     <center>
+                        <VBox BorderPane.alignment="CENTER">
+                           <children>
+                              <TitledPane animated="false" collapsible="false" prefHeight="200.0" prefWidth="200.0" text="Portfolio">
+                                 <content>
+                                    <FlowPane prefHeight="200.0" prefWidth="200.0">
+                                       <children>
+                                          <VBox prefHeight="200.0" prefWidth="100.0">
+                                             <children>
+                                                <Label text="Current Balance:" />
+                                                <Label text="Stock Value:" />
+                                             </children>
+                                          </VBox>
+                                          <VBox prefHeight="200.0" prefWidth="90.0">
+                                             <children>
+                                                <Label fx:id="currentBalanceLabel" text="£0.00" />
+                                                <Label fx:id="stockValueLabel" text="£0.00" />
+                                             </children>
+                                          </VBox>
+                                          <LineChart fx:id="portfolioChart" prefHeight="200.0" prefWidth="600.0">
+                                            <xAxis>
+                                              <CategoryAxis side="BOTTOM" />
+                                            </xAxis>
+                                            <yAxis>
+                                              <NumberAxis side="LEFT" />
+                                            </yAxis>
+                                          </LineChart>
+                                       </children>
+                                    </FlowPane>
+                                 </content>
+                              </TitledPane>
+                           </children>
+                        </VBox>
+                     </center>
                   </BorderPane>
                </content>
             </Tab>

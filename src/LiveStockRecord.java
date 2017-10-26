@@ -84,7 +84,7 @@ public class LiveStockRecord {
 
             stockNameLabel.setFont(Font.font(null, FontWeight.BOLD, 14));
             stockSymbol.setFont(Font.font(null, 12));
-        prevClosePrice.setFont(Font.font(null, 12));
+        prevClosePrice.setFont(Font.font(null, 10));
         stockSymbol.setTextFill(Color.GREY);
         prevClosePrice.setTextFill(Color.BLUE);
 

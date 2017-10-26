@@ -104,6 +104,8 @@ private void initialiseClocks(){
     clocks.add(new StockClock("NASDAQ", LocalTime.of(9,30), LocalTime.of(16,0), ZoneId.of("America/New_York")));
     clocks.add(new StockClock("London SE", LocalTime.of(8,0), LocalTime.of(16,30),ZoneId.of("Europe/London")));
     clocks.add(new StockClock("Tokyo SE", LocalTime.of(9,0), LocalTime.of(15,0),ZoneId.of("Asia/Tokyo"))); //TODO: Allow multiple open/close periods
+    clocks.add(new StockClock("Hong Kong SE", LocalTime.of(9,30), LocalTime.of(16,0),ZoneId.of("Asia/Hong_Kong")));
+    clocks.add(new StockClock("Australia SX", LocalTime.of(10,0), LocalTime.of(16,0),ZoneId.of("Australia/Canberra")));
 
     for(StockClock clock : clocks)
         timePane.getChildren().add(clock.getNode());

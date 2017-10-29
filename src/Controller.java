@@ -84,12 +84,18 @@ private void initialiseDisplay(){
             try {
                 name = dh.executeQuery("SELECT Name FROM indices WHERE Symbol='" + curr + "';").get(0);
                     float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol='" + curr + "' ORDER BY TradeDateTime DESC LIMIT 1;").get(0));
-                    float prevPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + curr + "' AND TradeDate = SUBDATE(CURDATE(), 1) ORDER BY TradeDate DESC LIMIT 1;").get(0));
+                    ArrayList<String> result = dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + curr + "' AND TradeDate = SUBDATE(CURDATE(), 1) ORDER BY TradeDate DESC LIMIT 1;");
 
-                    LiveStockRecord currRec = new LiveStockRecord(curr, name, currPrice, prevPrice, dh.executeQuery("SELECT TradeDateTime FROM intradaystockprices WHERE Symbol='" + curr + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
+                    if(!result.isEmpty()) {
+                        float prevPrice = Float.parseFloat(result.get(0));
 
-                    records.add(currRec);
-                    Platform.runLater(() -> stockList.getChildren().add(currRec.getNode()));
+                        if (!Float.isNaN(currPrice) && !Float.isNaN(prevPrice)) {
+                            LiveStockRecord currRec = new LiveStockRecord(curr, name, currPrice, prevPrice, dh.executeQuery("SELECT TradeDateTime FROM intradaystockprices WHERE Symbol='" + curr + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
+
+                            records.add(currRec);
+                            Platform.runLater(() -> stockList.getChildren().add(currRec.getNode()));
+                        }
+                    }
             } catch (SQLException e) {
             e.printStackTrace();
             }

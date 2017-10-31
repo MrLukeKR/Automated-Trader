@@ -10,6 +10,7 @@ import javafx.scene.text.TextAlignment;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 
 public class StockClock {
     VBox node = new VBox();
@@ -53,7 +54,10 @@ public class StockClock {
             currTime = LocalTime.now(zone);
             clockTime.setText(currTime.format(DateTimeFormatter.ofPattern("HH:mm:ss")));
 
-            if (currTime.isAfter(tradeEnd) || currTime.isBefore(tradeStart)) {
+            if (currTime.isAfter(tradeEnd)
+                    || currTime.isBefore(tradeStart)
+                    || Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY
+                    || Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
                 status.setText("CLOSED");
                 status.setTextFill(Color.RED);
             } else {

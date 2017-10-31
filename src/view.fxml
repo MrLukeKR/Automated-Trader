@@ -77,7 +77,7 @@
                                        <children>
                                           <VBox prefHeight="200.0" prefWidth="100.0">
                                              <children>
-                                                <Label text="Current Balance:" />
+                                                <Label text="Balance:" />
                                                 <Label text="Stock Value:" />
                                              </children>
                                           </VBox>

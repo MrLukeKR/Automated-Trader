@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
 public class Controller {
@@ -46,7 +47,10 @@ public class Controller {
     initialiseDisplay();
     updateNews();
 
-    for(LiveStockRecord stock : records) stock.updateChart(dh);
+    for(LiveStockRecord stock : records)
+        stock.updateChart(dh);
+
+    updateStockData();
     startRealTime();
 }
 
@@ -75,7 +79,6 @@ private void initialiseDatabase(){
     }catch (SQLException e){
         System.out.println(e.getMessage());
     }
-
 }
 
 private void initialiseDisplay(){
@@ -83,19 +86,9 @@ private void initialiseDisplay(){
             String name = null;
             try {
                 name = dh.executeQuery("SELECT Name FROM indices WHERE Symbol='" + curr + "';").get(0);
-                    float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol='" + curr + "' ORDER BY TradeDateTime DESC LIMIT 1;").get(0));
-                    ArrayList<String> result = dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + curr + "' AND TradeDate = SUBDATE(CURDATE(), 1) ORDER BY TradeDate DESC LIMIT 1;");
-
-                    if(!result.isEmpty()) {
-                        float prevPrice = Float.parseFloat(result.get(0));
-
-                        if (!Float.isNaN(currPrice) && !Float.isNaN(prevPrice)) {
-                            LiveStockRecord currRec = new LiveStockRecord(curr, name, currPrice, prevPrice, dh.executeQuery("SELECT TradeDateTime FROM intradaystockprices WHERE Symbol='" + curr + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
-
-                            records.add(currRec);
-                            Platform.runLater(() -> stockList.getChildren().add(currRec.getNode()));
-                        }
-                    }
+                LiveStockRecord currRec = new LiveStockRecord(curr, name);
+                records.add(currRec);
+                Platform.runLater(() -> stockList.getChildren().add(currRec.getNode()));
             } catch (SQLException e) {
             e.printStackTrace();
             }
@@ -203,15 +196,26 @@ private void updateClocks(){
     }
 
     private void updateRecord(LiveStockRecord record){
-        ArrayList<String> statistics = null;
+        ArrayList<String> cPrice = null;
+        ArrayList<String> pPrice = null;
            try {
-               statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol='" + record.getSymbol() + "' ORDER BY TradeDateTime DESC LIMIT 1;");
-               statistics.add(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + record.getSymbol() + "' AND TradeDate = SUBDATE(CURDATE(),1) ORDER BY TradeDate DESC LIMIT 1;").get(0));
+               cPrice = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol='" + record.getSymbol() + "' ORDER BY TradeDateTime DESC LIMIT 1;");
+
+               if(Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY)
+                   pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + record.getSymbol() + "' AND TradeDate = SUBDATE(CURDATE(),3) ORDER BY TradeDate DESC LIMIT 1;"));
+               else
+                   pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + record.getSymbol() + "' AND TradeDate = SUBDATE(CURDATE(),1) ORDER BY TradeDate DESC LIMIT 1;"));
            } catch (SQLException e) {e.printStackTrace();}
 
-           float currPrice = Float.parseFloat(statistics.get(0)), prevPrice = Float.parseFloat(statistics.get(1));
-
-            record.updateRecord(currPrice, prevPrice);
+        if(!cPrice.isEmpty()) {
+            float currPrice = Float.parseFloat(cPrice.get(0));
+            if(!pPrice.isEmpty()) {
+                float prevPrice = Float.parseFloat(pPrice.get(0));
+                record.updateRecord(currPrice, prevPrice);
+            }
+            else
+                record.updateRecord(currPrice, currPrice);
+        }
     }
 
     @FXML private void updateStockData(){

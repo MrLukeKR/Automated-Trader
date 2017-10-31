@@ -18,6 +18,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 
 public class LiveStockRecord {
     String name;
@@ -31,6 +32,7 @@ public class LiveStockRecord {
     ProgressIndicator prog = new ProgressIndicator();
     LineChart stockChart;
     XYChart.Series<Number, Number> stockData = new XYChart.Series<>();
+    Label prevClosePrice = new Label();
 
     NumberAxis xAxis = new NumberAxis(), yAxis = new NumberAxis();
 
@@ -38,19 +40,19 @@ public class LiveStockRecord {
     double change;
     String date;
 
-    public LiveStockRecord(String symbol, String stockName, float currPrice, float prevPrice, String date){
+    public LiveStockRecord(String symbol, String stockName){ //TODO: Change the constructor to allow for prevPrice again
         name = stockName;
-        price = currPrice;
-        this.date = date;
         this.symbol = symbol;
+        this.prevPrice = prevPrice;
         Label stockNameLabel = new Label(stockName);
         VBox newStockStats = new VBox();
         stockSymbol = new Label(symbol);
         stockChart = new LineChart(xAxis, yAxis);
-        Label prevClosePrice = new Label("Prev. Close: " + String.valueOf(prevPrice));
+
 
         xAxis.setTickLabelsVisible(false);
         xAxis.setOpacity(0);
+        xAxis.setAutoRanging(false);
         yAxis.setAutoRanging(false);
 
         stockData.setName(symbol);
@@ -75,8 +77,6 @@ public class LiveStockRecord {
 
             stockPrice.setFont(Font.font(null, 14));
             stockChange.setFont(Font.font(null, 12));
-
-            updateRecord(currPrice, prevPrice);
 
             newStockStats.getChildren().add(stockPrice);
             newStockStats.getChildren().add(stockChange);
@@ -109,8 +109,7 @@ public class LiveStockRecord {
     public void updateRecord(float currPrice, float prevPrice){
         Platform.runLater(() -> {
             String sCurrPrice = String.valueOf(currPrice);
-            String sPrevPrice = String.valueOf(prevPrice);
-
+            prevClosePrice.setText("Prev. Close: " + String.valueOf(prevPrice));
             change = currPrice - prevPrice;
             percentChange = (change / prevPrice * 100.0f);
 
@@ -133,9 +132,27 @@ public class LiveStockRecord {
     public void updateChart(DatabaseHandler dh){
         ArrayList<String> statistics = null;
         try {
+            ArrayList<String> pPrice;
+            if(Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY)
+                pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate = SUBDATE(CURDATE(),3) ORDER BY TradeDate DESC LIMIT 1;"));
+            else
+                pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate = SUBDATE(CURDATE(),1) ORDER BY TradeDate DESC LIMIT 1;"));
+
+
+            ArrayList<String> cPrice = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1;");
+
+            if(cPrice.isEmpty() || pPrice.isEmpty())
+                return;
+
+            float prevPrice = Float.parseFloat(pPrice.get(0));
+            float currPrice = Float.parseFloat(cPrice.get(0));
             statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
             yAxis.setLowerBound(Integer.MAX_VALUE);
             yAxis.setUpperBound(Integer.MIN_VALUE);
+
+            xAxis.setLowerBound(-statistics.size() + 1);
+            xAxis.setUpperBound(0);
+
             for(int time = 0; time < statistics.size(); time++){
                 float price = Float.parseFloat(statistics.get(time));
                 XYChart.Data<Number, Number> point = new XYChart.Data(time-statistics.size()+1, price);
@@ -144,7 +161,6 @@ public class LiveStockRecord {
                 yAxis.setUpperBound(Math.max(yAxis.getUpperBound(),price));
                 rect.setVisible(false);
                 point.setNode(rect);
-
 
                 if(stockData.getData().size() > statistics.size())
                     Platform.runLater(()->stockData.getData().removeAll());
@@ -156,6 +172,13 @@ public class LiveStockRecord {
                 else
                     Platform.runLater(()->stockData.getData().set(t, point));
             }
+
+            if(prevPrice > currPrice)
+                stockData.nodeProperty().get().setStyle("-fx-stroke: red; -fx-stroke-width: 1px;");
+            else if (prevPrice < currPrice)
+                stockData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
+            else
+                stockData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
         }catch (Exception e) {
             e.printStackTrace();
         }

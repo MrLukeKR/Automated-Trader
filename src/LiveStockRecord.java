@@ -1,5 +1,4 @@
 import javafx.application.Platform;
-
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.chart.LineChart;
@@ -14,39 +13,32 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 
 public class LiveStockRecord {
     String name;
     String symbol;
-    double prevPrice;
-    VBox newStock = new VBox();
-    HBox hStock = new HBox();
-    Label stockSymbol;
-    Label stockPrice = new Label();
-    Label stockChange = new Label();
-    ProgressIndicator prog = new ProgressIndicator();
-    LineChart stockChart;
-    XYChart.Series<Number, Number> stockData = new XYChart.Series<>();
-    Label prevClosePrice = new Label();
-
-    NumberAxis xAxis = new NumberAxis(), yAxis = new NumberAxis();
-
-    double price, percentChange;
-    double change;
     String date;
 
-    public LiveStockRecord(String symbol, String stockName){ //TODO: Change the constructor to allow for prevPrice again
+    VBox newStock = new VBox();
+    HBox hStock = new HBox();
+    Label stockSymbol = new Label();
+    Label stockPrice = new Label();
+    Label stockChange = new Label();
+    Label prevClosePrice = new Label();
+    XYChart.Series<Number, Number> stockData = new XYChart.Series<>();
+    NumberAxis xAxis = new NumberAxis(0,0,1), yAxis = new NumberAxis();
+    LineChart stockChart = new LineChart(xAxis, yAxis);
+    ProgressIndicator progress = new ProgressIndicator();
+
+    public LiveStockRecord(String symbol, String stockName, DatabaseHandler dh){ //TODO: Change the constructor to allow for prevPrice again
         name = stockName;
         this.symbol = symbol;
-        this.prevPrice = prevPrice;
         Label stockNameLabel = new Label(stockName);
         VBox newStockStats = new VBox();
-        stockSymbol = new Label(symbol);
-        stockChart = new LineChart(xAxis, yAxis);
-
+        stockSymbol.setText(symbol);
 
         xAxis.setTickLabelsVisible(false);
         xAxis.setOpacity(0);
@@ -60,96 +52,114 @@ public class LiveStockRecord {
         stockChart.getData().add(stockData);
         stockChart.setAnimated(false);
 
-        prog.setMaxHeight(75);
-        prog.setMaxWidth(75);
-        prog.setVisible(false);
+        progress.setMaxSize(75,75);
+        progress.setVisible(false);
 
-            newStock.setMinSize(125,50);
-            newStock.setPrefSize(125,50);
-            newStock.setMaxSize(125,50);
+        newStock.setMinSize(125,50);
+        newStock.setPrefSize(125,50);
+        newStock.setMaxSize(125,50);
 
-            newStockStats.setMinWidth(100);
-            newStockStats.setMaxWidth(100);
-            newStockStats.setMinHeight(50);
-            newStockStats.setMaxHeight(50);
+        newStockStats.setMinSize(100, 50);
+        newStockStats.setMaxSize(100, 50);
 
-            stockPrice.setFont(Font.font(null, 14));
-            stockChange.setFont(Font.font(null, 12));
+        stockPrice.setFont(Font.font(null, 14));
+        stockChange.setFont(Font.font(null, 12));
 
-            newStockStats.getChildren().add(stockPrice);
-            newStockStats.getChildren().add(stockChange);
-            newStockStats.getChildren().add(prevClosePrice);
+        newStockStats.getChildren().add(stockPrice);
+        newStockStats.getChildren().add(stockChange);
+        newStockStats.getChildren().add(prevClosePrice);
 
-            stockNameLabel.setFont(Font.font(null, FontWeight.BOLD, 14));
-            stockSymbol.setFont(Font.font(null, 12));
+        stockNameLabel.setFont(Font.font(null, FontWeight.BOLD, 14));
+        stockSymbol.setFont(Font.font(null, 12));
         prevClosePrice.setFont(Font.font(null, 10));
         stockSymbol.setTextFill(Color.GREY);
         prevClosePrice.setTextFill(Color.BLUE);
 
-            stockNameLabel.setMinWidth(100);
-            stockNameLabel.setMinHeight(20);
+        stockNameLabel.setMinSize(100,20);
 
-            stockSymbol.setMinWidth(100);
-            stockSymbol.setMinHeight(10);
+        stockSymbol.setMinSize(100,10);
 
-            newStock.getChildren().add(stockNameLabel);
-            newStock.getChildren().add(stockSymbol);
+        newStock.getChildren().add(stockNameLabel);
+        newStock.getChildren().add(stockSymbol);
 
-            hStock.getChildren().add(newStock);
-            Separator sep = new Separator(Orientation.VERTICAL);
-            sep.setVisible(false);
-            hStock.getChildren().add(sep);
-            hStock.getChildren().add(newStockStats);
-            hStock.getChildren().add(stockChart);
-            hStock.getChildren().add(prog);
+        hStock.getChildren().add(newStock);
+        Separator sep = new Separator(Orientation.VERTICAL);
+        sep.setVisible(false);
+        hStock.getChildren().add(sep);
+        hStock.getChildren().add(newStockStats);
+        hStock.getChildren().add(stockChart);
+        hStock.getChildren().add(progress);
+
+        updateRecord(dh);
     }
 
-    public void updateRecord(float currPrice, float prevPrice){
+    public void updateRecord(DatabaseHandler dh){
+        float currPrice = getCurrentPrice(dh),
+              prevPrice = getPreviousPrice(dh),
+              change = currPrice - prevPrice,
+              percentChange = (change / prevPrice * 100.0f);
+
         Platform.runLater(() -> {
-            String sCurrPrice = String.valueOf(currPrice);
-            prevClosePrice.setText("Prev. Close: " + String.valueOf(prevPrice));
-            change = currPrice - prevPrice;
-            percentChange = (change / prevPrice * 100.0f);
+            //TODO: If left to run after hours, make the previousClose Today's close
+            stockPrice.setText(String.valueOf(currPrice));
+            prevClosePrice.setText(String.valueOf("Prev. close:" + prevPrice));
 
             if (percentChange < 0) {
                 stockChange.setTextFill(Color.RED);
-                stockPrice.setText(sCurrPrice);
-                stockChange.setText("▼" + String.format("%.02f",change) + " (" + String.format("%.02f", percentChange) + "%)");
+                stockChange.setText("▼ ");
             } else if (percentChange == 0) {
                 stockChange.setTextFill(Color.BLACK);
-                stockPrice.setText(sCurrPrice);
-                stockChange.setText("► " + String.format("%.02f",change) + " (" + String.format("%.02f", percentChange) + "%)");
+                stockChange.setText("► ");
             } else {
                 stockChange.setTextFill(Color.GREEN);
-                stockPrice.setText(sCurrPrice);
-                stockChange.setText("▲ " + String.format("%.02f",change) + " (" + String.format("%.02f", percentChange) + "%)");
+                stockChange.setText("▲ ");
             }
+
+            stockChange.setText(stockChange.getText() + String.format("%.02f",change) + " (" + String.format("%.02f", percentChange) + "%)");
         });
     }
 
-    public void updateChart(DatabaseHandler dh){
-        ArrayList<String> statistics = null;
+    private float getPreviousPrice(DatabaseHandler dh){
+        ArrayList<String> pPrice = null;
         try {
-            ArrayList<String> pPrice;
+            int subtractDays = 1;
+
             if(Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY)
-                pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate = SUBDATE(CURDATE(),3) ORDER BY TradeDate DESC LIMIT 1;"));
-            else
-                pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate = SUBDATE(CURDATE(),1) ORDER BY TradeDate DESC LIMIT 1;"));
+                subtractDays = 3;
 
+            pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate = SUBDATE(CURDATE()," + subtractDays + ") ORDER BY TradeDate DESC LIMIT 1;"));
+        } catch (SQLException e) { e.printStackTrace(); }
 
-            ArrayList<String> cPrice = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1;");
+        if(pPrice == null || pPrice.isEmpty())
+            return -1;
+        else
+            return Float.parseFloat(pPrice.get(0));
+    }
 
-            if(cPrice.isEmpty() || pPrice.isEmpty())
-                return;
+    private float getCurrentPrice(DatabaseHandler dh){
+        ArrayList<String> cPrice = null;
+        try {
+            cPrice = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices AND Symbol='" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1;");
+        } catch (SQLException e) { e.printStackTrace(); }
 
-            float prevPrice = Float.parseFloat(pPrice.get(0));
-            float currPrice = Float.parseFloat(cPrice.get(0));
-            statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
+        if(cPrice == null || cPrice.isEmpty())
+            return -1;
+        else
+            return Float.parseFloat(cPrice.get(0));
+    }
+
+    public void updateChart(DatabaseHandler dh){
+        try {
+            float prevPrice = getPreviousPrice(dh), //TODO: remove the need to keep passing the database handler
+                  currPrice = getCurrentPrice(dh);  //TODO: remove the need to keep passing the database handler
+
+            if(prevPrice < 0 || currPrice < 0) return;
+
+            ArrayList<String> statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
             yAxis.setLowerBound(Integer.MAX_VALUE);
             yAxis.setUpperBound(Integer.MIN_VALUE);
 
             xAxis.setLowerBound(-statistics.size() + 1);
-            xAxis.setUpperBound(0);
 
             for(int time = 0; time < statistics.size(); time++){
                 float price = Float.parseFloat(statistics.get(time));
@@ -164,9 +174,8 @@ public class LiveStockRecord {
                     Platform.runLater(()->stockData.getData().removeAll());
 
                 final int t = time;
-                if(stockData.getData().size() < statistics.size() && time >= stockData.getData().size()){
+                if(stockData.getData().size() < statistics.size() && time >= stockData.getData().size())
                     Platform.runLater(()->stockData.getData().add(t,point));
-                }
                 else
                     Platform.runLater(()->stockData.getData().set(t, point));
             }
@@ -177,23 +186,13 @@ public class LiveStockRecord {
                 stockData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
             else
                 stockData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
-        }catch (Exception e) {
-            e.printStackTrace();
-        }
+        }catch (Exception e) { e.printStackTrace(); }
     }
 
-    public void setUpdating(boolean isUpdating) {Platform.runLater(() -> prog.setVisible(isUpdating));}
-
-    public double getChange() {return change;}
+    public void setUpdating(boolean isUpdating) {Platform.runLater(() -> progress.setVisible(isUpdating));}
     public String getDate(){return date;}
-    public double getPrice(){return price;}
-
     public String getName() {return name;}
     public String getSymbol() {return symbol;}
 
     public Node getNode() {return hStock;}
-
-    public double getPercentChange() {
-        return percentChange;
-    }
 }

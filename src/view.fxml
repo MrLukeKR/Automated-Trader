@@ -16,53 +16,34 @@
 <?import javafx.scene.layout.VBox?>
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
-   <children>
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
-        <tabs>
           <Tab text="Live Stock">
-               <content>
                   <BorderPane prefHeight="200.0" prefWidth="200.0">
                      <right>
                         <VBox prefHeight="851.0" prefWidth="400.0" BorderPane.alignment="CENTER">
-                           <children>
                               <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0" text="Latest Headlines">
-                                 <content>
                                     <ScrollPane prefHeight="403.0" prefWidth="398.0">
-                                       <content>
                                           <VBox fx:id="newsBox" prefHeight="330.0" prefWidth="400.0" />
-                                       </content>
                                     </ScrollPane>
-                                 </content>
                               </TitledPane>
                               <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0" text="Latest Tweets">
-                                 <content>
                                     <ScrollPane />
-                                 </content>
                               </TitledPane>
-                           </children>
                         </VBox>
                      </right>
                      <bottom>
                         <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
-                           <children>
                               <TextArea editable="false" prefHeight="200.0" prefWidth="1920.0" />
-                           </children>
                         </VBox>
                      </bottom>
                      <left>
                         <TitledPane animated="false" collapsible="false" prefHeight="751.0" prefWidth="650.0" text="Stocks" BorderPane.alignment="CENTER">
-                           <content>
                               <VBox prefHeight="851.0" prefWidth="250.0">
-                                 <children>
                                     <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER">
-                                       <content>
                                           <FlowPane fx:id="stockList" prefHeight="786.0" prefWidth="226.0" />
-                                       </content>
                                     </ScrollPane>
                                     <ProgressBar fx:id="liveStockProgressBar" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" progress="0.0" />
-                                 </children>
                               </VBox>
-                           </content>
                         </TitledPane>
                      </left>
                      <top>
@@ -70,22 +51,15 @@
                      </top>
                      <center>
                         <VBox BorderPane.alignment="CENTER">
-                           <children>
                               <TitledPane animated="false" collapsible="false" prefHeight="200.0" prefWidth="200.0" text="Portfolio">
-                                 <content>
                                     <FlowPane prefHeight="200.0" prefWidth="200.0">
-                                       <children>
                                           <VBox prefHeight="200.0" prefWidth="100.0">
-                                             <children>
                                                 <Label text="Balance:" />
                                                 <Label text="Stock Value:" />
-                                             </children>
                                           </VBox>
                                           <VBox prefHeight="200.0" prefWidth="90.0">
-                                             <children>
                                                 <Label fx:id="currentBalanceLabel" text="£0.00" />
                                                 <Label fx:id="stockValueLabel" text="£0.00" />
-                                             </children>
                                           </VBox>
                                           <LineChart fx:id="portfolioChart" prefHeight="200.0" prefWidth="600.0">
                                             <xAxis>
@@ -95,18 +69,12 @@
                                               <NumberAxis side="LEFT" />
                                             </yAxis>
                                           </LineChart>
-                                       </children>
                                     </FlowPane>
-                                 </content>
                               </TitledPane>
-                           </children>
                         </VBox>
                      </center>
                   </BorderPane>
-               </content>
             </Tab>
           <Tab text="Historical Stock Records" />
-        </tabs>
       </TabPane>
-   </children>
 </AnchorPane>

@@ -16,14 +16,8 @@ import java.util.ArrayList;
 
         ArrayList<String> csvArray = new ArrayList<>();
 
-        while((curr = br.readLine()) != null){
-            String[] split = curr.split(",");
-            curr = "";
-            for (int i = 0; i < 5; i++)
-                curr += split[i] + ",";
-            curr +=split[6];
+        while((curr = br.readLine()) != null)
             csvArray.add(curr);
-        }
 
         importDailyMarketData(csvArray, symbol, dh);
     }
@@ -37,26 +31,23 @@ import java.util.ArrayList;
         for(String curr : csv) {
             if(curr != null && curr.split(",").length == 6 ) {
                 split = curr.split(",");
-               String statement = "INSERT INTO dailystockprices VALUES("; //TODO: Do not consider non-numeric values
+                if(split[1].matches("[-+]?\\d*\\.?\\d+")) {
+                    String statement = "INSERT INTO dailystockprices VALUES("; //TODO: Do not consider non-numeric values
 
-                    statement += "'" + symbol + "','" + split[0] + "'";
-                    for (int i = 1; i < 6; i++)
-                        statement += "," + split[i];
-                    statement += ") ON DUPLICATE KEY UPDATE " +
+                    statement += "'" + symbol + "','" + split[0] + "'" + curr.replaceAll(split[0],"")
+                            +  ") ON DUPLICATE KEY UPDATE " +
                             "OpenPrice = '" + split[1] +
                             "', HighPrice = '" + split[2] +
                             "', LowPrice = '" + split[3] +
                             "', ClosePrice = '" + split[4] +
                             "', TradeVolume = '" + split[5] + "';";
 
-                    if(symbol == "MSFT")
-                        System.out.println(statement);
                     try {
                         dh.executeCommand(statement);
                     } catch (Exception e) {
                         System.err.println(e.getMessage() + " " + statement);
                     }
-
+                }
             }
         }
     }
@@ -72,21 +63,19 @@ import java.util.ArrayList;
         if(csv == null) return;
 
         for(String curr : csv) {
-            if(curr != null && curr.split(",").length == columnCount)
+            if(curr != null)
                 {
                     split = curr.split(",");
-
+                    if(split.length == columnCount && split[1].matches("[-+]?\\d*\\.?\\d+")) {
                         String statement = "INSERT IGNORE INTO " + table + columns + " VALUES("; //TODO: Update values if primary key exists but values are different
 
-                        statement += "'" + symbol + "','" + split[0] + "'";
-                        for (int i = 1; i < columnCount; i++)
-                            statement += "," + split[i];
-                        statement += ");";
+                        statement += "'" + symbol + "','" + split[0] + "'" + curr.replaceAll(split[0],"") + ");";
 
                         try {
                             dh.executeCommand(statement);
                         } catch (Exception e) {
                             System.err.println(e.getMessage() + " " + statement);
+                        }
                     }
             }
         }

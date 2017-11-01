@@ -36,12 +36,8 @@ public class Controller {
 
 @FXML public void initialize()
 {
-    NeuralNetwork myNet = new NeuralNetwork();
-    myNet.init(1,2,3,1);
     initialiseConnections();
-
-        initialiseDatabase();
-
+    initialiseDatabase();
     initialiseStocks();
     initialiseClocks();
     initialiseDisplay();
@@ -83,9 +79,8 @@ private void initialiseDatabase(){
 
 private void initialiseDisplay(){
         for (String curr : stocks) {
-            String name = null;
             try {
-                name = dh.executeQuery("SELECT Name FROM indices WHERE Symbol='" + curr + "';").get(0);
+                String name = dh.executeQuery("SELECT Name FROM indices WHERE Symbol='" + curr + "';").get(0);
                 LiveStockRecord currRec = new LiveStockRecord(curr, name);
                 records.add(currRec);
                 Platform.runLater(() -> stockList.getChildren().add(currRec.getNode()));
@@ -192,7 +187,7 @@ private void updateClocks(){
                 System.out.println("Downloaded full history of " + symbol);
                 StockRecordParser.importDailyMarketData(temp, symbol, dh);
                 System.out.println("Successully committed " + symbol + " full history to the database!");
-            };
+            }
     }
 
     private void updateRecord(LiveStockRecord record){

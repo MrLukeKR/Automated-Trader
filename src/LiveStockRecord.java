@@ -34,7 +34,7 @@ public class LiveStockRecord {
     LineChart stockChart = new LineChart(xAxis, yAxis);
     ProgressIndicator progress = new ProgressIndicator();
 
-    public LiveStockRecord(String symbol, String stockName, DatabaseHandler dh){ //TODO: Change the constructor to allow for prevPrice again
+    public LiveStockRecord(String symbol, String stockName, DatabaseHandler dh) {
         name = stockName;
         this.symbol = symbol;
         Label stockNameLabel = new Label(stockName);
@@ -77,7 +77,6 @@ public class LiveStockRecord {
         prevClosePrice.setTextFill(Color.BLUE);
 
         stockNameLabel.setMinSize(100,20);
-
         stockSymbol.setMinSize(100,10);
 
         newStock.getChildren().add(stockNameLabel);
@@ -101,9 +100,8 @@ public class LiveStockRecord {
               percentChange = (change / prevPrice * 100.0f);
 
         Platform.runLater(() -> {
-            //TODO: If left to run after hours, make the previousClose Today's close
             stockPrice.setText(String.valueOf(currPrice));
-            prevClosePrice.setText(String.valueOf("Prev. close:" + prevPrice));
+            prevClosePrice.setText(String.valueOf("Prev. close: " + prevPrice));
 
             if (percentChange < 0) {
                 stockChange.setTextFill(Color.RED);
@@ -159,41 +157,49 @@ public class LiveStockRecord {
             ArrayList<String> statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
             yAxis.setLowerBound(Integer.MAX_VALUE);
             yAxis.setUpperBound(Integer.MIN_VALUE);
-
             xAxis.setLowerBound(-statistics.size() + 1);
 
             for(int time = 0; time < statistics.size(); time++){
                 float price = Float.parseFloat(statistics.get(time));
                 XYChart.Data<Number, Number> point = new XYChart.Data(time-statistics.size()+1, price);
                 Rectangle rect = new Rectangle(0,0);
-                yAxis.setLowerBound(Math.min(yAxis.getLowerBound(),price));
-                yAxis.setUpperBound(Math.max(yAxis.getUpperBound(),price));
+                yAxis.setLowerBound(Math.min(yAxis.getLowerBound(), price));
+                yAxis.setUpperBound(Math.max(yAxis.getUpperBound(), price));
                 rect.setVisible(false);
                 point.setNode(rect);
 
-                if(stockData.getData().size() > statistics.size())
-                    Platform.runLater(()->stockData.getData().removeAll());
+                if (stockData.getData().size() > statistics.size())
+                    Platform.runLater(() -> stockData.getData().removeAll());
 
                 final int t = time;
+
                 if(stockData.getData().size() < statistics.size() && time >= stockData.getData().size())
                     Platform.runLater(()->stockData.getData().add(t,point));
                 else
                     Platform.runLater(()->stockData.getData().set(t, point));
             }
 
-            if(prevPrice > currPrice)
-                stockData.nodeProperty().get().setStyle("-fx-stroke: red; -fx-stroke-width: 1px;");
+            if (prevPrice > currPrice)
+                stockData.nodeProperty().get().setStyle("-fx-stroke: red;   -fx-stroke-width: 1px;");
             else if (prevPrice < currPrice)
                 stockData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
-            else
-                stockData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
+            else stockData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
         }catch (Exception e) { e.printStackTrace(); }
     }
 
-    public void setUpdating(boolean isUpdating) {Platform.runLater(() -> progress.setVisible(isUpdating));}
-    public String getDate(){return date;}
-    public String getName() {return name;}
-    public String getSymbol() {return symbol;}
+    public void setUpdating(boolean isUpdating) {
+        Platform.runLater(() -> progress.setVisible(isUpdating));
+    }
 
-    public Node getNode() {return hStock;}
+    public String getDate() {
+        return date;
+    }
+
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public Node getNode() {
+        return hStock;
+    }
 }

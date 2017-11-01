@@ -13,6 +13,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -139,7 +140,7 @@ public class LiveStockRecord {
     private float getCurrentPrice(DatabaseHandler dh){
         ArrayList<String> cPrice = null;
         try {
-            cPrice = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices AND Symbol='" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1;");
+            cPrice = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol='" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1;");
         } catch (SQLException e) { e.printStackTrace(); }
 
         if(cPrice == null || cPrice.isEmpty())

@@ -1,9 +1,7 @@
 import javafx.application.Platform;
 
 import javafx.geometry.Orientation;
-import javafx.geometry.Side;
 import javafx.scene.Node;
-import javafx.scene.chart.Axis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;

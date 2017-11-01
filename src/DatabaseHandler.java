@@ -34,13 +34,13 @@ public class DatabaseHandler {
     public ArrayList<String> executeQuery(String command) throws SQLException{
             Statement query = connection.createStatement();
 
-        ArrayList<String> tempArr = new ArrayList<String>();
+        ArrayList<String> tempArr = new ArrayList<>();
 
         ResultSet tempRs = query.executeQuery(command);
         ResultSetMetaData rsmd = tempRs.getMetaData();
 
         while(tempRs.next()){
-            String temp = tempRs.getString(1);;
+            String temp = tempRs.getString(1);
             for(int i = 2; i <= rsmd.getColumnCount(); i++) {
                 temp += tempRs.getString(i);
                 if(i <= rsmd.getColumnCount() - 1) temp +=",";

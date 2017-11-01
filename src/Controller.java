@@ -82,10 +82,8 @@ public class Controller {
                 String name = dh.executeQuery("SELECT Name FROM indices WHERE Symbol='" + curr + "';").get(0);
                 LiveStockRecord currRec = new LiveStockRecord(curr, name, dh);
                 records.add(currRec);
-                Platform.runLater(() -> stockList.getChildren().add(currRec.getNode()));
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+                stockList.getChildren().add(currRec.getNode());
+            } catch (SQLException e) { e.printStackTrace(); }
         }
     }
 

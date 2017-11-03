@@ -1,7 +1,7 @@
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 
@@ -23,12 +23,18 @@ public class Controller {
     ArrayList<StockClock> clocks = new ArrayList<>();
 
     final int downloadInterval = 1;
+    static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
 
     @FXML FlowPane stockList;
     @FXML ProgressBar liveStockProgressBar;
     @FXML FlowPane timePane;
     @FXML TextArea infoBox;
     @FXML VBox newsBox;
+    @FXML ChoiceBox symbolChoiceBox;
+    @FXML TextField amountField;
+    @FXML Label stockValueLabel;
+    @FXML Label currentBalanceLabel;
+    @FXML Label totalBalanceLabel;
 
     @FXML
     public void initialize() {
@@ -38,6 +44,8 @@ public class Controller {
         initialiseClocks();
         initialiseDisplay();
         updateNews();
+        updateStockValues();
+        updateBankBalance();
 
         for (LiveStockRecord stock : records) stock.updateChart(dh);
 
@@ -59,13 +67,16 @@ public class Controller {
         System.out.println("Initialising Database...");
         try {
             dh.executeCommand("CREATE DATABASE IF NOT EXISTS automated_trader;");//TODO: Allow login of root to create the initial agent user
-            dh.executeCommand("GRANT ALL ON automated_trader.* TO 'agent'@'%';");
+            //dh.executeCommand("GRANT ALL ON automated_trader.* TO 'agent'@'%';");
             dh.executeCommand("USE automated_trader");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS indices (Symbol varchar(7) UNIQUE NOT NULL, Name text NOT NULL, StartedTrading date NOT NULL, CeasedTrading date, TwitterUsername varchar(15), PRIMARY KEY (Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS dailystockprices (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content text, Published datetime NOT NULL, URL text, Mood double DEFAULT 0.5, PRIMARY KEY (Symbol,Headline), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4) NOT NULL, Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL,PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES Indices(Symbol));");
+
+            if(!System.getProperty("os.name").contains("Linux")) //MySQL 5.6 or lower doesn't support large unique keys
+                dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content text, Published datetime NOT NULL, URL text, Mood double DEFAULT 0.5, PRIMARY KEY (ID), UNIQUE (Symbol, Headline), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
+
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4) NOT NULL, Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL,PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS banktransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Amount double SIGNED NOT NULL, PRIMARY KEY (ID));");
 
             int bankTransactions = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM banktransactions;").get(0));
@@ -76,7 +87,34 @@ public class Controller {
         }
     }
 
+    private void updateBankBalance(){
+        try {
+            float balance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
+
+            currentBalanceLabel.setText(String.valueOf(balance));
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    private void updateStockValues(){
+        float worth = 0;
+        try{
+            ArrayList<String> heldStocks = dh.executeQuery("SELECT symbol FROM tradetransactions GROUP BY symbol HAVING SUM(Volume) > 0;");
+
+            for(String stock : heldStocks) {
+                int volume = Integer.parseInt(dh.executeQuery("SELECT SUM(Volume) FROM tradetransactions WHERE Symbol = '" + stock + "'").get(0));
+                float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
+                worth += volume * currPrice;
+
+                stockValueLabel.setText(String.valueOf(worth));
+            }
+        }catch(SQLException e){ e.printStackTrace();}
+
+
+    }
+
     private void initialiseDisplay() {
+        symbolChoiceBox.setItems(FXCollections.observableArrayList(stocks));
+
         for (String curr : stocks) {
             try {
                 String name = dh.executeQuery("SELECT Name FROM indices WHERE Symbol='" + curr + "';").get(0);
@@ -123,13 +161,16 @@ public class Controller {
                 liveStockProgressBar.setProgress(progressVal);
                 updateClocks();
 
-                if(cycle == 0 && s == 0)
-                    updateStockData();
+                if(cycle == 0 && s == 0) {
+                    new Thread(()-> updateStockData()).start();
+                }
             }
         }).start();
     }
 
     private void updateNews(){
+        if(System.getProperty("os.name").contains("Linux")) return;
+
         try { NewsAPIHandler.getLatestNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
 
         Platform.runLater(() -> {
@@ -189,31 +230,82 @@ public class Controller {
         }
     }
 
-    @FXML private void updateStockData(){
-        new Thread(()-> {
-            for (LiveStockRecord curr : records) {
-                curr.setUpdating(true);
-                ArrayList<String> temp = null;
-                try {
-                    temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=" + curr.getSymbol() + "&interval=1min&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
-                } catch (IOException e) {
+    @FXML
+    private void buyStock(){
+        if(!amountField.getText().isEmpty() && amountField.getText().matches(IS_NUMERIC)) {
+            try {
+                int amount = Integer.parseInt(amountField.getText());
+
+                String stock = symbolChoiceBox.getValue().toString();
+                float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock  + "' ORDER BY TradeDateTime DESC LIMIT 1" ).get(0));
+
+                float totalCost = cost * amount;
+
+                float balance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
+
+                if(totalCost <= balance) {
+                    dh.executeCommand("INSERT INTO banktransactions(Amount) VALUES (" + -totalCost + ")");
+                    dh.executeCommand("INSERT INTO tradetransactions(Type,Symbol,Volume,Price) VALUES ('BUY'," +
+                            "'" + stock + "'," +
+                            amount + "," +
+                            cost +
+                    ");");
+
+                    updateBankBalance();
+                    updateStockValues();
+                    updateTotalWorth();
                 }
+            } catch (SQLException e) { e.printStackTrace(); }
+        }
 
-                if (temp != null && temp.size() >= 2) {
-                    System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1));
-                    StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), dh);
+        amountField.clear();
+    }
 
-                    try {
-                        temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
-                    } catch (IOException e) { }
+    private void updateTotalWorth(){
+        float bankBalance = Float.parseFloat(currentBalanceLabel.getText());
+        float stockWorth = Float.parseFloat(stockValueLabel.getText());
 
-                    StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
+        totalBalanceLabel.setText(String.valueOf(bankBalance + stockWorth));
+    }
 
-                    curr.updateRecord(dh);
-                    curr.setUpdating(false);
-                    curr.updateChart(dh);
-                }
+    private void buyStock(String name, int amount){
+
+    }
+
+    @FXML
+    private void sellStock(){
+
+    }
+
+    private void sellStock(String name, int amount){
+
+    }
+
+    private void updateStockData(){
+        for (LiveStockRecord curr : records) {
+            curr.setUpdating(true);
+            ArrayList<String> temp = null;
+            try {
+                temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=" + curr.getSymbol() + "&interval=1min&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
+            } catch (IOException e) {
             }
-        }).start();
+
+            if (temp != null && temp.size() >= 2) {
+                System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1));
+                StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), dh);
+
+                try {
+                    temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
+                } catch (IOException e) { }
+
+                StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
+
+                curr.updateRecord(dh);
+                curr.setUpdating(false);
+                curr.updateChart(dh);
+            }
+        }
+
+        updateStockValues();
     }
 }

@@ -46,6 +46,7 @@ public class Controller {
         updateNews();
         updateStockValues();
         updateBankBalance();
+        updateTotalWorth();
 
         for (LiveStockRecord stock : records) stock.updateChart(dh);
 
@@ -108,8 +109,6 @@ public class Controller {
                 stockValueLabel.setText(String.valueOf(worth));
             }
         }catch(SQLException e){ e.printStackTrace();}
-
-
     }
 
     private void initialiseDisplay() {
@@ -251,9 +250,11 @@ public class Controller {
                             cost +
                     ");");
 
-                    updateBankBalance();
-                    updateStockValues();
-                    updateTotalWorth();
+                    Platform.runLater(() -> {
+                        updateBankBalance();
+                        updateStockValues();
+                        updateTotalWorth();
+                    });
                 }
             } catch (SQLException e) { e.printStackTrace(); }
         }
@@ -306,6 +307,9 @@ public class Controller {
             }
         }
 
-        updateStockValues();
+        Platform.runLater(() -> {
+            updateStockValues();
+            updateTotalWorth();
+        });
     }
 }

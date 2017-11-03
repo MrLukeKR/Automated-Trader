@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+
 public class StockRecordParser {
+    static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
 
     static public void importDailyMarketData(File csvFile, String symbol, DatabaseHandler dh) throws IOException, SQLException {
         FileReader fr = new FileReader(csvFile);
@@ -26,7 +28,7 @@ public class StockRecordParser {
         for(String curr : csv) {
             if (curr != null) {
                 String[] split = curr.split(",");
-                if (split.length == 6 && split[1].matches("[-+]?\\d*\\.?\\d+")) {
+                if (split.length == 6 && split[1].matches(IS_NUMERIC)) {
                     String statement = "INSERT INTO dailystockprices VALUES(";
 
                     statement += "'" + symbol + "','" + split[0] + "'" + curr.replaceAll(split[0],"")
@@ -53,7 +55,7 @@ public class StockRecordParser {
         for(String curr : csv) {
             if (curr != null) {
                 String split[] = curr.split(",");
-                if (split.length == columnCount && split[1].matches("[-+]?\\d*\\.?\\d+")) {
+                if (split.length == columnCount && split[1].matches(IS_NUMERIC)) {
                     String statement = "INSERT IGNORE INTO " + table + columns + " VALUES("; //TODO: Update values if primary key exists but values are different
 
                     statement += "'" + symbol + "','" + split[0] + "'" + curr.replaceAll(split[0], "") + ");";

@@ -102,7 +102,7 @@ public class Controller {
             ArrayList<String> heldStocks = dh.executeQuery("SELECT symbol FROM tradetransactions GROUP BY symbol HAVING SUM(Volume) > 0;");
 
             for(String stock : heldStocks) {
-                int volume = Integer.parseInt(dh.executeQuery("SELECT SUM(Volume) FROM tradetransactions WHERE Symbol = '" + stock + "'").get(0));
+                int volume = getHeldStocks(stock);
                 float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
                 worth += volume * currPrice;
 
@@ -273,9 +273,51 @@ public class Controller {
 
     }
 
+    private int getHeldStocks(String stock){
+        int bought = 0;
+        int sold = 0;
+        try {
+            bought = Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Volume),0) FROM tradetransactions WHERE Symbol='"+ stock +"' AND Type='BUY';").get(0));
+            sold = Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Volume),0) FROM tradetransactions WHERE Symbol='"+ stock +"' AND Type='SELL';").get(0));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return bought-sold;
+    }
+
     @FXML
     private void sellStock(){
+        if(!amountField.getText().isEmpty() && amountField.getText().matches(IS_NUMERIC)) {
+            try {
+                int amount = Integer.parseInt(amountField.getText());
 
+                String stock = symbolChoiceBox.getValue().toString();
+                float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock  + "' ORDER BY TradeDateTime DESC LIMIT 1" ).get(0));
+
+                float totalCost = cost * amount;
+
+
+                int available = getHeldStocks(stock);
+
+                if(amount <= available) {
+                    dh.executeCommand("INSERT INTO banktransactions(Amount) VALUES (" + totalCost + ")");
+                    dh.executeCommand("INSERT INTO tradetransactions(Type,Symbol,Volume,Price) VALUES ('SELL'," +
+                            "'" + stock + "'," +
+                            amount + "," +
+                            cost +
+                            ");");
+
+                    Platform.runLater(() -> {
+                        updateBankBalance();
+                        updateStockValues();
+                        updateTotalWorth();
+                    });
+                }
+            } catch (SQLException e) { e.printStackTrace(); }
+        }
+
+        amountField.clear();
     }
 
     private void sellStock(String name, int amount){
@@ -305,11 +347,11 @@ public class Controller {
                 curr.setUpdating(false);
                 curr.updateChart(dh);
             }
-        }
 
-        Platform.runLater(() -> {
-            updateStockValues();
-            updateTotalWorth();
-        });
+            Platform.runLater(() -> {
+                updateStockValues();
+                updateTotalWorth();
+            });
+        }
     }
 }

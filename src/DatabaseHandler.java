@@ -42,8 +42,7 @@ public class DatabaseHandler {
         while(tempRs.next()){
             String temp = tempRs.getString(1);
             for(int i = 2; i <= rsmd.getColumnCount(); i++) {
-                temp += tempRs.getString(i);
-                if(i <= rsmd.getColumnCount() - 1) temp +=",";
+                temp += "," + tempRs.getString(i);
             }
 
             tempArr.add(temp);

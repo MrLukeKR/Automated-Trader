@@ -1,5 +1,6 @@
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -29,10 +30,10 @@ public class NewsAPIHandler {
         });
     }
 
-    static public void getNews(String stock, DatabaseHandler dh) throws IOException, SQLException {
+    static public void getNews(String stock, DatabaseHandler dh) throws IOException, SQLException, JSONException {
         if(isOverLimit(dh)) return;
 
-        int values[] = getNews(stock,dh,1); //getNews returns count of number of pages + latest news, because querying just for the number of pages is a waste of an API credit
+        int values[] = getMetaData(stock,dh); //getNews returns count of number of pages + latest news, because querying just for the number of pages is a waste of an API credit
 
         int pageSize = 100; //TODO: Maybe make this variable if necessary
         int storedArticles = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM newsarticles WHERE Symbol='" + stock + "';").get(0));
@@ -56,20 +57,38 @@ public class NewsAPIHandler {
     }
 
     static public boolean isOverLimit(DatabaseHandler dh, int callsToPerform) throws SQLException {
-        ArrayList<String> sMaxCalls = dh.executeQuery("SELECT DailyLimit FROM apimanagement WHERE Name='INTRINIO';");
-
-        int limit = Integer.parseInt(sMaxCalls.get(0));
+        int limit = Integer.parseInt(dh.executeQuery("SELECT DailyLimit FROM apimanagement WHERE Name='INTRINIO';").get(0));
 
         return (callsToPerform + getCurrentCalls(dh)) == limit;
     }
 
     static public boolean isOverLimit(DatabaseHandler dh) throws SQLException {
-        return isOverLimit(dh, getCurrentCalls(dh));
+        return isOverLimit(dh, 0);
     }
 
-    static public int[] getNews(String stock, DatabaseHandler dh, int page) throws IOException, SQLException {
-        int pages = 0;
-        int articles = 0;
+    static public int[] getMetaData(String stock, DatabaseHandler dh) throws JSONException, IOException, SQLException {
+        URL url = new URL(INTRINIO_API_CALL + stock);
+
+        String doc = null;
+        try (InputStream in = url.openStream()) {
+            Scanner s = new Scanner(in).useDelimiter(("\\A"));
+            doc = s.next();
+        }
+
+        dh.executeCommand("INSERT INTO apicalls VALUES ('INTRINIO',CURDATE(), '1') ON UPDATE SET Calls = Calls + 1;");
+
+        JSONObject obj = new JSONObject(doc);
+
+        int pages = obj.getInt("total_pages");
+        int articles = obj.getInt("result_count");
+
+        int[] values = {pages,articles};
+
+        return values;
+    }
+
+    static public void getNews(String stock, DatabaseHandler dh, int page) throws IOException, SQLException {
+
         URL url = new URL(INTRINIO_API_CALL + stock + "&page_number=" + page);
 
         if(page == 1)
@@ -88,8 +107,6 @@ public class NewsAPIHandler {
         try {
             JSONObject obj = new JSONObject(doc);
             JSONArray arr = obj.getJSONArray("data");
-            pages = obj.getInt("total_pages");
-            articles = obj.getInt("result_count");
             String punctuationRemover = "'";
 
             for (int i = 0; i < arr.length(); i++) {
@@ -116,13 +133,9 @@ public class NewsAPIHandler {
                 }
             }
         } catch (Exception e) { e.printStackTrace(); }
-
-        int[] values = {pages,articles};
-
-        return values;
     }
 
-    static public void getNews(ArrayList<String> stockList, DatabaseHandler dh) throws IOException, SQLException {
+    static public void getNews(ArrayList<String> stockList, DatabaseHandler dh) throws IOException, SQLException, JSONException {
         for(String symbol : stockList)
             getNews(symbol,dh);
     }

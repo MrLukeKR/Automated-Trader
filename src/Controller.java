@@ -5,8 +5,17 @@ import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import org.json.JSONException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.safety.Whitelist;
+import org.jsoup.select.Elements;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalTime;
@@ -46,7 +55,6 @@ public class Controller {
         initialiseClocks();
         initialiseDisplay();
         updateNews();
-        downloadArticles();
         updateStockValues();
         updateBankBalance();
         updateTotalWorth();
@@ -55,6 +63,7 @@ public class Controller {
 
         for (LiveStockRecord stock : records) stock.updateChart(dh);
 
+        downloadArticles();
         startRealTime();
     }
 
@@ -369,26 +378,42 @@ public class Controller {
         }
     }
 
-    private String downloadArticle(int ID, String url, String filePath) throws IOException {
+    private String downloadArticle(String url) throws IOException, InterruptedException {
         URL site = new URL(url);
-        String fileURI = filePath + "/" + ID + ".html";
-        BufferedReader br = new BufferedReader(new InputStreamReader(site.openStream()));
+        HttpURLConnection.setFollowRedirects(true);
+        HttpURLConnection conn = (HttpURLConnection) site.openConnection(); //Written by https://stackoverflow.com/questions/15057329/how-to-get-redirected-url-and-content-using-httpurlconnection
+        conn.setInstanceFollowRedirects(true);
+
+        conn.connect();
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
         String input;
+        StringBuilder html = new StringBuilder();
 
-        File file = new File(fileURI);
-        if(!file.exists()) file.createNewFile();
+        while ((input = br.readLine()) != null)
+            html.append(input);
 
-        FileWriter fw = new FileWriter(file.getAbsoluteFile());
-        BufferedWriter bw =  new BufferedWriter(fw);
-
-        while((input = br.readLine()) != null)
-            bw.write(input);
-
-        bw.close();
+        conn.disconnect();
         br.close();
 
-        return fileURI;
+        Document doc = Jsoup.parse(html.toString());
+        Elements p = doc.getElementsByTag("p");
+
+        String strippedHTML = "";
+
+        int i = 0;
+        for (Element el : p) {
+            strippedHTML += el.text();
+            if (i++ < p.size()) strippedHTML += " ";
+        }
+
+        String cleanHTML = Jsoup.clean(strippedHTML, Whitelist.basic()).replaceAll("'", "").trim();
+
+        if (cleanHTML.isEmpty() || cleanHTML == "redirect") //Backoff! Caused a spam filter to block the connection!
+            return null;
+
+        return cleanHTML;
     }
 
     private void downloadArticles() {
@@ -408,8 +433,9 @@ public class Controller {
                 int id = Integer.parseInt(splitArticle[0]);
 
                 try {
-                    String site = downloadArticle(id, splitArticle[1], "res/newsarticles");
-                    dh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
+                    String site = downloadArticle(splitArticle[1]);
+                    if (site != null)
+                        dh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
                 } catch (Exception e) { e.printStackTrace(); }
             }
         }).start();

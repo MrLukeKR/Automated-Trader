@@ -4,9 +4,13 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
+import org.json.JSONException;
 
-import java.io.File;
-import java.io.IOException;
+import javax.swing.text.html.parser.DTD;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.Buffer;
 import java.sql.SQLException;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -37,7 +41,7 @@ public class Controller {
     @FXML Label totalBalanceLabel;
 
     @FXML
-    public void initialize() throws SQLException {
+    public void initialize() throws SQLException, JSONException {
         initialiseConnections();
         initialiseDatabase();
         TechnicalAnalyser.setDBHandler(dh);
@@ -45,6 +49,7 @@ public class Controller {
         initialiseClocks();
         initialiseDisplay();
         updateNews();
+        downloadArticles();
         updateStockValues();
         updateBankBalance();
         updateTotalWorth();
@@ -81,7 +86,7 @@ public class Controller {
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
 
             if(!System.getProperty("os.name").contains("Linux")) //MySQL 5.6 or lower doesn't support large unique keys
-                dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content text, Published datetime NOT NULL, URL text, Mood double DEFAULT 0.5, PRIMARY KEY (ID), UNIQUE (Symbol, Headline), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
+                dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL text, Mood double DEFAULT 0.5, PRIMARY KEY (ID), UNIQUE (Symbol, Headline), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
 
             dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4) NOT NULL, Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL,PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS banktransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Amount double SIGNED NOT NULL, PRIMARY KEY (ID));");
@@ -168,13 +173,13 @@ public class Controller {
 
                 if(cycle == 0 && s == 0) {
                     new Thread(()-> updateStockData()).start();
-                    new Thread(() -> { try { updateNews(); } catch (SQLException e) { e.printStackTrace(); } }).start();
+                    new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
                 }
             }
         }).start();
     }
 
-    private void updateNews() throws SQLException {
+    private void updateNews() throws SQLException, JSONException {
         if(System.getProperty("os.name").contains("Linux")) return;
 
         try { NewsAPIHandler.getNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
@@ -360,5 +365,51 @@ public class Controller {
                 updateTotalWorth();
             });
         }
+    }
+
+    private String downloadArticle(int ID, String url, String filePath) throws IOException {
+        URL site = new URL(url);
+        String fileURI = filePath + "/" + ID + ".html";
+        BufferedReader br = new BufferedReader(new InputStreamReader(site.openStream()));
+
+        String input;
+
+        File file = new File(fileURI);
+        if(!file.exists()) file.createNewFile();
+
+        FileWriter fw = new FileWriter(file.getAbsoluteFile());
+        BufferedWriter bw =  new BufferedWriter(fw);
+
+        while((input = br.readLine()) != null)
+            bw.write(input);
+
+        bw.close();
+        br.close();
+
+        return fileURI;
+    }
+
+    private void downloadArticles() {
+        System.out.println("Downloading missing news article content for entire database (in background)...");
+        new Thread(() -> {
+            ArrayList<String> undownloadedArticles = null;
+            try {
+                undownloadedArticles = dh.executeQuery("SELECT ID, URL FROM newsarticles WHERE Content IS NULL");
+            } catch (SQLException e) { e.printStackTrace(); }
+
+            if (undownloadedArticles == null || undownloadedArticles.isEmpty()) return;
+
+            String[] splitArticle = null;
+
+            for (String article : undownloadedArticles) {
+                splitArticle = article.split(",");
+                int id = Integer.parseInt(splitArticle[0]);
+
+                try {
+                    String site = downloadArticle(id, splitArticle[1], "res/newsarticles");
+                    dh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
+                } catch (Exception e) { e.printStackTrace(); }
+            }
+        }).start();
     }
 }

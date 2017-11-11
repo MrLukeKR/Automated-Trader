@@ -5,12 +5,18 @@ import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import org.json.JSONException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.safety.Whitelist;
+import org.jsoup.select.Elements;
 
-import javax.swing.text.html.parser.DTD;
-import java.io.*;
-import java.net.MalformedURLException;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.Buffer;
 import java.sql.SQLException;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -49,7 +55,6 @@ public class Controller {
         initialiseClocks();
         initialiseDisplay();
         updateNews();
-        downloadArticles();
         updateStockValues();
         updateBankBalance();
         updateTotalWorth();
@@ -58,6 +63,7 @@ public class Controller {
 
         for (LiveStockRecord stock : records) stock.updateChart(dh);
 
+        downloadArticles();
         startRealTime();
     }
 
@@ -82,7 +88,7 @@ public class Controller {
             dh.executeCommand("CREATE TABLE IF NOT EXISTS dailystockprices (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS dailytechnicalindicators (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, EMA12 double DEFAULT NULL, EMA26 double DEFAULT NULL, MACD double DEFAULT NULL, RSI double DEFAULT NULL, StoOsc double DEFAULT NULL, OBV double DEFAULT NULL, ADX double DEFAULT NULL, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0);");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0, PRIMARY KEY (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (ID int AUTO_INCREMENT NOT NULL, Gram varchar(1000) NOT NULL UNIQUE, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, Occurrences int DEFAULT 1, Blacklisted BIT DEFAULT 0, Processed BIT DEFAULT 0,  PRIMARY KEY (ID));");
 
@@ -95,8 +101,13 @@ public class Controller {
             int bankTransactions = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM banktransactions;").get(0));
 
             if (bankTransactions == 0) dh.executeCommand("INSERT INTO banktransactions(Amount) VALUES (10000);");
+
+            int apis = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM apimanagement;").get(0));
+
+            if (apis == 0)
+                dh.executeCommand("INSERT INTO apimanagement VALUES ('INTRINIO',500,0),('AlphaVantage',0,1667);");
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
         }
     }
 
@@ -368,26 +379,42 @@ public class Controller {
         }
     }
 
-    private String downloadArticle(int ID, String url, String filePath) throws IOException {
+    private String downloadArticle(String url) throws IOException, InterruptedException {
         URL site = new URL(url);
-        String fileURI = filePath + "/" + ID + ".html";
-        BufferedReader br = new BufferedReader(new InputStreamReader(site.openStream()));
+        HttpURLConnection.setFollowRedirects(true);
+        HttpURLConnection conn = (HttpURLConnection) site.openConnection(); //Written by https://stackoverflow.com/questions/15057329/how-to-get-redirected-url-and-content-using-httpurlconnection
+        conn.setInstanceFollowRedirects(true);
+
+        conn.connect();
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
         String input;
+        StringBuilder html = new StringBuilder();
 
-        File file = new File(fileURI);
-        if(!file.exists()) file.createNewFile();
+        while ((input = br.readLine()) != null)
+            html.append(input);
 
-        FileWriter fw = new FileWriter(file.getAbsoluteFile());
-        BufferedWriter bw =  new BufferedWriter(fw);
-
-        while((input = br.readLine()) != null)
-            bw.write(input);
-
-        bw.close();
+        conn.disconnect();
         br.close();
 
-        return fileURI;
+        Document doc = Jsoup.parse(html.toString());
+        Elements p = doc.getElementsByTag("p");
+
+        String strippedHTML = "";
+
+        int i = 0;
+        for (Element el : p) {
+            strippedHTML += el.text();
+            if (i++ < p.size()) strippedHTML += " ";
+        }
+
+        String cleanHTML = Jsoup.clean(strippedHTML, Whitelist.basic()).replaceAll("'", "").trim();
+
+        if (cleanHTML.isEmpty() || cleanHTML == "redirect") //Backoff! Caused a spam filter to block the connection!
+            return null;
+
+        return cleanHTML;
     }
 
     private void downloadArticles() {
@@ -407,8 +434,9 @@ public class Controller {
                 int id = Integer.parseInt(splitArticle[0]);
 
                 try {
-                    String site = downloadArticle(id, splitArticle[1], "res/newsarticles");
-                    dh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
+                    String site = downloadArticle(splitArticle[1]);
+                    if (site != null)
+                        dh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
                 } catch (Exception e) { e.printStackTrace(); }
             }
         }).start();

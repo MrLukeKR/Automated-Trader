@@ -183,7 +183,7 @@ public class Controller {
     private void updateNews() throws SQLException, JSONException, InterruptedException {
         if(System.getProperty("os.name").contains("Linux")) return;
 
-        try { NewsAPIHandler.getNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
+        try { NewsAPIHandler.getHistoricNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
 
         Platform.runLater(() -> {
            newsBox.getChildren().clear();

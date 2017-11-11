@@ -3,17 +3,18 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.Authenticator;
 import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 public class NewsAPIHandler {
     static final String INTRINIO_API_CALL = "https://api.intrinio.com/news?ticker=";
+    static final String INTRINIO_CSV_CALL = "https://api.intrinio.com/news.csv?page_size=10000&ticker=";
     static private String INTRINIO_USERNAME;
     static private String INTRINIO_PASSWORD;
     static private final int PAGES = 0, ARTICLES = 1; //Indices for accessing JSON metadata
@@ -30,19 +31,19 @@ public class NewsAPIHandler {
         });
     }
 
-    static public void getNews(String stock, DatabaseHandler dh) throws IOException, SQLException, JSONException {
+    static public void getHistoricNews(String stock, DatabaseHandler dh) throws IOException, SQLException, JSONException, InterruptedException {
         if(isOverLimit(dh)) return;
 
-        int values[] = getMetaData(stock,dh); //getNews returns count of number of pages + latest news, because querying just for the number of pages is a waste of an API credit
+        int values[] = getCSVMetaData(stock,dh); //getNews returns count of number of pages + latest news, because querying just for the number of pages is a waste of an API credit
 
-        int pageSize = 100; //TODO: Maybe make this variable if necessary
+        int pageSize = 10000; //TODO: Maybe make this variable if necessary
         int storedArticles = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM newsarticles WHERE Symbol='" + stock + "';").get(0));
         int startPage = values[PAGES] - (int) Math.floor(storedArticles / pageSize);
 
         int i = startPage;
 
         while(i >= 1 && !isOverLimit(dh))
-            getNews(stock, dh, i--);
+            getCSVNews(stock, dh, i--);
     }
 
     static public int getCurrentCalls(DatabaseHandler dh) throws SQLException {
@@ -66,25 +67,71 @@ public class NewsAPIHandler {
         return isOverLimit(dh, 0);
     }
 
-    static public int[] getMetaData(String stock, DatabaseHandler dh) throws JSONException, IOException, SQLException {
-        URL url = new URL(INTRINIO_API_CALL + stock);
+    static public int[] getCSVMetaData(String stock, DatabaseHandler dh) throws JSONException, IOException, SQLException, InterruptedException {
+        URL url = new URL(INTRINIO_CSV_CALL + stock);
 
-        String doc = null;
-        try (InputStream in = url.openStream()) {
-            Scanner s = new Scanner(in).useDelimiter(("\\A"));
-            doc = s.next();
-        }
+        TimeUnit.MILLISECONDS.sleep(1000); // To prevent blocking
+        BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
 
-        dh.executeCommand("INSERT INTO apicalls VALUES ('INTRINIO',CURDATE(), '1') ON UPDATE SET Calls = Calls + 1;");
+        String curr;
+        ArrayList<String> csvArray = new ArrayList<>();
 
-        JSONObject obj = new JSONObject(doc);
+        curr=br.readLine();
 
-        int pages = obj.getInt("total_pages");
-        int articles = obj.getInt("result_count");
+        String[] splitString = curr.split(",");
+
+        dh.executeCommand("INSERT INTO apicalls VALUES('INTRINIO', CURDATE(), 1) ON DUPLICATE KEY UPDATE Calls = Calls +1;");
+
+        int pages = Integer.parseInt(splitString[3].split(":")[1].trim());
+        int articles = Integer.parseInt(splitString[0].split(":")[1].trim());
 
         int[] values = {pages,articles};
 
         return values;
+    }
+
+    static public void getCSVNews(String stock, DatabaseHandler dh, int page) throws IOException, SQLException, InterruptedException {
+        URL url = new URL(INTRINIO_CSV_CALL + stock + "&page_number=" + page);
+
+        TimeUnit.MILLISECONDS.sleep(1000);
+        BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+        String curr;
+
+        ArrayList<String> newsArray = new ArrayList<String>();
+
+        for(int i = 0; i < 2; i++) //Remove preamble
+        br.readLine();
+
+        while((curr = br.readLine())!=null)
+            newsArray.add(curr);
+
+        br.close();
+
+        for(String news : newsArray){
+            String[] splitNews = news.split(",");
+            if(splitNews.length == 7) {
+                String title = splitNews[3].replaceAll("'", "").replaceAll("\"", "");
+                String summary = splitNews[6].replaceAll("'", "");
+                String date = splitNews[4].replaceAll("'", "");
+                String link = splitNews[5].replaceAll("'", "");
+                date = date.split(" ")[0] + " " + date.split(" ")[1];
+
+                String data = "'" + stock + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
+
+                String query = "SELECT * FROM newsarticles WHERE headline = '" + title + "' AND Symbol = '" + stock + "'";
+
+                ArrayList<String> results = dh.executeQuery(query);
+
+                if (results.isEmpty()) {
+                    String command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL) VALUES (" + data + ");";
+
+                    try {
+                        dh.executeCommand(command);
+                    } catch (Exception e) {
+                    }
+                }
+            }
+        }
     }
 
     static public void getNews(String stock, DatabaseHandler dh, int page) throws IOException, SQLException {
@@ -102,7 +149,7 @@ public class NewsAPIHandler {
             doc = s.next();
         }
 
-        dh.executeCommand("INSERT INTO apicalls VALUES ('INTRINIO',CURDATE(), '1') ON UPDATE SET Calls = Calls + 1;");
+        dh.executeCommand("INSERT INTO apicalls VALUES('INTRINIO', CURDATE(), 1) ON DUPLICATE KEY UPDATE Calls = Calls +1;");
 
         try {
             JSONObject obj = new JSONObject(doc);
@@ -135,8 +182,8 @@ public class NewsAPIHandler {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    static public void getNews(ArrayList<String> stockList, DatabaseHandler dh) throws IOException, SQLException, JSONException {
+    static public void getHistoricNews(ArrayList<String> stockList, DatabaseHandler dh) throws IOException, SQLException, JSONException, InterruptedException {
         for(String symbol : stockList)
-            getNews(symbol,dh);
+            getHistoricNews(symbol,dh);
     }
 }

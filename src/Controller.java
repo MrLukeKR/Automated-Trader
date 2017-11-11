@@ -47,7 +47,7 @@ public class Controller {
     @FXML Label totalBalanceLabel;
 
     @FXML
-    public void initialize() throws SQLException, JSONException {
+    public void initialize() throws SQLException, JSONException, InterruptedException {
         initialiseConnections();
         initialiseDatabase();
         TechnicalAnalyser.setDBHandler(dh);
@@ -90,6 +90,7 @@ public class Controller {
             dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0, PRIMARY KEY (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (ID int AUTO_INCREMENT NOT NULL, Gram varchar(1000) NOT NULL UNIQUE, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, Occurrences int DEFAULT 1, Blacklisted BIT DEFAULT 0, Processed BIT DEFAULT 0,  PRIMARY KEY (ID));");
 
             if(!System.getProperty("os.name").contains("Linux")) //MySQL 5.6 or lower doesn't support large unique keys
                 dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL text, Mood double DEFAULT 0.5, PRIMARY KEY (ID), UNIQUE (Symbol, Headline), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
@@ -190,10 +191,10 @@ public class Controller {
         }).start();
     }
 
-    private void updateNews() throws SQLException, JSONException {
+    private void updateNews() throws SQLException, JSONException, InterruptedException {
         if(System.getProperty("os.name").contains("Linux")) return;
 
-        try { NewsAPIHandler.getNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
+        try { NewsAPIHandler.getHistoricNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
 
         Platform.runLater(() -> {
            newsBox.getChildren().clear();

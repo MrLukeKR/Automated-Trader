@@ -1,9 +1,11 @@
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.Authenticator;
 import java.net.PasswordAuthentication;
 import java.net.URL;
@@ -91,6 +93,7 @@ public class NewsAPIHandler {
     }
 
     static public void getCSVNews(String stock, DatabaseHandler dh, int page) throws IOException, SQLException, InterruptedException {
+        System.out.println("Getting headlines for " + stock + " (Page " + page + ")");
         URL url = new URL(INTRINIO_CSV_CALL + stock + "&page_number=" + page);
 
         TimeUnit.MILLISECONDS.sleep(1000);
@@ -118,18 +121,23 @@ public class NewsAPIHandler {
 
                 String data = "'" + stock + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
 
-                String query = "SELECT * FROM newsarticles WHERE headline = '" + title + "' AND Symbol = '" + stock + "'";
+                ArrayList<String> duplicate = dh.executeQuery("SELECT * FROM newsarticles WHERE URL ='" + link + "' AND Symbol = '" + stock + "'");
 
-                ArrayList<String> results = dh.executeQuery(query);
+                if (!duplicate.isEmpty()) break;
 
-                if (results.isEmpty()) {
-                    String command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL) VALUES (" + data + ");";
+                ArrayList<String> results = dh.executeQuery("SELECT * FROM newsarticles WHERE Headline = '" + title + "' AND Symbol = '" + stock + "'");
+                String command;
+                if (results.isEmpty())
+                    command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL) VALUES (" + data + ");";
+                else
+                    command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL, Duplicate) VALUES (" + data + ", 1);";
 
-                    try {
-                        dh.executeCommand(command);
-                    } catch (Exception e) {
-                    }
+                try {
+                    dh.executeCommand(command);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
+
             }
         }
     }

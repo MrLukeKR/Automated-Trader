@@ -5,6 +5,7 @@
       <root url="jar://$PROJECT_DIR$/lib/jlibsvm-0.911.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/json-simple-1.1.1.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/java-json.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jsoup-1.11.1.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

@@ -54,12 +54,6 @@ public class Controller {
         NaturalLanguageProcessor.initialise(dh);
         initialiseStocks();
 
-        new Thread(() -> {
-            processYahooHistories();
-            downloadStockHistory();
-            TechnicalAnalyser.processUncalculated();
-        }).start();
-
         initialiseClocks();
         initialiseDisplay();
         updateStockValues();
@@ -69,6 +63,20 @@ public class Controller {
         for (LiveStockRecord stock : records) stock.updateChart(dh);
 
         startRealTime();
+
+        new Thread(() -> {
+            processYahooHistories();
+            downloadStockHistory();
+            //TechnicalAnalyser.processUncalculated();
+        }).start();
+
+        new Thread(() -> {
+            try {
+                NaturalLanguageProcessor.enumerateWordsFromArticles(2);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }).start();
 
         new Thread(() -> {
             try {
@@ -104,10 +112,10 @@ public class Controller {
             dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0, PRIMARY KEY (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (ID int AUTO_INCREMENT NOT NULL, Gram varchar(1000) NOT NULL UNIQUE, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, Occurrences int DEFAULT 1, Blacklisted BIT DEFAULT 0, PRIMARY KEY (ID));");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (Gram varchar(1000) NOT NULL UNIQUE, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0, PRIMARY KEY (Gram));");
 
             if(!System.getProperty("os.name").contains("Linux")) //MySQL 5.6 or lower doesn't support large unique keys
-                dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, PRIMARY KEY (ID), UNIQUE (Symbol, URL), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
+                dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Enumerated BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, PRIMARY KEY (ID), UNIQUE (Symbol, URL), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
 
             dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4) NOT NULL, Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL,PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS banktransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Amount double SIGNED NOT NULL, PRIMARY KEY (ID));");

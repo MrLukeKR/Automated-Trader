@@ -50,8 +50,16 @@ public class Controller {
     public void initialize() throws SQLException, JSONException, InterruptedException {
         initialiseConnections();
         initialiseDatabase();
-        TechnicalAnalyser.setDBHandler(dh);
+        TechnicalAnalyser.initialise(dh);
+        NaturalLanguageProcessor.initialise(dh);
         initialiseStocks();
+
+        new Thread(() -> {
+            processYahooHistories();
+            downloadStockHistory();
+            TechnicalAnalyser.processUncalculated();
+        }).start();
+
         initialiseClocks();
         initialiseDisplay();
         updateStockValues();
@@ -62,12 +70,11 @@ public class Controller {
 
         startRealTime();
 
-        TechnicalAnalyser.processUncalculated();
-
         new Thread(() -> {
             try {
                 updateNews();
                 downloadArticles();
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -177,6 +184,15 @@ public class Controller {
 
     @FXML
     public void startRealTime() {
+        new Thread(() -> {
+            while (!quit) updateClocks();
+            try {
+                TimeUnit.MILLISECONDS.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
         new Thread(()-> {
             while (!quit) {
                 try { TimeUnit.MILLISECONDS.sleep(1000); } catch (InterruptedException e) { e.printStackTrace(); }
@@ -184,11 +200,6 @@ public class Controller {
                 int s = LocalTime.now().getSecond();
                 int m = LocalTime.now().getMinute();
                 int cycle = m % downloadInterval;
-
-                double progressVal=((s+1) + cycle * 60) / (downloadInterval * 60.0f);
-
-                liveStockProgressBar.setProgress(progressVal);
-                updateClocks();
 
                 if(cycle == 0 && s == 0) {
                     updateStockData();
@@ -224,29 +235,37 @@ public class Controller {
         try {
             stocks = dh.executeQuery("SELECT Symbol FROM indices");
         } catch (SQLException e) { e.printStackTrace(); }
+    }
 
-        new Thread(() -> {
-            for (String symbol : stocks) {
-                File file = new File("res/historicstocks/" + symbol + ".csv");
+    private void processYahooHistories() {
+        for (String symbol : stocks) {
+            File file = new File("res/historicstocks/" + symbol + ".csv");
+
+            if (file.exists())
                 try {
                     StockRecordParser.importDailyMarketData(file, symbol, dh);
+                    System.out.println("Successfully committed complete Yahoo records of " + symbol + " to the database!");
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            else
+                System.err.println("No Yahoo history available for " + symbol);
+        }
+    }
 
-                System.out.println("Successfully committed complete Yahoo records of " + symbol + " to the database!");
-
-                ArrayList<String> temp = null;
-                try {
-                    temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&datatype=csv&outputsize=full&apikey=" + avh.getApiKey());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                System.out.println("Downloaded full history of " + symbol);
-                StockRecordParser.importDailyMarketData(temp, symbol, dh);
-                System.out.println("Successully committed " + symbol + " full history to the database!");
+    private void downloadStockHistory() {
+        for (String symbol : stocks) {
+            ArrayList<String> temp = null;
+            try {
+                temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&datatype=csv&outputsize=full&apikey=" + avh.getApiKey());
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        }).start();
+
+            System.out.println("Downloaded full history of " + symbol);
+            StockRecordParser.importDailyMarketData(temp, symbol, dh);
+            System.out.println("Successully committed " + symbol + " full history to the database!");
+        }
 
         for (String symbol : stocks) {
             try {
@@ -365,14 +384,15 @@ public class Controller {
             }
 
             if (temp != null && temp.size() >= 2) {
-                System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1));
                 StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), dh);
+                System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1));
 
                 try {
                     temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
                 } catch (IOException e) { }
 
                 StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
+                System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
 
                 curr.updateRecord(dh);
                 curr.setUpdating(false);

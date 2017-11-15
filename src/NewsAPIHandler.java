@@ -125,6 +125,8 @@ public class NewsAPIHandler {
 
                 if (!duplicate.isEmpty()) break;
 
+                System.out.println("Discovered News Article for " + stock + ": " + title);
+
                 ArrayList<String> results = dh.executeQuery("SELECT * FROM newsarticles WHERE Headline = '" + title + "' AND Symbol = '" + stock + "'");
                 String command;
                 if (results.isEmpty())

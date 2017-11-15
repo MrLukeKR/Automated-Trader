@@ -4,7 +4,7 @@ import java.util.ArrayList;
 public class TechnicalAnalyser {
     static private DatabaseHandler dh;
 
-    static public void setDBHandler(DatabaseHandler db) {
+    static public void initialise(DatabaseHandler db) {
         dh = db;
     }
 

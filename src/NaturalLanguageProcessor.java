@@ -61,7 +61,7 @@ public class NaturalLanguageProcessor {
         return sentence.trim();
     }
 
-    static public void enumerateWordsFromArticles(int n) throws SQLException {
+    static public void enumerateNGramsFromArticles(int n) throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 0");
         for (String unprocessedID : unprocessedIDs) {
             String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
@@ -84,16 +84,23 @@ public class NaturalLanguageProcessor {
                 Set<String> noDuplicateSentences = new HashSet<>(cSentences);
 
                 for (String ngram : noDuplicateNGrams)
-                    if (ngram != null) {
-                        dh.executeCommand("INSERT INTO ngrams(Gram, n) VALUES ('" + ngram + "'," + ngram.split(" ").length + ") ON DUPLICATE KEY UPDATE Documents = Documents + 1;");
-                        int occurrences = Collections.frequency(ngrams, ngram);
-                        dh.executeCommand("UPDATE ngrams SET Occurrences = Occurrences + " + occurrences + " WHERE Gram = '" + ngram + "';");
-                    }
+                    if (ngram != null)
+                        try {
+                            dh.executeCommand("INSERT INTO ngrams(Gram, n) VALUES ('" + ngram + "'," + ngram.split(" ").length + ") ON DUPLICATE KEY UPDATE Documents = Documents + 1;");
+                            int occurrences = Collections.frequency(ngrams, ngram);
+                            dh.executeCommand("UPDATE ngrams SET Occurrences = Occurrences + " + occurrences + " WHERE Gram = '" + ngram + "';");
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
 
                 for (String cSentence : noDuplicateSentences)
                     if (cSentence != null && cSentence.split(" ").length > n) {
-                        dh.executeCommand("INSERT INTO ngrams(Gram, n) VALUES ('" + cSentence + "'," + cSentence.split(" ").length + ") ON DUPLICATE KEY UPDATE Documents = Documents + 1;");
-                        dh.executeCommand("UPDATE ngrams SET Occurrences = Occurrences + " + Collections.frequency(cSentences, cSentence) + " WHERE Gram = '" + cSentence + "';");
+                        try {
+                            dh.executeCommand("INSERT INTO ngrams(Gram, n) VALUES ('" + cSentence + "'," + cSentence.split(" ").length + ") ON DUPLICATE KEY UPDATE Documents = Documents + 1;");
+                            dh.executeCommand("UPDATE ngrams SET Occurrences = Occurrences + " + Collections.frequency(cSentences, cSentence) + " WHERE Gram = '" + cSentence + "';");
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
             }
 

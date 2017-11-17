@@ -72,7 +72,7 @@ public class Controller {
 
         new Thread(() -> {
             try {
-                NaturalLanguageProcessor.enumerateWordsFromArticles(2);
+                NaturalLanguageProcessor.enumerateNGramsFromArticles(2);
             } catch (SQLException e) {
                 e.printStackTrace();
             }

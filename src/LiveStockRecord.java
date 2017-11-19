@@ -118,15 +118,22 @@ public class LiveStockRecord {
         });
     }
 
+    private int getLastTradeDay() {
+        switch (Calendar.getInstance().get(Calendar.DAY_OF_WEEK)) {
+            case Calendar.MONDAY:
+                return 3;
+            case Calendar.SUNDAY:
+                return 2;
+            default:
+                return 1;
+        }
+    }
+
     private float getPreviousPrice(DatabaseHandler dh){
         ArrayList<String> pPrice = null;
         try {
-            int subtractDays = 1;
 
-            if(Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY)
-                subtractDays = 3;
-
-            pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate = SUBDATE(CURDATE()," + subtractDays + ") ORDER BY TradeDate DESC LIMIT 1;"));
+            pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate = SUBDATE(CURDATE()," + getLastTradeDay() + ") ORDER BY TradeDate DESC LIMIT 1;"));
         } catch (SQLException e) { e.printStackTrace(); }
 
         if(pPrice == null || pPrice.isEmpty())
@@ -154,9 +161,12 @@ public class LiveStockRecord {
 
             if(prevPrice < 0 || currPrice < 0) return;
 
-            ArrayList<String> statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
             yAxis.setLowerBound(Integer.MAX_VALUE);
             yAxis.setUpperBound(Integer.MIN_VALUE);
+            ArrayList<String> statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
+
+            if (statistics.isEmpty())
+                statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = SUBDATE(CURDATE(), " + getLastTradeDay() + ") AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
             xAxis.setLowerBound(-statistics.size() + 1);
 
             for(int time = 0; time < statistics.size(); time++){

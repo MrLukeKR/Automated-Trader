@@ -21,7 +21,7 @@
                                     </ScrollPane>
                               </TitledPane>
                             <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0"
-                                        text="Statistics">
+                                        text="Control Panel">
                                     <ScrollPane />
                               </TitledPane>
                         </VBox>
@@ -68,7 +68,7 @@
                                             </VBox>
                                         </left>
                                         <center>
-                                            <PieChart fx:id="diversificationChart" title="Share Division"
+                                            <PieChart fx:id="diversificationChart" title="Capital Allocation"
                                                       BorderPane.alignment="CENTER"/>
                                         </center>
                                     </BorderPane>

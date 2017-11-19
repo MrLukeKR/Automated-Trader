@@ -3,9 +3,13 @@
 <?import javafx.scene.chart.CategoryAxis?>
 <?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.chart.PieChart?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.162-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
+<?import javafx.scene.text.Font?>
+<AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
+            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
+            fx:controller="Controller">
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
                   <BorderPane prefHeight="200.0" prefWidth="200.0">
@@ -16,7 +20,8 @@
                                           <VBox fx:id="newsBox" prefHeight="330.0" prefWidth="400.0" />
                                     </ScrollPane>
                               </TitledPane>
-                              <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0" text="Latest Tweets">
+                            <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0"
+                                        text="Statistics">
                                     <ScrollPane />
                               </TitledPane>
                         </VBox>
@@ -41,40 +46,71 @@
                      </top>
                      <center>
                         <VBox BorderPane.alignment="CENTER">
-                              <TitledPane animated="false" collapsible="false" prefHeight="200.0" prefWidth="200.0" text="Portfolio">
-                                    <FlowPane prefHeight="200.0" prefWidth="200.0">
+                            <TitledPane animated="false" collapsible="false" prefHeight="300.0" prefWidth="870.0"
+                                        text="Portfolio Optimisation">
+                                <content>
+                                    <BorderPane prefHeight="200.0" prefWidth="200.0">
+                                        <left>
+                                            <VBox BorderPane.alignment="CENTER">
+                                                <children>
+                                                    <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="17.0"
+                                                           prefWidth="200.0" text="Stocks Owned" textAlignment="CENTER">
+                                                        <font>
+                                                            <Font size="16.0"/>
+                                                        </font>
+                                                    </Label>
+                                                    <ScrollPane hbarPolicy="NEVER" prefHeight="230.0" prefWidth="200.0">
+                                                        <content>
+                                                            <VBox prefHeight="230.0" prefWidth="185.0"/>
+                                                        </content>
+                                                    </ScrollPane>
+                                                </children>
+                                            </VBox>
+                                        </left>
+                                        <center>
+                                            <PieChart fx:id="diversificationChart" title="Share Division"
+                                                      BorderPane.alignment="CENTER"/>
+                                        </center>
+                                    </BorderPane>
+                                </content>
+                            </TitledPane>
+                            <TitledPane animated="false" collapsible="false" prefHeight="200.0" prefWidth="200.0"
+                                        text="Profit/Loss">
+                                <FlowPane prefHeight="171.0" prefWidth="868.0">
                         <VBox>
                            <children>
-                              <HBox prefHeight="120.0" prefWidth="190.0">
+                               <HBox prefHeight="60.0" prefWidth="190.0">
                                  <children>
                                                       <VBox prefHeight="200.0" prefWidth="100.0">
                                                             <Label text="Balance:" />
                                                             <Label text="Stock Value:" />
                                        <Separator prefWidth="200.0" />
-                                       <Label layoutX="10.0" layoutY="28.0" text="Total:" />
+                                                          <Label text="Loss Cut-off:"/>
+                                                          <Label text="Target:"/>
+                                                          <Label text="Profit/Loss:"/>
+                                                          <Separator prefWidth="200.0"/>
+                                                          <Label layoutX="10.0" layoutY="28.0" text="Total:">
+                                                              <font>
+                                                                  <Font name="System Bold" size="12.0"/>
+                                                              </font>
+                                                          </Label>
                                                       </VBox>
                                                       <VBox prefHeight="200.0" prefWidth="90.0">
                                                             <Label fx:id="currentBalanceLabel" text="0.00" />
                                                             <Label fx:id="stockValueLabel" text="0.00" />
                                        <Separator prefWidth="200.0" />
+                                                          <Label fx:id="cutoffLabel" text="0.00"/>
+                                                          <Label fx:id="targetLabel" text="0.00"/>
+                                                          <Label fx:id="profitLossLabel" text="0.00"/>
+                                                          <Separator prefWidth="200.0"/>
                                        <Label fx:id="totalBalanceLabel" layoutX="10.0" layoutY="28.0" text="0.00" />
                                                       </VBox>
                                  </children>
                               </HBox>
-                              <Separator prefHeight="1.0" prefWidth="190.0" />
-                              <FlowPane prefHeight="80.0" prefWidth="190.0">
-                                 <children>
-                                    <Label prefHeight="18.0" prefWidth="75.0" text="Amount:" />
-                                    <TextField fx:id="amountField" prefHeight="28.0" prefWidth="114.0" />
-                                    <ChoiceBox fx:id="symbolChoiceBox" prefHeight="25.0" prefWidth="190.0" />
-                                    <Button fx:id="sellButton" mnemonicParsing="false" onAction="#sellStock" prefHeight="25.0" prefWidth="90.0" text="Sell" />
-                                    <Separator orientation="VERTICAL" prefHeight="25.0" prefWidth="10.0" />
-                                    <Button fx:id="buyButton" mnemonicParsing="false" onAction="#buyStock" prefHeight="25.0" prefWidth="90.0" text="Buy" />
-                                 </children>
-                              </FlowPane>
+                               <Separator prefHeight="10.0" prefWidth="190.0"/>
                            </children>
                         </VBox>
-                                          <LineChart fx:id="portfolioChart" prefHeight="200.0" prefWidth="600.0">
+                                    <LineChart fx:id="portfolioChart" prefHeight="151.0" prefWidth="600.0">
                                             <xAxis>
                                               <CategoryAxis side="BOTTOM" />
                                             </xAxis>

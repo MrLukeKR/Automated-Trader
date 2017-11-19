@@ -1,7 +1,9 @@
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.chart.PieChart;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import org.json.JSONException;
@@ -40,11 +42,17 @@ public class Controller {
     @FXML FlowPane timePane;
     @FXML TextArea infoBox;
     @FXML VBox newsBox;
-    @FXML ChoiceBox symbolChoiceBox;
-    @FXML TextField amountField;
     @FXML Label stockValueLabel;
     @FXML Label currentBalanceLabel;
     @FXML Label totalBalanceLabel;
+    @FXML
+    Label cutoffLabel;
+    @FXML
+    Label targetLabel;
+    @FXML
+    Label profitLossLabel;
+    @FXML
+    PieChart diversificationChart;
 
     boolean updating = false;
 
@@ -158,8 +166,6 @@ public class Controller {
     }
 
     private void initialiseDisplay() {
-        symbolChoiceBox.setItems(FXCollections.observableArrayList(stocks));
-
         for (String curr : stocks) {
             try {
                 String name = dh.executeQuery("SELECT Name FROM indices WHERE Symbol='" + curr + "';").get(0);
@@ -282,36 +288,25 @@ public class Controller {
     }
 
     @FXML
-    private void buyStock(){
-        if(!amountField.getText().isEmpty() && amountField.getText().matches(IS_NUMERIC)) {
-            try {
-                int amount = Integer.parseInt(amountField.getText());
+    private void buyStock(int amount, String stock) throws SQLException {
+        float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
+        float totalCost = cost * amount;
+        float balance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
 
-                String stock = symbolChoiceBox.getValue().toString();
-                float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock  + "' ORDER BY TradeDateTime DESC LIMIT 1" ).get(0));
-
-                float totalCost = cost * amount;
-
-                float balance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
-
-                if(totalCost <= balance) {
-                    dh.executeCommand("INSERT INTO banktransactions(Amount) VALUES (" + -totalCost + ")");
-                    dh.executeCommand("INSERT INTO tradetransactions(Type,Symbol,Volume,Price) VALUES ('BUY'," +
-                            "'" + stock + "'," +
-                            amount + "," +
-                            cost +
+        if (totalCost <= balance) {
+            dh.executeCommand("INSERT INTO banktransactions(Amount) VALUES (" + -totalCost + ")");
+            dh.executeCommand("INSERT INTO tradetransactions(Type,Symbol,Volume,Price) VALUES ('BUY'," +
+                    "'" + stock + "'," +
+                    amount + "," +
+                    cost +
                     ");");
 
-                    Platform.runLater(() -> {
-                        updateBankBalance();
-                        updateStockValues();
-                        updateTotalWorth();
-                    });
-                }
-            } catch (SQLException e) { e.printStackTrace(); }
+            Platform.runLater(() -> {
+                updateBankBalance();
+                updateStockValues();
+                updateTotalWorth();
+            });
         }
-
-        amountField.clear();
     }
 
     private void updateTotalWorth(){
@@ -319,10 +314,6 @@ public class Controller {
         float stockWorth = Float.parseFloat(stockValueLabel.getText());
 
         totalBalanceLabel.setText(String.valueOf(bankBalance + stockWorth));
-    }
-
-    private void buyStock(String name, int amount){
-
     }
 
     private int getHeldStocks(String stock){
@@ -339,12 +330,8 @@ public class Controller {
     }
 
     @FXML
-    private void sellStock(){
-        if(!amountField.getText().isEmpty() && amountField.getText().matches(IS_NUMERIC)) {
-            try {
-                int amount = Integer.parseInt(amountField.getText());
+    private void sellStock(int amount, String stock) throws SQLException {
 
-                String stock = symbolChoiceBox.getValue().toString();
                 float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock  + "' ORDER BY TradeDateTime DESC LIMIT 1" ).get(0));
 
                 float totalCost = cost * amount;
@@ -366,14 +353,6 @@ public class Controller {
                         updateTotalWorth();
                     });
                 }
-            } catch (SQLException e) { e.printStackTrace(); }
-        }
-
-        amountField.clear();
-    }
-
-    private void sellStock(String name, int amount){
-
     }
 
     private void updateStockData(){

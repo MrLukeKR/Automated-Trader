@@ -6,6 +6,7 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import org.json.JSONException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -54,7 +55,8 @@ public class Controller {
     @FXML
     PieChart diversificationChart;
 
-    boolean updating = false;
+    boolean priceUpdating = false;
+    boolean newsUpdating = false;
 
     @FXML
     public void initialize() throws SQLException, JSONException, InterruptedException {
@@ -69,6 +71,9 @@ public class Controller {
         updateStockValues();
         updateBankBalance();
         updateTotalWorth();
+        updateProfitLoss();
+        updateOptimisationChart();
+        updateStocksOwned();
 
         for (LiveStockRecord stock : records) stock.updateChart(dh);
 
@@ -122,6 +127,7 @@ public class Controller {
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0, PRIMARY KEY (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (Gram varchar(1000) NOT NULL UNIQUE, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0, PRIMARY KEY (Gram));");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS portfolio (Symbol varchar(7) NOT NULL, Allocation double NOT NULL, Held int NOT NULL DEFAULT 0, Investment double NOT NULL DEFAULT 0, PRIMARY KEY (Symbol), FOREIGN KEY (Symbol) REFERENCES Indices (Symbol));");
 
             if(!System.getProperty("os.name").contains("Linux")) //MySQL 5.6 or lower doesn't support large unique keys
                 dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline varchar(255) NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Enumerated BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, PRIMARY KEY (ID), UNIQUE (Symbol, URL), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
@@ -153,7 +159,7 @@ public class Controller {
     private void updateStockValues(){
         float worth = 0;
         try{
-            ArrayList<String> heldStocks = dh.executeQuery("SELECT symbol FROM tradetransactions GROUP BY symbol HAVING SUM(Volume) > 0;");
+            ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM tradetransactions GROUP BY symbol HAVING SUM(Volume) > 0;");
 
             for(String stock : heldStocks) {
                 int volume = getHeldStocks(stock);
@@ -218,7 +224,8 @@ public class Controller {
     }
 
     private void updateNews() throws SQLException, JSONException, InterruptedException {
-        if(System.getProperty("os.name").contains("Linux")) return;
+        if (System.getProperty("os.name").contains("Linux") || newsUpdating) return;
+        newsUpdating = true;
 
         try { NewsAPIHandler.getHistoricNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
 
@@ -237,6 +244,7 @@ public class Controller {
                newsBox.getChildren().add(temp.getNode());
            }
        });
+        newsUpdating = false;
     }
 
     @FXML public void initialiseStocks() {
@@ -309,6 +317,39 @@ public class Controller {
         }
     }
 
+    private void updateStocksOwned() throws SQLException {
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, SUM(Volume) FROM tradetransactions GROUP BY Symbol HAVING SUM(Volume) > 0");
+
+        for (String stock : heldStocks) {
+
+        }
+    }
+
+    private float updateProfitLoss() throws SQLException {
+        float investmentAmount = Float.parseFloat(dh.executeQuery("SELECT SUM(AMOUNT) FROM banktransactions WHERE Type='DEPOSIT';").get(0));
+        float currentBalance = Float.parseFloat(dh.executeQuery("SELECT SUM(AMOUNT) FROM banktransactions").get(0));
+        float potentialTotal = 0;
+
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, SUM(Volume) FROM tradetransactions GROUP BY Symbol HAVING SUM(Volume) > 0");
+
+        for (String stock : heldStocks) {
+            String[] splitStock = stock.split(",");
+            potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+        }
+
+        float total = (currentBalance - investmentAmount + potentialTotal);
+
+        profitLossLabel.setText(String.valueOf(total));
+        if (total > 0)
+            profitLossLabel.setTextFill(Color.GREEN);
+        else if (total == 0)
+            profitLossLabel.setTextFill(Color.BLACK);
+        else
+            profitLossLabel.setTextFill(Color.RED);
+
+        return total;
+    }
+
     private void updateTotalWorth(){
         float bankBalance = Float.parseFloat(currentBalanceLabel.getText());
         float stockWorth = Float.parseFloat(stockValueLabel.getText());
@@ -317,16 +358,13 @@ public class Controller {
     }
 
     private int getHeldStocks(String stock){
-        int bought = 0;
-        int sold = 0;
         try {
-            bought = Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Volume),0) FROM tradetransactions WHERE Symbol='"+ stock +"' AND Type='BUY';").get(0));
-            sold = Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Volume),0) FROM tradetransactions WHERE Symbol='"+ stock +"' AND Type='SELL';").get(0));
+            return Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Volume),0) FROM tradetransactions WHERE Symbol='" + stock + "';").get(0));
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return bought-sold;
+        return 0;
     }
 
     @FXML
@@ -355,9 +393,27 @@ public class Controller {
                 }
     }
 
+    private void updateOptimisationChart() throws SQLException {
+        int total = Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Allocation),0) FROM portfolio;").get(0));
+
+        ArrayList<String> allowance = dh.executeQuery("SELECT Symbol, Allocation FROM portfolio;");
+
+        ArrayList<PieChart.Data> piechartData = new ArrayList<>();
+
+        for (String stock : allowance) {
+            String[] splitStock = stock.split(",");
+            float allocation = Float.parseFloat(splitStock[1]);
+
+            piechartData.add(new PieChart.Data(splitStock[0], allocation));
+        }
+
+        diversificationChart.getData().clear();
+        diversificationChart.getData().addAll(piechartData);
+    }
+
     private void updateStockData(){
-        if (updating) return;
-        updating = true;
+        if (priceUpdating) return;
+        priceUpdating = true;
         for (LiveStockRecord curr : records) {
             curr.setUpdating(true);
             ArrayList<String> temp = null;
@@ -388,9 +444,14 @@ public class Controller {
             Platform.runLater(() -> {
                 updateStockValues();
                 updateTotalWorth();
+                try {
+                    updateProfitLoss();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             });
         }
-        updating = false;
+        priceUpdating = false;
     }
 
     private String downloadArticle(String url) throws IOException, InterruptedException {

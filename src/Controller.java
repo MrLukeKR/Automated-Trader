@@ -46,6 +46,8 @@ public class Controller {
     @FXML Label currentBalanceLabel;
     @FXML Label totalBalanceLabel;
 
+    boolean updating = false;
+
     @FXML
     public void initialize() throws SQLException, JSONException, InterruptedException {
         initialiseConnections();
@@ -67,7 +69,7 @@ public class Controller {
         new Thread(() -> {
             processYahooHistories();
             downloadStockHistory();
-            //TechnicalAnalyser.processUncalculated();
+            TechnicalAnalyser.processUncalculated();
         }).start();
 
         new Thread(() -> {
@@ -82,7 +84,6 @@ public class Controller {
             try {
                 updateNews();
                 downloadArticles();
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -193,24 +194,17 @@ public class Controller {
     @FXML
     public void startRealTime() {
         new Thread(() -> {
-            while (!quit) updateClocks();
-            try {
-                TimeUnit.MILLISECONDS.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
 
-        new Thread(()-> {
             while (!quit) {
                 try { TimeUnit.MILLISECONDS.sleep(1000); } catch (InterruptedException e) { e.printStackTrace(); }
+                updateClocks();
 
                 int s = LocalTime.now().getSecond();
                 int m = LocalTime.now().getMinute();
                 int cycle = m % downloadInterval;
 
                 if(cycle == 0 && s == 0) {
-                    updateStockData();
+                    new Thread(() -> updateStockData()).start();
                     //new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
                 }
             }
@@ -383,6 +377,8 @@ public class Controller {
     }
 
     private void updateStockData(){
+        if (updating) return;
+        updating = true;
         for (LiveStockRecord curr : records) {
             curr.setUpdating(true);
             ArrayList<String> temp = null;
@@ -397,14 +393,17 @@ public class Controller {
 
                 try {
                     temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
-                } catch (IOException e) { }
 
-                StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
-                System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
 
-                curr.updateRecord(dh);
-                curr.setUpdating(false);
-                curr.updateChart(dh);
+                    StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
+                    System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
+
+                    curr.updateRecord(dh);
+                    curr.setUpdating(false);
+                    curr.updateChart(dh);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             Platform.runLater(() -> {
@@ -412,6 +411,7 @@ public class Controller {
                 updateTotalWorth();
             });
         }
+        updating = false;
     }
 
     private String downloadArticle(String url) throws IOException, InterruptedException {

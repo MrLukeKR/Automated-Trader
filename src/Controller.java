@@ -53,7 +53,9 @@ public class Controller {
     @FXML
     Label profitLossLabel;
     @FXML
-    PieChart diversificationChart;
+    PieChart allocationChart;
+    @FXML
+    PieChart componentChart;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -72,7 +74,8 @@ public class Controller {
         updateBankBalance();
         updateTotalWorth();
         updateProfitLoss();
-        updateOptimisationChart();
+        updateAllocationChart();
+        updateComponentChart();
         updateStocksOwned();
 
         for (LiveStockRecord stock : records) stock.updateChart(dh);
@@ -393,7 +396,21 @@ public class Controller {
                 }
     }
 
-    private void updateOptimisationChart() throws SQLException {
+    private void updateComponentChart() throws SQLException {
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, Held FROM portfolio;");
+
+        ArrayList<PieChart.Data> piechartData = new ArrayList<>();
+
+        for (String stock : heldStocks) {
+            String[] splitStock = stock.split(",");
+            piechartData.add(new PieChart.Data(splitStock[0], Integer.parseInt(splitStock[1])));
+        }
+
+        componentChart.getData().clear();
+        componentChart.getData().addAll(piechartData);
+    }
+
+    private void updateAllocationChart() throws SQLException {
         int total = Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Allocation),0) FROM portfolio;").get(0));
 
         ArrayList<String> allowance = dh.executeQuery("SELECT Symbol, Allocation FROM portfolio;");
@@ -407,8 +424,8 @@ public class Controller {
             piechartData.add(new PieChart.Data(splitStock[0], allocation));
         }
 
-        diversificationChart.getData().clear();
-        diversificationChart.getData().addAll(piechartData);
+        allocationChart.getData().clear();
+        allocationChart.getData().addAll(piechartData);
     }
 
     private void updateStockData(){

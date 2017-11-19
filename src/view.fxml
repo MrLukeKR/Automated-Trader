@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.chart.CategoryAxis?>
-<?import javafx.scene.chart.LineChart?>
-<?import javafx.scene.chart.NumberAxis?>
-<?import javafx.scene.chart.PieChart?>
+<?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
@@ -68,8 +65,12 @@
                                             </VBox>
                                         </left>
                                         <center>
-                                            <PieChart fx:id="diversificationChart" title="Capital Allocation"
+                                            <HBox>
+                                                <PieChart fx:id="allocationChart" title="Fund Allocation"
                                                       BorderPane.alignment="CENTER"/>
+                                                <PieChart fx:id="componentChart" title="Portfolio Components"
+                                                          BorderPane.alignment="CENTER"/>
+                                            </HBox>
                                         </center>
                                     </BorderPane>
                                 </content>

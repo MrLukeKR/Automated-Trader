@@ -10,6 +10,14 @@ public class NaturalLanguageProcessor {
 
     static public void initialise(DatabaseHandler dbh) throws SQLException {
         dh = dbh;
+
+        ArrayList<String> uselessSentences = dh.executeQuery("SELECT Sentence FROM sentences WHERE Blacklisted = 1");
+
+        if (STOP_WORDS.isEmpty())
+            for (String sentence : uselessSentences)
+                if (!sentence.isEmpty())
+                    STOP_WORDS.add(sentence);
+
         ArrayList<String> stopWords = dh.executeQuery("SELECT Gram FROM ngrams WHERE Blacklisted = 1");
 
         if (STOP_WORDS.isEmpty())
@@ -61,8 +69,9 @@ public class NaturalLanguageProcessor {
         return sentence.trim();
     }
 
-    static public void enumerateNGramsFromArticles(int n) throws SQLException {
+    static public void enumerateSentencesFromArticles() throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 0");
+        System.out.println("Enumerating sentences for " + unprocessedIDs.size() + " documents...");
         for (String unprocessedID : unprocessedIDs) {
             String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
             if (unprocessed != null) {
@@ -72,16 +81,46 @@ public class NaturalLanguageProcessor {
 
                 for (String sentence : sentences) {
                     String cSentence = cleanSentence(sentence, false);
-                    if (cSentence != null) {
+                    if (cSentence != null)
                         cSentences.add(cSentence);
+                }
+
+                Set<String> noDuplicateSentences = new HashSet<>(cSentences);
+                for (String cSentence : noDuplicateSentences)
+                    try {
+                        dh.executeCommand("INSERT INTO sentences(Sentence) VALUES ('" + cSentence + "') ON DUPLICATE KEY UPDATE Documents = Documents + 1;");
+                        dh.executeCommand("UPDATE sentences SET Occurrences = Occurrences + " + Collections.frequency(cSentences, cSentence) + " WHERE sentence = '" + cSentence + "';");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+            }
+
+            dh.executeCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = " + unprocessedID);
+        }
+    }
+
+    static public void determineUselessSentences() {
+
+    }
+
+    static public void enumerateNGramsFromArticles(int n) throws SQLException {
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0");
+        System.out.println("Enumerating n-grams for " + unprocessedIDs.size() + " documents...");
+        for (String unprocessedID : unprocessedIDs) {
+            String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
+            if (unprocessed != null) {
+                ArrayList<String> sentences = splitToSentences(unprocessed, Locale.US);
+                ArrayList<String> ngrams = new ArrayList<>();
+
+                for (String sentence : sentences) {
+                    String cSentence = cleanSentence(sentence, false);
+                    if (cSentence != null)
                         for (int i = 1; i <= n; i++)
                             if (cSentence.split(" ").length >= n)
                                 ngrams.addAll(splitToNGrams(cSentence, Locale.US, i));
-                    }
                 }
 
                 Set<String> noDuplicateNGrams = new HashSet<>(ngrams);
-                Set<String> noDuplicateSentences = new HashSet<>(cSentences);
 
                 for (String ngram : noDuplicateNGrams)
                     if (ngram != null)
@@ -92,20 +131,11 @@ public class NaturalLanguageProcessor {
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-
-                for (String cSentence : noDuplicateSentences)
-                    if (cSentence != null && cSentence.split(" ").length > n) {
-                        try {
-                            dh.executeCommand("INSERT INTO ngrams(Gram, n) VALUES ('" + cSentence + "'," + cSentence.split(" ").length + ") ON DUPLICATE KEY UPDATE Documents = Documents + 1;");
-                            dh.executeCommand("UPDATE ngrams SET Occurrences = Occurrences + " + Collections.frequency(cSentences, cSentence) + " WHERE Gram = '" + cSentence + "';");
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
             }
 
-            dh.executeCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = " + unprocessedID);
+            dh.executeCommand("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
         }
+        System.out.println("Finished processing n-grams");
     }
 
     static public ArrayList<String> splitToNGrams(ArrayList<String> cleanedSentences, Locale languageLocale, int n) {

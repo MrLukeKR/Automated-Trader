@@ -33,7 +33,7 @@
                                                 <right>
                                                     <ProgressBar fx:id="newsFeedProgress" prefHeight="18.0"
                                                                  prefWidth="275.0" progress="0.0"
-                                                                 BorderPane.alignment="CENTER"/>
+                                                                 BorderPane.alignment="CENTER" visible="false"/>
                                                 </right>
                                                 <center>
                                                     <Label text="News Feed" BorderPane.alignment="CENTER">

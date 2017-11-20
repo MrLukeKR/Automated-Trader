@@ -69,10 +69,11 @@ public class Controller {
     public void initialize() throws SQLException, JSONException, InterruptedException {
         initialiseConnections();
         initialiseDatabase();
+
         TechnicalAnalyser.initialise(dh);
         NaturalLanguageProcessor.initialise(dh);
-        initialiseStocks();
 
+        initialiseStocks();
         initialiseClocks();
         initialiseDisplay();
         updateStockValues();
@@ -82,6 +83,8 @@ public class Controller {
         updateAllocationChart();
         updateComponentChart();
         updateStocksOwned();
+
+        checkServices();
 
         for (LiveStockRecord stock : records) stock.updateChart(dh);
 
@@ -99,11 +102,25 @@ public class Controller {
                 downloadArticles();
                 NaturalLanguageProcessor.enumerateSentencesFromArticles();
                 NaturalLanguageProcessor.determineUselessSentences();
-                NaturalLanguageProcessor.enumerateNGramsFromArticles(3);
+                //NaturalLanguageProcessor.enumerateNGramsFromArticles(3);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }).start();
+    }
+
+    private void checkServices() throws SQLException {
+        int newsCalls = Integer.parseInt(dh.executeQuery("SELECT COALESCE(Calls, 0) FROM apicalls WHERE Name='INTRINIO' AND Date=CURDATE()").get(0)),
+                callLimit = Integer.parseInt(dh.executeQuery("SELECT COALESCE(DailyLimit,0) FROM apimanagement WHERE Name='INTRINIO';").get(0));
+
+        if (newsCalls < callLimit) {
+            newsFeedAvailability.setFill(Color.GREEN);
+            newsFeedAvailability.setStroke(Color.GREEN);
+        } else {
+            newsFeedAvailability.setFill(Color.RED);
+            newsFeedAvailability.setStroke(Color.RED);
+        }
+
     }
 
     private void initialiseConnections() {
@@ -228,7 +245,11 @@ public class Controller {
         if (newsUpdating) return;
         newsUpdating = true;
 
-        try { NewsAPIHandler.getHistoricNews(stocks, dh); } catch (IOException e) { e.printStackTrace(); }
+        try {
+            NewsAPIHandler.getHistoricNews(stocks, dh, newsFeedProgress);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         Platform.runLater(() -> {
            newsBox.getChildren().clear();
@@ -444,10 +465,11 @@ public class Controller {
                 try {
                     temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
 
-                    if (temp.size() > 1)
+                    if (temp.size() > 1) {
                         StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
 
-                    System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
+                        System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
+                    }
 
                     curr.updateRecord(dh);
                     curr.setUpdating(false);

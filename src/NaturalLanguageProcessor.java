@@ -88,7 +88,7 @@ public class NaturalLanguageProcessor {
                 Set<String> noDuplicateSentences = new HashSet<>(cSentences);
                 for (String cSentence : noDuplicateSentences)
                     try {
-                        if (dh.executeQuery("SELECT * FROM sentences WHERE sentence = '" + cSentence + "');").isEmpty())
+                        if (dh.executeQuery("SELECT * FROM sentences WHERE sentence = '" + cSentence + "';").isEmpty())
                             dh.executeCommand("INSERT INTO sentences(Sentence) VALUES ('" + cSentence + "');");
 
                         dh.executeCommand("UPDATE sentences SET Documents = Documents + 1, Occurrences = Occurrences + " + Collections.frequency(cSentences, cSentence) + " WHERE sentence = '" + cSentence + "';");

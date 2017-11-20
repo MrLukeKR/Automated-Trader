@@ -1,3 +1,4 @@
+import javafx.scene.control.ProgressBar;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -6,9 +7,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.Authenticator;
-import java.net.PasswordAuthentication;
-import java.net.URL;
+import java.net.*;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -73,7 +72,26 @@ public class NewsAPIHandler {
         URL url = new URL(INTRINIO_CSV_CALL + stock);
 
         TimeUnit.MILLISECONDS.sleep(1000); // To prevent blocking
-        BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+
+        URLConnection connect = url.openConnection();
+        InputStreamReader isr = null;
+
+        try {
+            isr = new InputStreamReader(url.openStream());
+        } catch (IOException e) {
+            HttpURLConnection http = (HttpURLConnection) connect;
+            if (http.getResponseCode() == 429)
+                System.err.println("Too many requests"); //TODO: Make a GUI graphic that shows this has occurred
+
+            ((HttpURLConnection) connect).disconnect();
+
+            dh.executeCommand("INSERT INTO apicalls VALUES ('INTRINIO', CURDATE(), 500) ON DUPLICATE KEY UPDATE Calls = 500;"); //Incase another system uses this program, this database value doesn't get updated, in which case if an error occurs, mark the api as "limit reached"
+        }
+
+        if (isr == null)
+            return new int[]{0, 0};
+
+        BufferedReader br = new BufferedReader(isr);
 
         String curr;
         ArrayList<String> csvArray = new ArrayList<>();
@@ -103,7 +121,7 @@ public class NewsAPIHandler {
         ArrayList<String> newsArray = new ArrayList<String>();
 
         for(int i = 0; i < 2; i++) //Remove preamble
-        br.readLine();
+            br.readLine();
 
         while((curr = br.readLine())!=null)
             newsArray.add(curr);
@@ -193,8 +211,13 @@ public class NewsAPIHandler {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    static public void getHistoricNews(ArrayList<String> stockList, DatabaseHandler dh) throws IOException, SQLException, JSONException, InterruptedException {
-        for(String symbol : stockList)
-            getHistoricNews(symbol,dh);
+    static public void getHistoricNews(ArrayList<String> stockList, DatabaseHandler dh, ProgressBar pb) throws IOException, SQLException, JSONException, InterruptedException {
+        pb.setVisible(true);
+        double i = 0, t = stockList.size();
+        for (String symbol : stockList) {
+            getHistoricNews(symbol, dh);
+            pb.setProgress(i++ / t);
+        }
+        pb.setVisible(false);
     }
 }

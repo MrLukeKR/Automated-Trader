@@ -47,22 +47,15 @@ public class Controller {
     @FXML Label stockValueLabel;
     @FXML Label currentBalanceLabel;
     @FXML Label totalBalanceLabel;
-    @FXML
-    Label cutoffLabel;
-    @FXML
-    Label targetLabel;
-    @FXML
-    Label profitLossLabel;
-    @FXML
-    PieChart allocationChart;
-    @FXML
-    PieChart componentChart;
-    @FXML
-    Circle newsFeedAvailability;
-    @FXML
-    ProgressBar newsFeedProgress;
-    @FXML
-    ProgressBar nlpProgress;
+    @FXML Label cutoffLabel;
+    @FXML Label targetLabel;
+    @FXML Label profitLossLabel;
+    @FXML PieChart allocationChart;
+    @FXML PieChart componentChart;
+    @FXML Circle newsFeedAvailability;
+    @FXML ProgressBar newsFeedProgress;
+    @FXML ProgressBar nlpProgress;
+    @FXML VBox stockBox;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -113,8 +106,13 @@ public class Controller {
     }
 
     private void checkServices() throws SQLException {
-        int newsCalls = Integer.parseInt(dh.executeQuery("SELECT COALESCE(Calls, 0) FROM apicalls WHERE Name='INTRINIO' AND Date=CURDATE()").get(0)),
-                callLimit = Integer.parseInt(dh.executeQuery("SELECT COALESCE(DailyLimit,0) FROM apimanagement WHERE Name='INTRINIO';").get(0));
+        int newsCalls = 0;
+        int callLimit = Integer.parseInt(dh.executeQuery("SELECT COALESCE(DailyLimit,0) FROM apimanagement WHERE Name='INTRINIO';").get(0));
+
+        ArrayList<String> calls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Name='INTRINIO' AND Date=CURDATE()");
+
+        if(!calls.isEmpty())
+            newsCalls = Integer.parseInt(calls.get(0));
 
         if (newsCalls < callLimit) {
             newsFeedAvailability.setFill(Color.GREEN);
@@ -238,6 +236,7 @@ public class Controller {
 
                 if(cycle == 0 && s == 0) {
                     new Thread(() -> updateStockData()).start();
+                    try { checkServices(); } catch (SQLException e) { e.printStackTrace(); }
                     //new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
                 }
             }
@@ -338,6 +337,9 @@ public class Controller {
                 updateBankBalance();
                 updateStockValues();
                 updateTotalWorth();
+                try {
+                    updateProfitLoss();
+                } catch (SQLException e) {  e.printStackTrace(); }
             });
         }
     }
@@ -345,24 +347,26 @@ public class Controller {
     private void updateStocksOwned() throws SQLException {
         ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, SUM(Volume) FROM tradetransactions GROUP BY Symbol HAVING SUM(Volume) > 0");
 
-        for (String stock : heldStocks) {
+        stockBox.getChildren().clear();
 
+        for (String stock : heldStocks) {
+            String[] splitStock = stock.split(",");
+            stockBox.getChildren().add(new Label(splitStock[0] + " x" + splitStock[1]));
         }
     }
 
     private float updateProfitLoss() throws SQLException {
-        float investmentAmount = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(AMOUNT),0) FROM banktransactions WHERE Type='DEPOSIT';").get(0));
-        float currentBalance = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(AMOUNT),0) FROM banktransactions").get(0));
+        float nonLiquidBalance = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(AMOUNT),0) FROM banktransactions WHERE Type!='DEPOSIT'").get(0));
         float potentialTotal = 0;
 
         ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, SUM(Volume) FROM tradetransactions GROUP BY Symbol HAVING SUM(Volume) > 0");
 
         for (String stock : heldStocks) {
             String[] splitStock = stock.split(",");
-            potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+            potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
         }
 
-        float total = (currentBalance + potentialTotal) - investmentAmount;
+        float total = nonLiquidBalance + potentialTotal;
 
         profitLossLabel.setText(String.valueOf(total));
         if (total > 0)
@@ -414,6 +418,9 @@ public class Controller {
                         updateBankBalance();
                         updateStockValues();
                         updateTotalWorth();
+                        try {
+                            updateProfitLoss();
+                        } catch (SQLException e) { e.printStackTrace(); }
                     });
                 }
     }

@@ -1,3 +1,6 @@
+import javafx.application.Platform;
+import javafx.scene.control.ProgressBar;
+
 import java.sql.SQLException;
 import java.text.BreakIterator;
 import java.util.*;
@@ -69,9 +72,13 @@ public class NaturalLanguageProcessor {
         return sentence.trim();
     }
 
-    static public void enumerateSentencesFromArticles() throws SQLException {
+    static public void enumerateSentencesFromArticles(ProgressBar pb) throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 0");
         System.out.println("Enumerating sentences for " + unprocessedIDs.size() + " documents...");
+
+        double i = 0, t = unprocessedIDs.size();
+        pb.setVisible(true);
+
         for (String unprocessedID : unprocessedIDs) {
             String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
             if (unprocessed != null) {
@@ -97,8 +104,12 @@ public class NaturalLanguageProcessor {
                     }
             }
 
+            final double val = i++ / t;
+            Platform.runLater(() -> pb.setProgress(val));
             dh.executeCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = " + unprocessedID);
         }
+
+        pb.setVisible(false);
     }
 
     static public void determineUselessSentences() {
@@ -140,6 +151,7 @@ public class NaturalLanguageProcessor {
             dh.executeCommand("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
         }
         System.out.println("Finished processing n-grams");
+
     }
 
     static public ArrayList<String> splitToNGrams(ArrayList<String> cleanedSentences, Locale languageLocale, int n) {

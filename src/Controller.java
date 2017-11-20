@@ -61,6 +61,8 @@ public class Controller {
     Circle newsFeedAvailability;
     @FXML
     ProgressBar newsFeedProgress;
+    @FXML
+    ProgressBar nlpProgress;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -76,6 +78,7 @@ public class Controller {
         initialiseStocks();
         initialiseClocks();
         initialiseDisplay();
+
         updateStockValues();
         updateBankBalance();
         updateTotalWorth();
@@ -100,7 +103,7 @@ public class Controller {
             try {
                 updateNews();
                 downloadArticles();
-                NaturalLanguageProcessor.enumerateSentencesFromArticles();
+                NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
                 NaturalLanguageProcessor.determineUselessSentences();
                 //NaturalLanguageProcessor.enumerateNGramsFromArticles(3);
             } catch (Exception e) {

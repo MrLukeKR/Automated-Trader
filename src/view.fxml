@@ -23,26 +23,49 @@
                                 <content>
                                     <BorderPane prefHeight="200.0" prefWidth="200.0">
                                         <bottom>
-                                            <BorderPane prefHeight="25.0" prefWidth="398.0"
-                                                        BorderPane.alignment="CENTER">
-                                                <left>
-                                                    <Circle fx:id="newsFeedAvailability" fill="#00d000" radius="10.0"
-                                                            stroke="WHITE" strokeType="INSIDE"
-                                                            BorderPane.alignment="CENTER"/>
-                                                </left>
-                                                <right>
-                                                    <ProgressBar fx:id="newsFeedProgress" prefHeight="18.0"
-                                                                 prefWidth="275.0" progress="0.0"
-                                                                 BorderPane.alignment="CENTER" visible="false"/>
-                                                </right>
-                                                <center>
-                                                    <Label text="News Feed" BorderPane.alignment="CENTER">
-                                                        <font>
-                                                            <Font name="System Bold" size="14.0"/>
-                                                        </font>
-                                                    </Label>
-                                                </center>
-                                            </BorderPane>
+                                            <FlowPane BorderPane.alignment="CENTER">
+                                                <children>
+                                                    <BorderPane prefHeight="25.0" prefWidth="398.0">
+                                                        <left>
+                                                            <Circle fx:id="newsFeedAvailability" fill="#ffb200"
+                                                                    radius="5.0" stroke="#ffb200" strokeType="INSIDE"
+                                                                    BorderPane.alignment="CENTER"/>
+                                                        </left>
+                                                        <right>
+                                                            <ProgressBar fx:id="newsFeedProgress" prefHeight="18.0"
+                                                                         prefWidth="275.0" progress="0.0"
+                                                                         visible="false" BorderPane.alignment="CENTER"/>
+                                                        </right>
+                                                        <center>
+                                                            <Label text="News Feed" BorderPane.alignment="CENTER">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                        </center>
+                                                    </BorderPane>
+                                                    <BorderPane prefHeight="25.0" prefWidth="398.0">
+                                                        <left>
+                                                            <Circle fx:id="nlpAvailability" fill="#ffb200" radius="5.0"
+                                                                    stroke="#ffb200" strokeType="INSIDE"
+                                                                    BorderPane.alignment="CENTER"/>
+                                                        </left>
+                                                        <right>
+                                                            <ProgressBar fx:id="nlpProgress" prefHeight="18.0"
+                                                                         prefWidth="160.0" progress="0.0"
+                                                                         visible="false" BorderPane.alignment="CENTER"/>
+                                                        </right>
+                                                        <center>
+                                                            <Label text="Natural Language Processor"
+                                                                   BorderPane.alignment="CENTER">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                        </center>
+                                                    </BorderPane>
+                                                </children>
+                                            </FlowPane>
                                         </bottom>
                                     </BorderPane>
                                 </content>
@@ -84,7 +107,8 @@
                                                     </Label>
                                                     <ScrollPane hbarPolicy="NEVER" prefHeight="230.0" prefWidth="200.0">
                                                         <content>
-                                                            <VBox prefHeight="230.0" prefWidth="185.0"/>
+                                                            <VBox fx:id="stockBox" prefHeight="230.0"
+                                                                  prefWidth="185.0"/>
                                                         </content>
                                                     </ScrollPane>
                                                 </children>

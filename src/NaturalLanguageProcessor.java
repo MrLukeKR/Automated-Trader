@@ -88,8 +88,10 @@ public class NaturalLanguageProcessor {
                 Set<String> noDuplicateSentences = new HashSet<>(cSentences);
                 for (String cSentence : noDuplicateSentences)
                     try {
-                        dh.executeCommand("INSERT INTO sentences(Sentence) VALUES ('" + cSentence + "') ON DUPLICATE KEY UPDATE Documents = Documents + 1;");
-                        dh.executeCommand("UPDATE sentences SET Occurrences = Occurrences + " + Collections.frequency(cSentences, cSentence) + " WHERE sentence = '" + cSentence + "';");
+                        if (dh.executeQuery("SELECT * FROM sentences WHERE sentence = '" + cSentence + "');").isEmpty())
+                            dh.executeCommand("INSERT INTO sentences(Sentence) VALUES ('" + cSentence + "');");
+
+                        dh.executeCommand("UPDATE sentences SET Documents = Documents + 1, Occurrences = Occurrences + " + Collections.frequency(cSentences, cSentence) + " WHERE sentence = '" + cSentence + "';");
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -125,9 +127,11 @@ public class NaturalLanguageProcessor {
                 for (String ngram : noDuplicateNGrams)
                     if (ngram != null)
                         try {
-                            dh.executeCommand("INSERT INTO ngrams(Gram, n) VALUES ('" + ngram + "'," + ngram.split(" ").length + ") ON DUPLICATE KEY UPDATE Documents = Documents + 1;");
+                            if (dh.executeQuery("SELECT * FROM ngrams WHERE gram = '" + ngram + "');").isEmpty())
+                                dh.executeCommand("INSERT INTO ngrams(Gram, n) VALUES ('" + ngram + "'," + ngram.split(" ").length + ");");
+
                             int occurrences = Collections.frequency(ngrams, ngram);
-                            dh.executeCommand("UPDATE ngrams SET Occurrences = Occurrences + " + occurrences + " WHERE Gram = '" + ngram + "';");
+                            dh.executeCommand("UPDATE ngrams SET Documents = Documents + 1, Occurrences = Occurrences + " + occurrences + " WHERE Gram = '" + ngram + "';");
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

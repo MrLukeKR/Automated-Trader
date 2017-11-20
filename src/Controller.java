@@ -7,6 +7,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import org.json.JSONException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -56,6 +57,10 @@ public class Controller {
     PieChart allocationChart;
     @FXML
     PieChart componentChart;
+    @FXML
+    Circle newsFeedAvailability;
+    @FXML
+    ProgressBar newsFeedProgress;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;

@@ -186,6 +186,7 @@ public class NewsAPIHandler {
                     try {
                         dh.executeCommand(command);
                     } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
             }

@@ -3,6 +3,7 @@
 <?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.Font?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
             minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
@@ -19,7 +20,32 @@
                               </TitledPane>
                             <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0"
                                         text="Control Panel">
-                                    <ScrollPane />
+                                <content>
+                                    <BorderPane prefHeight="200.0" prefWidth="200.0">
+                                        <bottom>
+                                            <BorderPane prefHeight="25.0" prefWidth="398.0"
+                                                        BorderPane.alignment="CENTER">
+                                                <left>
+                                                    <Circle fx:id="newsFeedAvailability" fill="#00d000" radius="10.0"
+                                                            stroke="WHITE" strokeType="INSIDE"
+                                                            BorderPane.alignment="CENTER"/>
+                                                </left>
+                                                <right>
+                                                    <ProgressBar fx:id="newsFeedProgress" prefHeight="18.0"
+                                                                 prefWidth="275.0" progress="0.0"
+                                                                 BorderPane.alignment="CENTER"/>
+                                                </right>
+                                                <center>
+                                                    <Label text="News Feed" BorderPane.alignment="CENTER">
+                                                        <font>
+                                                            <Font name="System Bold" size="14.0"/>
+                                                        </font>
+                                                    </Label>
+                                                </center>
+                                            </BorderPane>
+                                        </bottom>
+                                    </BorderPane>
+                                </content>
                               </TitledPane>
                         </VBox>
                      </right>
@@ -67,7 +93,7 @@
                                         <center>
                                             <HBox>
                                                 <PieChart fx:id="allocationChart" title="Fund Allocation"
-                                                      BorderPane.alignment="CENTER"/>
+                                                          BorderPane.alignment="CENTER"/>
                                                 <PieChart fx:id="componentChart" title="Portfolio Components"
                                                           BorderPane.alignment="CENTER"/>
                                             </HBox>

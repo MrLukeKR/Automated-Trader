@@ -340,7 +340,7 @@ public class Controller {
             potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
         }
 
-        float total = (currentBalance - investmentAmount + potentialTotal);
+        float total = (currentBalance + potentialTotal) - investmentAmount;
 
         profitLossLabel.setText(String.valueOf(total));
         if (total > 0)
@@ -446,8 +446,9 @@ public class Controller {
                 try {
                     temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
 
+                    if (temp.size() > 1)
+                        StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
 
-                    StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
                     System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
 
                     curr.updateRecord(dh);

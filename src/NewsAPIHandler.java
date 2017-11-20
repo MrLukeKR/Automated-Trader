@@ -121,9 +121,8 @@ public class NewsAPIHandler {
 
                 String data = "'" + stock + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
 
-                ArrayList<String> duplicate = dh.executeQuery("SELECT * FROM newsarticles WHERE URL ='" + link + "' AND Symbol = '" + stock + "'");
-
-                if (!duplicate.isEmpty()) break;
+                if (!dh.executeQuery("SELECT * FROM newsarticles WHERE URL ='" + link + "' AND Symbol = '" + stock + "'").isEmpty())
+                    break;
 
                 System.out.println("Discovered News Article for " + stock + ": " + title);
 
@@ -186,7 +185,8 @@ public class NewsAPIHandler {
 
                     try {
                         dh.executeCommand(command);
-                    }catch (Exception e){ }
+                    } catch (Exception e) {
+                    }
                 }
             }
         } catch (Exception e) { e.printStackTrace(); }

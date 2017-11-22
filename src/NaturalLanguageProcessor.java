@@ -69,7 +69,10 @@ public class NaturalLanguageProcessor {
             sentence = removeStopWords(sentence);                                                   //Remove blacklisted terms
         sentence = sentence.replaceAll("\\s\\s+", " ");                           //Trim multi-spaces
 
-        return sentence.trim();
+        if (sentence.isEmpty())
+            return null;
+        else
+            return sentence.trim();
     }
 
     static public void enumerateSentencesFromArticles(ProgressBar pb) throws SQLException {

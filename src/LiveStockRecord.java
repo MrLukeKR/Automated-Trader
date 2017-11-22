@@ -184,7 +184,7 @@ public class LiveStockRecord {
                 final int t = time, size = statistics.size();
 
                 Platform.runLater(() -> {
-                    if (stockData.getData().size() < size && t >= stockData.getData().size())
+                    if (stockData.getData().size() < size && t + 1 > stockData.getData().size())
                         stockData.getData().add(t, point);
                     else
                         stockData.getData().set(t, point);
@@ -196,6 +196,7 @@ public class LiveStockRecord {
             else if (prevPrice < currPrice)
                 stockData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
             else stockData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
+
         }catch (Exception e) { e.printStackTrace(); }
     }
 

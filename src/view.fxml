@@ -27,8 +27,8 @@
                                                 <children>
                                                     <BorderPane prefHeight="25.0" prefWidth="398.0">
                                                         <left>
-                                                            <Circle fx:id="newsFeedAvailability" fill="#ffb200"
-                                                                    radius="5.0" stroke="#ffb200" strokeType="INSIDE"
+                                                            <Circle fx:id="newsFeedAvailability" fill="#ff0000"
+                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"
                                                                     BorderPane.alignment="CENTER"/>
                                                         </left>
                                                         <right>
@@ -46,8 +46,8 @@
                                                     </BorderPane>
                                                     <BorderPane prefHeight="25.0" prefWidth="398.0">
                                                         <left>
-                                                            <Circle fx:id="nlpAvailability" fill="#ffb200" radius="5.0"
-                                                                    stroke="#ffb200" strokeType="INSIDE"
+                                                            <Circle fx:id="nlpAvailability" fill="#ff0000" radius="5.0"
+                                                                    stroke="#ff0000" strokeType="INSIDE"
                                                                     BorderPane.alignment="CENTER"/>
                                                         </left>
                                                         <right>

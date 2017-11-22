@@ -84,7 +84,6 @@ public class NaturalLanguageProcessor {
             if (unprocessed != null) {
                 ArrayList<String> sentences = splitToSentences(unprocessed, Locale.US);
                 ArrayList<String> cSentences = new ArrayList<>();
-                ArrayList<String> ngrams = new ArrayList<>();
 
                 for (String sentence : sentences) {
                     String cSentence = cleanSentence(sentence, false);

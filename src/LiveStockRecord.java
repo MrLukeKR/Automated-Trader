@@ -45,6 +45,8 @@ public class LiveStockRecord {
         xAxis.setOpacity(0);
         xAxis.setAutoRanging(false);
         yAxis.setAutoRanging(false);
+        yAxis.setLowerBound(Integer.MAX_VALUE);
+        yAxis.setUpperBound(Integer.MIN_VALUE);
 
         stockData.setName(symbol);
 
@@ -161,13 +163,14 @@ public class LiveStockRecord {
 
             if(prevPrice < 0 || currPrice < 0) return;
 
-            yAxis.setLowerBound(Integer.MAX_VALUE);
-            yAxis.setUpperBound(Integer.MIN_VALUE);
             ArrayList<String> statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
 
             if (statistics.isEmpty())
                 statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = SUBDATE(CURDATE(), " + getLastTradeDay() + ") AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
             xAxis.setLowerBound(-statistics.size() + 1);
+
+            if (statistics.size() < stockData.getData().size())
+                stockData.getData().removeAll();
 
             for(int time = 0; time < statistics.size(); time++){
                 float price = Float.parseFloat(statistics.get(time));
@@ -178,15 +181,14 @@ public class LiveStockRecord {
                 rect.setVisible(false);
                 point.setNode(rect);
 
-                if (stockData.getData().size() > statistics.size())
-                    Platform.runLater(() -> stockData.getData().removeAll());
+                final int t = time, size = statistics.size();
 
-                final int t = time;
-
-                if(stockData.getData().size() < statistics.size() && time >= stockData.getData().size())
-                    Platform.runLater(()->stockData.getData().add(t,point));
-                else
-                    Platform.runLater(()->stockData.getData().set(t, point));
+                Platform.runLater(() -> {
+                    if (stockData.getData().size() < size && t >= stockData.getData().size())
+                        stockData.getData().add(t, point);
+                    else
+                        stockData.getData().set(t, point);
+                });
             }
 
             if (prevPrice > currPrice)

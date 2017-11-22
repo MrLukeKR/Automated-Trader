@@ -94,7 +94,6 @@ public class NewsAPIHandler {
         BufferedReader br = new BufferedReader(isr);
 
         String curr;
-        ArrayList<String> csvArray = new ArrayList<>();
 
         curr=br.readLine();
 
@@ -115,7 +114,25 @@ public class NewsAPIHandler {
         URL url = new URL(INTRINIO_CSV_CALL + stock + "&page_number=" + page);
 
         TimeUnit.MILLISECONDS.sleep(1000);
-        BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+        URLConnection connect = url.openConnection();
+        InputStreamReader isr = null;
+
+        try {
+            isr = new InputStreamReader(url.openStream());
+        } catch (IOException e) {
+            HttpURLConnection http = (HttpURLConnection) connect;
+            if (http.getResponseCode() == 429)
+                System.err.println("Too many requests"); //TODO: Make a GUI graphic that shows this has occurred
+
+            ((HttpURLConnection) connect).disconnect();
+
+            dh.executeCommand("INSERT INTO apicalls VALUES ('INTRINIO', CURDATE(), 500) ON DUPLICATE KEY UPDATE Calls = 500;"); //Incase another system uses this program, this database value doesn't get updated, in which case if an error occurs, mark the api as "limit reached"
+        }
+
+        if (isr == null)
+            return;
+
+        BufferedReader br = new BufferedReader(isr);
         String curr;
 
         ArrayList<String> newsArray = new ArrayList<String>();

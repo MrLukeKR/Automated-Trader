@@ -91,7 +91,11 @@ public class Controller {
         startRealTime();
 
         new Thread(() -> {
-            processYahooHistories();
+            try {
+                processYahooHistories();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
             downloadStockHistory();
             TechnicalAnalyser.processUncalculated();
         }).start();
@@ -305,8 +309,10 @@ public class Controller {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    private void processYahooHistories() {
+    private void processYahooHistories() throws SQLException {
         for (String symbol : stocks) {
+            if (!dh.executeQuery("SELECT COALESCE(COUNT(*),0) FROM dailystockprices WHERE Symbol='" + symbol + "';").isEmpty())
+                return;
             File file = new File("res/historicstocks/" + symbol + ".csv");
 
             if (file.exists())
@@ -582,7 +588,7 @@ public class Controller {
     }
 
     private void downloadArticles() throws SQLException {
-        System.out.println("Downloading missing news article content for entire database (in background)...");
+        System.out.println("Downloading missing news article content...");
 
         ArrayList<String> undownloadedArticles = dh.executeQuery("SELECT ID, URL FROM newsarticles WHERE Content IS NULL AND Blacklisted = 0 AND Redirected = 0 AND Duplicate = 0 AND URL != \"\";");
 

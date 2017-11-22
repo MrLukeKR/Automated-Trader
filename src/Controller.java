@@ -53,6 +53,8 @@ public class Controller {
     @FXML PieChart allocationChart;
     @FXML PieChart componentChart;
     @FXML Circle newsFeedAvailability;
+    @FXML
+    Circle nlpAvailability;
     @FXML ProgressBar newsFeedProgress;
     @FXML ProgressBar nlpProgress;
     @FXML VBox stockBox;
@@ -73,6 +75,7 @@ public class Controller {
         initialiseDisplay();
 
         updateStockValues();
+
         updateBankBalance();
         updateTotalWorth();
         updateProfitLoss();
@@ -80,6 +83,7 @@ public class Controller {
         updateComponentChart();
         updateStocksOwned();
 
+        calculateLossCutoff(0.1);
         checkServices();
 
         for (LiveStockRecord stock : records) stock.updateChart(dh);
@@ -105,6 +109,12 @@ public class Controller {
         }).start();
     }
 
+    private void calculateLossCutoff(double percentage) throws SQLException {
+        double amount = Double.parseDouble(dh.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions WHERE Type='DEPOSIT';").get(0)) * (1 - percentage);
+
+        cutoffLabel.setText(String.valueOf(amount));
+    }
+
     private void checkServices() throws SQLException {
         int newsCalls = 0;
         int callLimit = Integer.parseInt(dh.executeQuery("SELECT COALESCE(DailyLimit,0) FROM apimanagement WHERE Name='INTRINIO';").get(0));
@@ -122,6 +132,21 @@ public class Controller {
             newsFeedAvailability.setStroke(Color.RED);
         }
 
+        int unenumerated = Integer.parseInt(dh.executeQuery("SELECT COALESCE(COUNT(*),0) FROM newsarticles WHERE Enumerated=0;").get(0));
+        int untokenised = Integer.parseInt(dh.executeQuery("SELECT COALESCE(COUNT(*),0) FROM newsarticles WHERE Tokenised=0;").get(0));
+        int unprocessed = Integer.parseInt(dh.executeQuery("SELECT COALESCE(COUNT(*),0) FROM newsarticles WHERE Processed=0;").get(0));
+        int total = Integer.parseInt(dh.executeQuery("SELECT COALESCE(COUNT(*),0) FROM newsarticles WHERE Content IS NOT NULL;").get(0));
+
+        if (unenumerated > 0 || untokenised > 0) {
+            nlpAvailability.setFill(Color.ORANGE);
+            nlpAvailability.setStroke(Color.ORANGE);
+        } else if (unprocessed == untokenised && untokenised == unenumerated && total > 0) { //If no NLP operations are being performed then all flags will be negative and therefore NLP module is not working
+            nlpAvailability.setFill(Color.RED);
+            nlpAvailability.setStroke(Color.RED);
+        } else {
+            nlpAvailability.setFill(Color.GREEN);
+            nlpAvailability.setStroke(Color.GREEN);
+        }
     }
 
     private void initialiseConnections() {
@@ -149,7 +174,7 @@ public class Controller {
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (ID int AUTO_INCREMENT NOT NULL PRIMARY KEY, Gram text NOT NULL, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0);");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS portfolio (Symbol varchar(7) NOT NULL, Allocation double NOT NULL, Held int NOT NULL DEFAULT 0, Investment double NOT NULL DEFAULT 0, PRIMARY KEY (Symbol), FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS sentences (ID int AUTO_INCREMENT NOT NULL PRIMARY KEY, Sentence text NOT NULL, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0);");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS sentences (ID int AUTO_INCREMENT NOT NULL PRIMARY KEY, Sentence text NOT NULL, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 0 NOT NULL, Blacklisted BIT DEFAULT 0);");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline text NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Enumerated BIT DEFAULT 0 NOT NULL, Tokenised BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4), Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL,PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS banktransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(10), Amount double SIGNED NOT NULL, PRIMARY KEY (ID));");
@@ -232,12 +257,15 @@ public class Controller {
 
                 int s = LocalTime.now().getSecond();
                 int m = LocalTime.now().getMinute();
+                int h = LocalTime.now().getHour();
                 int cycle = m % downloadInterval;
 
                 if(cycle == 0 && s == 0) {
-                    new Thread(() -> updateStockData()).start();
+                    if (m == 0 && h == 0) new Thread(() -> updateDailyStockData()).start();
+                    new Thread(() -> updateIntradayStockData()).start();
                     try { checkServices(); } catch (SQLException e) { e.printStackTrace(); }
                     //new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
+
                 }
             }
         }).start();
@@ -457,7 +485,28 @@ public class Controller {
         allocationChart.getData().addAll(piechartData);
     }
 
-    private void updateStockData(){
+    private void updateDailyStockData() {
+        if (priceUpdating) return;
+        priceUpdating = true;
+        for (LiveStockRecord curr : records) {
+            curr.setUpdating(true);
+            ArrayList<String> temp = null;
+
+            try {
+                temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            if (temp.size() > 1) {
+                StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
+                System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
+            }
+        }
+        priceUpdating = false;
+    }
+
+    private void updateIntradayStockData() {
         if (priceUpdating) return;
         priceUpdating = true;
         for (LiveStockRecord curr : records) {
@@ -471,23 +520,11 @@ public class Controller {
             if (temp != null && temp.size() >= 2) {
                 StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), dh);
                 System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1));
-
-                try {
-                    temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
-
-                    if (temp.size() > 1) {
-                        StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
-
-                        System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
-                    }
-
-                    curr.updateRecord(dh);
-                    curr.setUpdating(false);
-                    curr.updateChart(dh);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
             }
+
+            curr.updateRecord(dh);
+            curr.setUpdating(false);
+            curr.updateChart(dh);
 
             Platform.runLater(() -> {
                 updateStockValues();

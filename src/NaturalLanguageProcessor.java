@@ -121,8 +121,7 @@ public class NaturalLanguageProcessor {
 
         for(String key : temporaryDatabase.keySet()){
             Integer[] accumulations = temporaryDatabase.get(key);
-            dh.executeCommand("INSERT INTO sentences(Hash, Sentence) SELECT * FROM (SELECT SHA1('" + key + "'), '" + key + "') AS temp WHERE NOT EXISTS (SELECT Hash FROM sentences WHERE Hash = SHA1('" + key + "')) LIMIT 1;");
-            dh.executeCommand("UPDATE sentences SET Documents = Documents + " + accumulations[0]  + ", Occurrences = Occurrences + " + accumulations[1] + " WHERE Hash = SHA1('" + key + "');");
+            dh.executeCommand("INSERT INTO sentences(Hash, Sentence, Documents, Occurrences) VALUES (SHA1('" + key + "'), '" + key + "', '" + accumulations[0] + "','" + accumulations[1] + "') ON DUPLICATE KEY UPDATE Documents = Documents + " + accumulations[0]  + ", Occurrences = Occurrences + " + accumulations[1] + ";");
             pb.setProgress(i++ / t);
         }
 

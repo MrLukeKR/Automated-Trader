@@ -1,55 +1,4 @@
-import javafx.application.Platform;
-import javafx.fxml.FXML;
-import javafx.scene.chart.PieChart;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TextArea;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import org.json.JSONException;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.safety.Whitelist;
-import org.jsoup.select.Elements;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.sql.SQLException;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
-
-public class Controller {
-    static DatabaseHandler dh = new DatabaseHandler();
-    static AlphaVantageHandler avh = new AlphaVantageHandler();
-    static boolean quit = false;
-
-    ArrayList<String> stocks = new ArrayList<>();
-    ArrayList<LiveStockRecord> records = new ArrayList<>();
-    ArrayList<StockClock> clocks = new ArrayList<>();
-
-    final int downloadInterval = 1;
-    static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
-
-    @FXML FlowPane stockList;
-    @FXML ProgressBar liveStockProgressBar;
-    @FXML FlowPane timePane;
-    @FXML TextArea infoBox;
-    @FXML VBox newsBox;
-    @FXML Label stockValueLabel;
-    @FXML Label currentBalanceLabel;
-    @FXML Label totalBalanceLabel;
-    @FXML Label cutoffLabel;
-    @FXML Label targetLabel;
-    @FXML Label profitLossLabel;
+import javafx.application.Platform;import javafx.fxml.FXML;import javafx.scene.chart.PieChart;import javafx.scene.control.Label;import javafx.scene.control.ProgressBar;import javafx.scene.control.TextArea;import javafx.scene.layout.FlowPane;import javafx.scene.layout.VBox;import javafx.scene.paint.Color;import javafx.scene.shape.Circle;import org.json.JSONException;import org.jsoup.Jsoup;import org.jsoup.nodes.Document;import org.jsoup.nodes.Element;import org.jsoup.safety.Whitelist;import org.jsoup.select.Elements;import java.io.BufferedReader;import java.io.File;import java.io.IOException;import java.io.InputStreamReader;import java.net.HttpURLConnection;import java.net.URL;import java.sql.SQLException;import java.time.LocalTime;import java.time.ZoneId;import java.util.ArrayList;import java.util.concurrent.TimeUnit;public class Controller { static DatabaseHandler dh = new DatabaseHandler();static AlphaVantageHandler avh = new AlphaVantageHandler();static boolean quit = false;ArrayList<String> stocks = new ArrayList<>();ArrayList<LiveStockRecord> records = new ArrayList<>();ArrayList<StockClock> clocks = new ArrayList<>();final int downloadInterval = 1;static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";@FXML FlowPane stockList;@FXML ProgressBar liveStockProgressBar;@FXML FlowPane timePane;@FXML TextArea infoBox;@FXML VBox newsBox;@FXML Label stockValueLabel;@FXML Label currentBalanceLabel;@FXML Label totalBalanceLabel;@FXML Label cutoffLabel;@FXML Label targetLabel;@FXML Label profitLossLabel;
     @FXML PieChart allocationChart;
     @FXML PieChart componentChart;
     @FXML Circle newsFeedAvailability;
@@ -74,8 +23,9 @@ public class Controller {
         initialiseClocks();
         initialiseDisplay();
 
-        updateStockValues();
+        //updateDailyStockData();
 
+        updateStockValues();
         updateBankBalance();
         updateTotalWorth();
         updateProfitLoss();
@@ -91,13 +41,8 @@ public class Controller {
         startRealTime();
 
         new Thread(() -> {
-            try {
-                processYahooHistories();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            try {processYahooHistories();} catch (SQLException e) { e.printStackTrace(); }
             downloadStockHistory();
-            TechnicalAnalyser.processUncalculated();
         }).start();
 
         new Thread(() -> {
@@ -107,10 +52,9 @@ public class Controller {
                 NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
                 NaturalLanguageProcessor.determineUselessSentences();
                 //NaturalLanguageProcessor.enumerateNGramsFromArticles(3);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) {e.printStackTrace();}
         }).start();
+        //new Thread(() -> TechnicalAnalyser.processUncalculated()).start();
     }
 
     private void calculateLossCutoff(double percentage) throws SQLException {
@@ -332,9 +276,7 @@ public class Controller {
             ArrayList<String> temp = null;
             try {
                 temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&datatype=csv&outputsize=full&apikey=" + avh.getApiKey());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) {e.printStackTrace();} //TODO: Process offline (503, 500 errors) handling
 
             System.out.println("Downloaded full history of " + symbol);
             StockRecordParser.importDailyMarketData(temp, symbol, dh);
@@ -347,9 +289,7 @@ public class Controller {
                 System.out.println("Downloaded intraday history of " + symbol);
                 StockRecordParser.importIntradayMarketData(temp, symbol, dh);
                 System.out.println("Successully committed " + symbol + " intraday history to the database!");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) {e.printStackTrace();}
         }
     }
 

@@ -26,6 +26,17 @@ public class DatabaseHandler {
         return (connection != null);
     }
 
+
+    public void commit() throws SQLException {
+        connection.commit();
+    }
+
+    public boolean setAutoCommit(boolean autoCommit) throws SQLException {
+        connection.setAutoCommit(autoCommit);
+
+        return connection.getAutoCommit() == autoCommit;
+    }
+
     public Boolean executeCommand(String command) throws SQLException {
         Statement statement = connection.createStatement();
         return statement.execute(command);

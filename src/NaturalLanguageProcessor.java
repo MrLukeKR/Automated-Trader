@@ -82,6 +82,8 @@ public class NaturalLanguageProcessor {
         double i = 0, t = unprocessedIDs.size();
         pb.setVisible(true);
 
+        Map<String, Integer[]> temporaryDatabase = new HashMap<>();
+
         for (String unprocessedID : unprocessedIDs) {
             String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
             if (unprocessed != null) {
@@ -96,20 +98,36 @@ public class NaturalLanguageProcessor {
 
                 Set<String> noDuplicateSentences = new HashSet<>(cSentences);
                 for (String cSentence : noDuplicateSentences)
-                    try {
-                        if (dh.executeQuery("SELECT * FROM sentences WHERE sentence = '" + cSentence + "';").isEmpty())
-                            dh.executeCommand("INSERT INTO sentences(Sentence) VALUES ('" + cSentence + "');");
+                    try { //TODO: The database handling here is a MASSIVE bottleneck - see if it can be performed as fewer statements
+                        Integer[] accumulations = {1,Collections.frequency(cSentences,cSentence)};
+                        Integer[] existingAccumulations = {0,0};
 
-                        dh.executeCommand("UPDATE sentences SET Documents = Documents + 1, Occurrences = Occurrences + " + Collections.frequency(cSentences, cSentence) + " WHERE sentence = '" + cSentence + "';");
+                        if(temporaryDatabase.containsKey(cSentence))
+                            existingAccumulations = temporaryDatabase.get(cSentence);
+
+                        for(int a = 0; a < 2; a++) accumulations[a] += existingAccumulations[a];
+
+                        temporaryDatabase.put(cSentence, accumulations);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-            }
+                }
 
-            final double val = i++ / t;
-            Platform.runLater(() -> pb.setProgress(val));
-            dh.executeCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = " + unprocessedID);
+            pb.setProgress(i++/t);
         }
+
+        i = 0;
+        t = temporaryDatabase.size();
+
+        for(String key : temporaryDatabase.keySet()){
+            Integer[] accumulations = temporaryDatabase.get(key);
+            dh.executeCommand("INSERT INTO sentences(Sentence) SELECT * FROM (SELECT '" + key + "') AS temp WHERE NOT EXISTS (SELECT sentence FROM sentences WHERE sentence = '" + key + "') LIMIT 1;");
+            dh.executeCommand("UPDATE sentences SET Documents = Documents + " + accumulations[0]  + ", Occurrences = Occurrences + " + accumulations[1] + " WHERE sentence = '" + key + "';");
+            pb.setProgress(i++ / t);
+        }
+
+        for(String id : unprocessedIDs)
+            dh.executeCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = '" + id + "';");
 
         pb.setVisible(false);
     }

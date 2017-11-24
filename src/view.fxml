@@ -4,9 +4,9 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.Circle?>
-<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
+            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.121"
             fx:controller="Controller">
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
@@ -25,6 +25,26 @@
                                         <bottom>
                                             <FlowPane BorderPane.alignment="CENTER">
                                                 <children>
+                                                    <BorderPane prefHeight="25.0" prefWidth="398.0">
+                                                        <left>
+                                                            <Circle fx:id="stockFeedAvailability" fill="#ff0000"
+                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"
+                                                                    BorderPane.alignment="CENTER"/>
+                                                        </left>
+                                                        <right>
+                                                            <ProgressBar fx:id="stockFeedProgress" prefHeight="20.0"
+                                                                         prefWidth="230.0" progress="0.0"
+                                                                         visible="false" BorderPane.alignment="CENTER"/>
+                                                        </right>
+                                                        <center>
+                                                            <Label text="Stock Quote Feed"
+                                                                   BorderPane.alignment="CENTER">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                        </center>
+                                                    </BorderPane>
                                                     <BorderPane prefHeight="25.0" prefWidth="398.0">
                                                         <left>
                                                             <Circle fx:id="newsFeedAvailability" fill="#ff0000"

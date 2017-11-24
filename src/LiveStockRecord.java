@@ -41,6 +41,8 @@ public class LiveStockRecord {
         VBox newStockStats = new VBox();
         stockSymbol.setText(symbol);
 
+        stockChart.setVisible(false);
+
         xAxis.setTickLabelsVisible(false);
         xAxis.setOpacity(0);
         xAxis.setAutoRanging(false);
@@ -156,7 +158,7 @@ public class LiveStockRecord {
             return Float.parseFloat(cPrice.get(0));
     }
 
-    public void updateChart(DatabaseHandler dh){
+    public void updateChart(DatabaseHandler dh, boolean forceClear) {
         try {
             float prevPrice = getPreviousPrice(dh), //TODO: remove the need to keep passing the database handler
                   currPrice = getCurrentPrice(dh);  //TODO: remove the need to keep passing the database handler
@@ -169,8 +171,11 @@ public class LiveStockRecord {
                 statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = SUBDATE(CURDATE(), " + getLastTradeDay() + ") AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
             xAxis.setLowerBound(-statistics.size() + 1);
 
-            if (statistics.size() < stockData.getData().size())
+            if (statistics.size() < stockData.getData().size() || forceClear) {
                 stockData.getData().removeAll();
+                yAxis.setLowerBound(Integer.MAX_VALUE);
+                yAxis.setUpperBound(Integer.MIN_VALUE);
+            }
 
             for(int time = 0; time < statistics.size(); time++){
                 float price = Float.parseFloat(statistics.get(time));
@@ -196,7 +201,7 @@ public class LiveStockRecord {
             else if (prevPrice < currPrice)
                 stockData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
             else stockData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
-
+            if (!stockChart.isVisible()) stockChart.setVisible(true);
         }catch (Exception e) { e.printStackTrace(); }
     }
 

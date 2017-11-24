@@ -38,7 +38,12 @@ public class NewsAPIHandler {
         int values[] = getCSVMetaData(stock,dh); //getNews returns count of number of pages + latest news, because querying just for the number of pages is a waste of an API credit
 
         double pageSize = 10000; //TODO: Maybe make this variable if necessary
+
         double storedArticles = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM newsarticles WHERE Symbol='" + stock + "';").get(0));
+
+        if (storedArticles == values[ARTICLES])
+            return;
+
         int startPage = values[PAGES] - (int) Math.floor(storedArticles / pageSize);
 
         int i = startPage;

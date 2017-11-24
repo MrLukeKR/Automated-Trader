@@ -37,8 +37,8 @@ public class NewsAPIHandler {
 
         int values[] = getCSVMetaData(stock,dh); //getNews returns count of number of pages + latest news, because querying just for the number of pages is a waste of an API credit
 
-        int pageSize = 10000; //TODO: Maybe make this variable if necessary
-        int storedArticles = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM newsarticles WHERE Symbol='" + stock + "';").get(0));
+        double pageSize = 10000; //TODO: Maybe make this variable if necessary
+        double storedArticles = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM newsarticles WHERE Symbol='" + stock + "';").get(0));
         int startPage = values[PAGES] - (int) Math.floor(storedArticles / pageSize);
 
         int i = startPage;
@@ -137,7 +137,7 @@ public class NewsAPIHandler {
 
         ArrayList<String> newsArray = new ArrayList<String>();
 
-        for(int i = 0; i < 2; i++) //Remove preamble
+        for (int i = 0; i < 2; i++)  //Remove preamble
             br.readLine();
 
         while((curr = br.readLine())!=null)
@@ -229,12 +229,10 @@ public class NewsAPIHandler {
     }
 
     static public void getHistoricNews(ArrayList<String> stockList, DatabaseHandler dh, ProgressBar pb) throws IOException, SQLException, JSONException, InterruptedException {
-        pb.setVisible(true);
-        double i = 0, t = stockList.size();
+        double i = 0, t = stockList.size() - 1;
         for (String symbol : stockList) {
             getHistoricNews(symbol, dh);
-            pb.setProgress(i++ / t);
+            Controller.updateProgress(i++, t, pb);
         }
-        pb.setVisible(false);
     }
 }

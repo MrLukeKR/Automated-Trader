@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 public class Controller {
     static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
     static DatabaseHandler dh = new DatabaseHandler();
+    static DatabaseHandler mdh = new DatabaseHandler(); //Manual DB (No auto-commit)
     static AlphaVantageHandler avh = new AlphaVantageHandler();
     static boolean quit = false;
     final int downloadInterval = 1;
@@ -100,6 +101,9 @@ public class Controller {
         System.out.println("Initialising Connections...");
         try {
             dh.init("agent", "0Y5q0m28pSB9jj2O");
+            mdh.init("agent", "0Y5q0m28pSB9jj2O");
+            mdh.executeCommand("USE automated_trader"); //TODO: Fix the init calls for databases
+
         } catch (Exception e) {
         }
         avh.init("PBATJ7L9N8SNK835");
@@ -113,7 +117,7 @@ public class Controller {
         initialiseDatabase();
 
         TechnicalAnalyser.initialise(dh);
-        NaturalLanguageProcessor.initialise(dh);
+        NaturalLanguageProcessor.initialise(mdh);
 
         initialiseStocks();
         initialiseClocks();
@@ -580,7 +584,7 @@ public class Controller {
                 e.printStackTrace();
             }
 
-            if (temp.size() > 1) {
+            if (temp != null && temp.size() > 1) {
                 StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
                 System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
             }

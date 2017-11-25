@@ -126,7 +126,7 @@ public class NaturalLanguageProcessor {
 
         i = 0;
         t = temporaryDatabase.size() - 1;
-
+        dh.setAutoCommit(false);
         for(String key : temporaryDatabase.keySet()){
             Integer[] accumulations = temporaryDatabase.get(key);
             dh.executeCommand("INSERT INTO sentences(Hash, Sentence, Documents, Occurrences) VALUES (MD5('" + key + "'), '" + key + "', '" + accumulations[0] + "','" + accumulations[1] + "') ON DUPLICATE KEY UPDATE Documents = Documents + " + accumulations[0] + ", Occurrences = Occurrences + " + accumulations[1] + ";");
@@ -136,6 +136,9 @@ public class NaturalLanguageProcessor {
 
         for(String id : unprocessedIDs)
             dh.executeCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = '" + id + "';");
+
+        dh.commit();
+        dh.setAutoCommit(true);
     }
 
     static public void determineUselessSentences() throws SQLException {
@@ -177,6 +180,9 @@ public class NaturalLanguageProcessor {
 
                 Set<String> noDuplicateNGrams = new HashSet<>(ngrams);
 
+                dh.setAutoCommit(false);
+
+                //TODO: Make a hashmap before adding to the database
                 for (String ngram : noDuplicateNGrams)
                     if (ngram != null)
                         try {
@@ -201,6 +207,8 @@ public class NaturalLanguageProcessor {
             Controller.updateProgress(k++, t, pb);
         }
         System.out.println("Finished processing n-grams");
+        dh.commit();
+        dh.setAutoCommit(true);
     }
 
     static public ArrayList<String> splitToNGrams(ArrayList<String> cleanedSentences, Locale languageLocale, int n) {

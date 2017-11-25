@@ -35,7 +35,7 @@ public class NewsAPIHandler {
     static public void getHistoricNews(String stock, DatabaseHandler dh) throws IOException, SQLException, JSONException, InterruptedException {
         if(isOverLimit(dh)) return;
 
-        int values[] = getCSVMetaData(stock,dh); //getNews returns count of number of pages + latest news, because querying just for the number of pages is a waste of an API credit
+        int values[] = getCSVMetaData(stock, dh);
 
         double pageSize = 10000; //TODO: Maybe make this variable if necessary
 

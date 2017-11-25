@@ -136,8 +136,9 @@ public class LiveStockRecord {
     private float getPreviousPrice(DatabaseHandler dh){
         ArrayList<String> pPrice = null;
         try {
+            pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate < CURDATE() ORDER BY TradeDate DESC LIMIT 1;"));
 
-            pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate = SUBDATE(CURDATE()," + getLastTradeDay() + ") ORDER BY TradeDate DESC LIMIT 1;"));
+
         } catch (SQLException e) { e.printStackTrace(); }
 
         if(pPrice == null || pPrice.isEmpty())

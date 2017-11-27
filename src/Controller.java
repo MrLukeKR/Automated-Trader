@@ -149,7 +149,7 @@ public class Controller {
                 downloadArticles();
                 NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
                 NaturalLanguageProcessor.determineUselessSentences();
-                NaturalLanguageProcessor.enumerateNGramsFromArticles(3, nlpProgress);
+                NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
             } catch (Exception e) {e.printStackTrace();}
         }).start();
         //new Thread(() -> TechnicalAnalyser.processUncalculated()).start();
@@ -373,7 +373,7 @@ public class Controller {
 
         float total = nonLiquidBalance + potentialTotal;
 
-        profitLossLabel.setText(String.valueOf(total));
+        profitLossLabel.setText(String.valueOf(Math.round(total * 100.0) / 100.0));
         if (total > 0)
             profitLossLabel.setTextFill(Color.GREEN);
         else if (total == 0)
@@ -388,7 +388,7 @@ public class Controller {
         float bankBalance = Float.parseFloat(currentBalanceLabel.getText());
         float stockWorth = Float.parseFloat(stockValueLabel.getText());
 
-        totalBalanceLabel.setText(String.valueOf(bankBalance + stockWorth));
+        totalBalanceLabel.setText(String.valueOf(Math.round((bankBalance + stockWorth) * 100.0) / 100.0));
     }
 
     private int getHeldStocks(String stock){
@@ -628,13 +628,11 @@ public class Controller {
 
     private void downloadArticles() throws SQLException {
         System.out.println("Downloading missing news article content...");
-        newsFeedProgress.setProgress(0);
-        newsFeedProgress.setVisible(true);
         ArrayList<String> undownloadedArticles = dh.executeQuery("SELECT ID, URL FROM newsarticles WHERE Content IS NULL AND Blacklisted = 0 AND Redirected = 0 AND Duplicate = 0 AND URL != \"\";");
 
         if (undownloadedArticles == null || undownloadedArticles.isEmpty()) return;
 
-        String[] splitArticle = null;
+        String[] splitArticle;
         double i = 0, t = undownloadedArticles.size();
         for (String article : undownloadedArticles) {
             splitArticle = article.split(",");
@@ -663,7 +661,5 @@ public class Controller {
             }
             newsFeedProgress.setProgress(i++ / t);
         }
-
-        newsFeedProgress.setVisible(false);
     }
 }

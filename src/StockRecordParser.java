@@ -56,9 +56,15 @@ public class StockRecordParser {
             if (curr != null) {
                 String split[] = curr.split(",");
                 if (split.length == columnCount && split[1].matches(IS_NUMERIC)) {
-                    String statement = "INSERT IGNORE INTO " + table + columns + " VALUES("; //TODO: Update values if primary key exists but values are different
+                    String statement = "INSERT INTO " + table + columns + " VALUES(";
 
-                    statement += "'" + symbol + "','" + split[0] + "'" + curr.replaceAll(split[0], "") + ");";
+                    statement += "'" + symbol + "','" + split[0] + "'" + curr.replaceAll(split[0], "") + ")" +
+                            " ON DUPLICATE KEY UPDATE " +
+                            "OpenPrice = '" + split[1] +
+                            "', HighPrice = '" + split[2] +
+                            "', LowPrice = '" + split[3] +
+                            "', ClosePrice = '" + split[4] +
+                            "', TradeVolume = '" + split[5] + "';";
 
                     try {
                         dh.executeCommand(statement);

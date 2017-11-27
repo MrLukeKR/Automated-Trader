@@ -1,5 +1,7 @@
 import javafx.scene.control.ProgressBar;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.text.BreakIterator;
 import java.util.*;
@@ -60,7 +62,7 @@ public class NaturalLanguageProcessor {
 
         int i = 1;
         for (String sentence : sentences) {
-            if (!USELESS_SENTENCES.contains(sentences)) {
+            if (!USELESS_SENTENCES.contains(cleanSentence(sentence, false))) {
                 cleanDocument += sentence;
                 if (i++ < sentences.size()) cleanDocument += " ";
             }
@@ -106,7 +108,7 @@ public class NaturalLanguageProcessor {
 
                 Set<String> noDuplicateSentences = new HashSet<>(cSentences);
                 for (String cSentence : noDuplicateSentences)
-                    try { //TODO: The database handling here is a MASSIVE bottleneck - see if it can be performed as fewer statements
+                    try {
                         Integer[] accumulations = {1,Collections.frequency(cSentences,cSentence)};
                         Integer[] existingAccumulations = {0,0};
 
@@ -126,7 +128,7 @@ public class NaturalLanguageProcessor {
 
         i = 0;
         t = temporaryDatabase.size() - 1;
-        dh.setAutoCommit(false);
+
         for(String key : temporaryDatabase.keySet()){
             Integer[] accumulations = temporaryDatabase.get(key);
             dh.executeCommand("INSERT INTO sentences(Hash, Sentence, Documents, Occurrences) VALUES (MD5('" + key + "'), '" + key + "', '" + accumulations[0] + "','" + accumulations[1] + "') ON DUPLICATE KEY UPDATE Documents = Documents + " + accumulations[0] + ", Occurrences = Occurrences + " + accumulations[1] + ";");
@@ -137,8 +139,6 @@ public class NaturalLanguageProcessor {
         for(String id : unprocessedIDs)
             dh.executeCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = '" + id + "';");
 
-        dh.commit();
-        dh.setAutoCommit(true);
     }
 
     static public void determineUselessSentences() throws SQLException {
@@ -153,21 +153,25 @@ public class NaturalLanguageProcessor {
     }
 
     static public double getPriceChangeOnDate(String symbol, String date) throws SQLException {
-        double priceOnDate = Double.parseDouble(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + symbol + "' AND TradeDate = '" + date + "';").get(0)),
-                priceOnPrev = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + "' AND TradeDate < '" + date + "' ORDER BY TradeDate DESC LIMIT 1;").get(0)); //TODO: Refactor this to not use as many queries
+        String truncDate = date.split(" ")[0];
+
+        double priceOnDate = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol = '" + symbol + "' AND TradeDate >= '" + truncDate + "' ORDER BY TradeDate ASC LIMIT 1;").get(0)),
+                priceOnPrev = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate < '" + truncDate + "' ORDER BY TradeDate DESC LIMIT 1;").get(0)); //TODO: Refactor this to not use as many queries
 
         return priceOnDate - priceOnPrev;
     }
 
-    static public void enumerateNGramsFromArticles(int n, ProgressBar pb) throws SQLException {
-        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT Hash FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) != CURDATE()");
+    static public void enumerateNGramsFromArticles(int n, ProgressBar pb) throws SQLException, FileNotFoundException {
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) != CURDATE()");
         System.out.println("Enumerating n-grams for " + unprocessedIDs.size() + " documents...");
+
         int k = 0, t = unprocessedIDs.size() - 1;
+        Map<String, Double[]> temporaryDatabase = new HashMap<>();
+
         for (String unprocessedID : unprocessedIDs) {
-            String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE Hash = " + unprocessedID).get(0);
+            String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
             if (unprocessed != null) {
-                unprocessed = cleanDocument(unprocessed);
-                ArrayList<String> sentences = splitToSentences(unprocessed, Locale.US);
+                ArrayList<String> sentences = splitToSentences(cleanDocument(unprocessed), Locale.US);
                 ArrayList<String> ngrams = new ArrayList<>();
 
                 for (String sentence : sentences) {
@@ -180,35 +184,54 @@ public class NaturalLanguageProcessor {
 
                 Set<String> noDuplicateNGrams = new HashSet<>(ngrams);
 
-                dh.setAutoCommit(false);
+                String[] symbolAndDate = dh.executeQuery("SELECT Symbol, Published FROM newsarticles WHERE ID = " + unprocessedID).get(0).split(",");
 
-                //TODO: Make a hashmap before adding to the database
+                double priceChange = getPriceChangeOnDate(symbolAndDate[0], symbolAndDate[1]); //TODO: Refactor this to not use as many queries
+                double increase = 0, decrease = 0;
+
+                if (priceChange < 0)
+                    decrease = Math.abs(priceChange);
+                else
+                    increase = priceChange;
+
                 for (String ngram : noDuplicateNGrams)
                     if (ngram != null)
                         try {
-                            int occurrences = Collections.frequency(ngrams, ngram);
-                            String[] symbolAndDate = dh.executeQuery("SELECT Symbol, Published FROM newsarticles WHERE Hash = " + unprocessedID).get(0).split(",");
+                            Double[] accumulations = {1.0, (double) Collections.frequency(ngrams, ngram), increase, decrease};
+                            Double[] existingAccumulations = {0.0, 0.0, 0.0, 0.0};
 
-                            double priceChange = getPriceChangeOnDate(symbolAndDate[0], symbolAndDate[1]); //TODO: Refactor this to not use as many queries
-                            double increase = 0, decrease = 0;
+                            if (temporaryDatabase.containsKey(ngram))
+                                existingAccumulations = temporaryDatabase.get(ngram);
 
-                            if (priceChange < 0)
-                                decrease = Math.abs(priceChange);
-                            else
-                                increase = priceChange;
+                            for (int a = 0; a < 4; a++) accumulations[a] += existingAccumulations[a];
 
-                            dh.executeCommand("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES (MD5('" + ngram + "'), '" + ngram + "'," + ngram.split(" ").length + ",1," + occurrences + "," + increase + "," + decrease + ") ON DUPLICATE KEY UPDATE Documents = Documents + 1, Occurrences = Occurrences + " + occurrences + ", Increase = Increase + " + increase + ", Decrease = Decrease + " + decrease + ";)");
+                            temporaryDatabase.put(ngram, accumulations);
+
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
             }
 
-            dh.executeCommand("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
+
             Controller.updateProgress(k++, t, pb);
         }
+
+        k = 0;
+        t = temporaryDatabase.size() - 1;
+
+        PrintWriter writer = new PrintWriter("res/Ngrams.sql");
+
+        for (String key : temporaryDatabase.keySet()) {
+            Double[] values = temporaryDatabase.get(key);
+            writer.println("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES (MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + Math.round(values[0]) + "," + Math.round(values[1]) + "," + values[2] + "," + values[3] + ") ON DUPLICATE KEY UPDATE Documents = Documents + " + Math.round(values[0]) + ", Occurrences = Occurrences + " + Math.round(values[1]) + ", Increase = Increase + " + values[2] + ", Decrease = Decrease + " + values[3] + ";");
+            Controller.updateProgress(k++, t, pb);
+        }
+
+        for (String unprocessedID : unprocessedIDs)
+            writer.println("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
+
+        writer.close();
         System.out.println("Finished processing n-grams");
-        dh.commit();
-        dh.setAutoCommit(true);
     }
 
     static public ArrayList<String> splitToNGrams(ArrayList<String> cleanedSentences, Locale languageLocale, int n) {

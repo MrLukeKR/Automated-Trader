@@ -6,7 +6,7 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.121"
+            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
             fx:controller="Controller">
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
@@ -23,7 +23,8 @@
                                 <content>
                                     <BorderPane prefHeight="200.0" prefWidth="200.0">
                                         <bottom>
-                                            <FlowPane BorderPane.alignment="CENTER">
+                                            <FlowPane prefHeight="110.0" prefWidth="401.0"
+                                                      BorderPane.alignment="CENTER">
                                                 <children>
                                                     <BorderPane prefHeight="25.0" prefWidth="398.0">
                                                         <left>
@@ -84,9 +85,97 @@
                                                             </Label>
                                                         </center>
                                                     </BorderPane>
+                                                    <BorderPane prefHeight="25.0" prefWidth="398.0">
+                                                        <left>
+                                                            <Circle fx:id="stockForecastAvailability" fill="#ff0000"
+                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"
+                                                                    BorderPane.alignment="CENTER"/>
+                                                        </left>
+                                                        <right>
+                                                            <ProgressBar fx:id="stockForecastProgress" prefHeight="20.0"
+                                                                         prefWidth="235.0" progress="0.0"
+                                                                         visible="false" BorderPane.alignment="CENTER"/>
+                                                        </right>
+                                                        <center>
+                                                            <Label text="Stock Forecaster"
+                                                                   BorderPane.alignment="CENTER">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                        </center>
+                                                    </BorderPane>
                                                 </children>
                                             </FlowPane>
                                         </bottom>
+                                        <top>
+                                            <FlowPane prefHeight="210.0" prefWidth="401.0"
+                                                      BorderPane.alignment="CENTER">
+                                                <children>
+                                                    <Label text="Autonomy Level: "/>
+                                                    <ComboBox fx:id="autonomyLevelDropdown" prefHeight="25.0"
+                                                              prefWidth="305.0"/>
+                                                    <Separator prefHeight="15.0" prefWidth="400.0"/>
+                                                    <FlowPane fx:id="manualToolbox" disable="true" prefHeight="70.0"
+                                                              prefWidth="400.0">
+                                                        <children>
+                                                            <Label prefHeight="17.0" prefWidth="40.0" text="Stock:"/>
+                                                            <ComboBox fx:id="stockDropdown" prefHeight="25.0"
+                                                                      prefWidth="150.0"/>
+                                                            <Separator orientation="VERTICAL" prefHeight="25.0"
+                                                                       prefWidth="21.0" visible="false"/>
+                                                            <Label prefHeight="17.0" prefWidth="55.0" text="Amount:"/>
+                                                            <TextField fx:id="stockAmountField" prefHeight="25.0"
+                                                                       prefWidth="134.0"/>
+                                                            <Separator prefHeight="15.0" prefWidth="400.0"
+                                                                       visible="false"/>
+                                                            <Button fx:id="sellButton" mnemonicParsing="false"
+                                                                    prefHeight="25.0" prefWidth="190.0"
+                                                                    text="SELL STOCK"/>
+                                                            <Separator orientation="VERTICAL" prefHeight="25.0"
+                                                                       prefWidth="20.0" visible="false"/>
+                                                            <Button fx:id="buyButton" mnemonicParsing="false"
+                                                                    prefHeight="25.0" prefWidth="190.0"
+                                                                    text="BUY STOCK"/>
+                                                        </children>
+                                                    </FlowPane>
+                                                    <Separator prefHeight="10.0" prefWidth="400.0"/>
+                                                    <FlowPane fx:id="autonomousToolbox" disable="true" prefHeight="90.0"
+                                                              prefWidth="400.0">
+                                                        <children>
+                                                            <Label prefHeight="17.0" prefWidth="80.0"
+                                                                   text="Loss Cut-off: "/>
+                                                            <TextField fx:id="lossCutoffField"/>
+                                                            <Separator orientation="VERTICAL" prefHeight="25.0"
+                                                                       prefWidth="14.0" visible="false"/>
+                                                            <Label fx:id="lossCutoffPercentageLabel" prefHeight="17.0"
+                                                                   prefWidth="55.0" text="0.0%"/>
+                                                            <Button fx:id="setLossCutoffButton" mnemonicParsing="false"
+                                                                    text="Set Loss Cut-Off"/>
+                                                            <Separator prefHeight="5.0" prefWidth="400.0"
+                                                                       visible="false"/>
+                                                            <Label prefHeight="17.0" prefWidth="80.0"
+                                                                   text="Profit Target:"/>
+                                                            <TextField fx:id="profitTargetField"/>
+                                                            <Separator orientation="VERTICAL" prefHeight="25.0"
+                                                                       prefWidth="14.0" visible="false"/>
+                                                            <Label fx:id="profitTargetPercentageLabel" prefHeight="17.0"
+                                                                   prefWidth="55.0" text="0.0%"/>
+                                                            <Button fx:id="setProfitTargetButton"
+                                                                    mnemonicParsing="false" text="Set Profit Target"/>
+                                                            <Separator prefHeight="10.0" prefWidth="400.0"
+                                                                       visible="false"/>
+                                                            <Button mnemonicParsing="false" prefHeight="25.0"
+                                                                    prefWidth="400.0" text="Rebalance Portfolio"/>
+                                                        </children>
+                                                    </FlowPane>
+                                                </children>
+                                            </FlowPane>
+                                        </top>
+                                        <center>
+                                            <Separator prefHeight="10.0" prefWidth="401.0"
+                                                       BorderPane.alignment="CENTER"/>
+                                        </center>
                                     </BorderPane>
                                 </content>
                               </TitledPane>
@@ -112,6 +201,12 @@
                      </top>
                      <center>
                         <VBox BorderPane.alignment="CENTER">
+                            <TitledPane animated="false" collapsible="false" prefHeight="300.0" prefWidth="870.0"
+                                        text="Stock Prediction">
+                                <content>
+                                    <BorderPane prefHeight="200.0" prefWidth="200.0"/>
+                                </content>
+                            </TitledPane>
                             <TitledPane animated="false" collapsible="false" prefHeight="300.0" prefWidth="870.0"
                                         text="Portfolio Optimisation">
                                 <content>
@@ -148,7 +243,7 @@
                             <TitledPane animated="false" collapsible="false" prefHeight="200.0" prefWidth="200.0"
                                         text="Profit/Loss">
                                 <FlowPane prefHeight="171.0" prefWidth="868.0">
-                        <VBox>
+                                    <VBox prefHeight="151.0" prefWidth="190.0">
                            <children>
                                <HBox prefHeight="60.0" prefWidth="190.0">
                                  <children>
@@ -181,7 +276,7 @@
                                <Separator prefHeight="10.0" prefWidth="190.0"/>
                            </children>
                         </VBox>
-                                    <LineChart fx:id="portfolioChart" prefHeight="151.0" prefWidth="600.0">
+                                    <LineChart fx:id="portfolioChart" prefHeight="150.0" prefWidth="600.0">
                                             <xAxis>
                                               <CategoryAxis side="BOTTOM" />
                                             </xAxis>

@@ -1,9 +1,8 @@
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.chart.PieChart;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -37,6 +36,7 @@ public class Controller {
     ArrayList<String> stocks = new ArrayList<>();
     ArrayList<LiveStockRecord> records = new ArrayList<>();
     ArrayList<StockClock> clocks = new ArrayList<>();
+
     @FXML
     FlowPane stockList;
     @FXML
@@ -67,6 +67,20 @@ public class Controller {
     @FXML ProgressBar newsFeedProgress;
     @FXML ProgressBar nlpProgress;
     @FXML VBox stockBox;
+    @FXML
+    ComboBox autonomyLevelDropdown;
+    @FXML
+    FlowPane manualToolbox;
+    @FXML
+    FlowPane autonomousToolbox;
+    @FXML
+    Label lossCutoffPercentageLabel;
+    @FXML
+    Label profitTargetPercentageLabel;
+    @FXML
+    TextField lossCutoffField;
+    @FXML
+    TextField profitTargetField;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -113,6 +127,8 @@ public class Controller {
 
     @FXML
     public void initialize() throws SQLException, JSONException, InterruptedException {
+        autonomyLevelDropdown.getItems().add(FXCollections.observableArrayList("Manual", "Semi-Autonomous", "Fully Autonomous"));
+
         initialiseConnections();
         initialiseDatabase();
 
@@ -350,13 +366,13 @@ public class Controller {
     }
 
     private void updateStocksOwned() throws SQLException {
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, SUM(Volume) FROM tradetransactions GROUP BY Symbol HAVING SUM(Volume) > 0");
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT SUM(Volume), Symbol FROM tradetransactions GROUP BY Symbol HAVING SUM(Volume) > 0");
 
         stockBox.getChildren().clear();
 
         for (String stock : heldStocks) {
             String[] splitStock = stock.split(",");
-            stockBox.getChildren().add(new Label(splitStock[0] + " x" + splitStock[1]));
+            stockBox.getChildren().add(new Label(splitStock[0] + '\t' + splitStock[1]));
         }
     }
 

@@ -187,18 +187,21 @@ public class NaturalLanguageProcessor {
                 String[] symbolAndDate = dh.executeQuery("SELECT Symbol, Published FROM newsarticles WHERE ID = " + unprocessedID).get(0).split(",");
 
                 double priceChange = getPriceChangeOnDate(symbolAndDate[0], symbolAndDate[1]); //TODO: Refactor this to not use as many queries
-                double increase = 0, decrease = 0;
+                double increase = 0, decrease = 0, increaseAmount = 0, decreaseAmount = 0;
 
-                if (priceChange < 0)
-                    decrease = Math.abs(priceChange);
-                else
-                    increase = priceChange;
+                if (priceChange < 0) {
+                    decrease = 1;
+                    decreaseAmount = Math.abs(priceChange);
+                } else {
+                    increase = 1;
+                    increaseAmount = priceChange;
+                }
 
                 for (String ngram : noDuplicateNGrams)
                     if (ngram != null)
                         try {
-                            Double[] accumulations = {1.0, (double) Collections.frequency(ngrams, ngram), increase, decrease};
-                            Double[] existingAccumulations = {0.0, 0.0, 0.0, 0.0};
+                            Double[] accumulations = {1.0, (double) Collections.frequency(ngrams, ngram), increase, decrease, increaseAmount, decreaseAmount};
+                            Double[] existingAccumulations = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
                             if (temporaryDatabase.containsKey(ngram))
                                 existingAccumulations = temporaryDatabase.get(ngram);
@@ -212,7 +215,6 @@ public class NaturalLanguageProcessor {
                         }
             }
 
-
             Controller.updateProgress(k++, t, pb);
         }
 
@@ -223,7 +225,7 @@ public class NaturalLanguageProcessor {
 
         for (String key : temporaryDatabase.keySet()) {
             Double[] values = temporaryDatabase.get(key);
-            writer.println("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES (MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + Math.round(values[0]) + "," + Math.round(values[1]) + "," + values[2] + "," + values[3] + ") ON DUPLICATE KEY UPDATE Documents = Documents + " + Math.round(values[0]) + ", Occurrences = Occurrences + " + Math.round(values[1]) + ", Increase = Increase + " + values[2] + ", Decrease = Decrease + " + values[3] + ";");
+            writer.println("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease, IncreaseAmount, DecreaseAmount) VALUES (MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + Math.round(values[0]) + "," + Math.round(values[1]) + "," + values[2] + "," + values[3] + "," + values[4] + "," + values[5] + ") ON DUPLICATE KEY UPDATE Documents = Documents + " + Math.round(values[0]) + ", Occurrences = Occurrences + " + Math.round(values[1]) + ", Increase = Increase + " + values[2] + ", Decrease = Decrease + " + values[3] + ", IncreaseAmount = " + values[4] + ", DecreaseAmount = " + values[5] + ";");
             Controller.updateProgress(k++, t, pb);
         }
 

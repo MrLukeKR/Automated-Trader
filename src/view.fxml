@@ -2,6 +2,7 @@
 
 <?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.effect.SepiaTone?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.*?>
@@ -113,11 +114,14 @@
                                                       BorderPane.alignment="CENTER">
                                                 <children>
                                                     <Label text="Autonomy Level: "/>
-                                                    <ComboBox fx:id="autonomyLevelDropdown" prefHeight="25.0"
-                                                              prefWidth="305.0"/>
+                                                    <ComboBox fx:id="autonomyLevelDropdown" onAction="#setAutonomyLevel"
+                                                              prefHeight="25.0" prefWidth="305.0">
+                                                        <effect>
+                                                            <SepiaTone level="0.25"/>
+                                                        </effect>
+                                                    </ComboBox>
                                                     <Separator prefHeight="15.0" prefWidth="400.0"/>
-                                                    <FlowPane fx:id="manualToolbox" disable="true" prefHeight="70.0"
-                                                              prefWidth="400.0">
+                                                    <FlowPane fx:id="manualToolbox" prefHeight="70.0" prefWidth="400.0">
                                                         <children>
                                                             <Label prefHeight="17.0" prefWidth="40.0" text="Stock:"/>
                                                             <ComboBox fx:id="stockDropdown" prefHeight="25.0"
@@ -140,7 +144,7 @@
                                                         </children>
                                                     </FlowPane>
                                                     <Separator prefHeight="10.0" prefWidth="400.0"/>
-                                                    <FlowPane fx:id="autonomousToolbox" disable="true" prefHeight="90.0"
+                                                    <FlowPane fx:id="autonomousToolbox" prefHeight="90.0"
                                                               prefWidth="400.0">
                                                         <children>
                                                             <Label prefHeight="17.0" prefWidth="80.0"

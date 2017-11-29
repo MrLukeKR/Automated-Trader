@@ -1,6 +1,6 @@
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.chart.LineChart;
 import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
@@ -70,9 +70,9 @@ public class Controller {
     @FXML
     ComboBox autonomyLevelDropdown;
     @FXML
-    FlowPane manualToolbox;
-    @FXML
     FlowPane autonomousToolbox;
+    @FXML
+    FlowPane manualToolbox;
     @FXML
     Label lossCutoffPercentageLabel;
     @FXML
@@ -81,6 +81,8 @@ public class Controller {
     TextField lossCutoffField;
     @FXML
     TextField profitTargetField;
+    @FXML
+    LineChart<Number, Number> portfolioChart;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -126,8 +128,21 @@ public class Controller {
     }
 
     @FXML
+    public void setAutonomyLevel() {
+        String level = autonomyLevelDropdown.getValue().toString();
+        boolean fullyAutonomous = level == "Full-Autonomy",
+                semiAutonomous = level == "Semi-Autonomy";
+
+        autonomousToolbox.setDisable(fullyAutonomous || !semiAutonomous);
+        manualToolbox.setDisable(fullyAutonomous);
+
+        //TODO: Set autonomy settings
+    }
+
+    @FXML
     public void initialize() throws SQLException, JSONException, InterruptedException {
-        autonomyLevelDropdown.getItems().add(FXCollections.observableArrayList("Manual", "Semi-Autonomous", "Fully Autonomous"));
+        autonomyLevelDropdown.getItems().addAll("Manual", "Semi-Autonomy", "Full-Autonomy");
+        autonomyLevelDropdown.getSelectionModel().selectFirst();
 
         initialiseConnections();
         initialiseDatabase();

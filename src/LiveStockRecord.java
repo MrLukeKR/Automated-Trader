@@ -173,7 +173,7 @@ public class LiveStockRecord {
             xAxis.setLowerBound(-statistics.size() + 1);
 
             if (statistics.size() < stockData.getData().size() || forceClear) {
-                stockData.getData().removeAll();
+                stockData.getData().clear();
                 yAxis.setLowerBound(Integer.MAX_VALUE);
                 yAxis.setUpperBound(Integer.MIN_VALUE);
             }
@@ -182,10 +182,10 @@ public class LiveStockRecord {
                 float price = Float.parseFloat(statistics.get(time));
                 XYChart.Data<Number, Number> point = new XYChart.Data(time-statistics.size()+1, price);
                 Rectangle rect = new Rectangle(0,0);
-                yAxis.setLowerBound(Math.min(yAxis.getLowerBound(), price));
-                yAxis.setUpperBound(Math.max(yAxis.getUpperBound(), price));
                 rect.setVisible(false);
                 point.setNode(rect);
+                yAxis.setLowerBound(Math.min(yAxis.getLowerBound(), price));
+                yAxis.setUpperBound(Math.max(yAxis.getUpperBound(), price));
 
                 final int t = time, size = statistics.size();
 

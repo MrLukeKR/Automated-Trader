@@ -158,7 +158,7 @@ public class NaturalLanguageProcessor {
         double priceOnDate = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol = '" + symbol + "' AND TradeDate >= '" + truncDate + "' ORDER BY TradeDate ASC LIMIT 1;").get(0)),
                 priceOnPrev = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate < '" + truncDate + "' ORDER BY TradeDate DESC LIMIT 1;").get(0)); //TODO: Refactor this to not use as many queries
 
-        return priceOnDate - priceOnPrev;
+        return (priceOnDate - priceOnPrev) / priceOnDate * 100.0;
     }
 
     static public void enumerateNGramsFromArticles(int n, ProgressBar pb) throws SQLException, FileNotFoundException {
@@ -206,7 +206,7 @@ public class NaturalLanguageProcessor {
                             if (temporaryDatabase.containsKey(ngram))
                                 existingAccumulations = temporaryDatabase.get(ngram);
 
-                            for (int a = 0; a < 4; a++) accumulations[a] += existingAccumulations[a];
+                            for (int a = 0; a < 6; a++) accumulations[a] += existingAccumulations[a];
 
                             temporaryDatabase.put(ngram, accumulations);
 
@@ -221,18 +221,18 @@ public class NaturalLanguageProcessor {
         k = 0;
         t = temporaryDatabase.size() - 1;
 
-        PrintWriter writer = new PrintWriter("res/Ngrams.sql");
+        PrintWriter pr = new PrintWriter("res/NGrams.sql");
 
         for (String key : temporaryDatabase.keySet()) {
             Double[] values = temporaryDatabase.get(key);
-            writer.println("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease, IncreaseAmount, DecreaseAmount) VALUES (MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + values[0] + "," + values[1] + "," + values[2] + "," + values[3] + "," + values[4] + "," + values[5] + ") ON DUPLICATE KEY UPDATE Documents = Documents + " + Math.round(values[0]) + ", Occurrences = Occurrences + " + Math.round(values[1]) + ", Increase = Increase + " + values[2] + ", Decrease = Decrease + " + values[3] + ", IncreaseAmount = " + values[4] + ", DecreaseAmount = " + values[5] + ";");
+            pr.println("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease, IncreaseAmount, DecreaseAmount) VALUES (MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + values[0] + "," + values[1] + "," + values[2] + "," + values[3] + "," + values[4] + "," + values[5] + ") ON DUPLICATE KEY UPDATE Documents = Documents + " + Math.round(values[0]) + ", Occurrences = Occurrences + " + Math.round(values[1]) + ", Increase = Increase + " + values[2] + ", Decrease = Decrease + " + values[3] + ", IncreaseAmount = " + values[4] + ", DecreaseAmount = " + values[5] + ";");
             Controller.updateProgress(k++, t, pb);
         }
 
         for (String unprocessedID : unprocessedIDs)
-            writer.println("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
+            pr.println("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
 
-        writer.close();
+        pr.close();
         System.out.println("Finished processing n-grams");
     }
 

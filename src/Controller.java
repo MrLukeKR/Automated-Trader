@@ -2,11 +2,13 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.PieChart;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import org.json.JSONException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -24,6 +26,8 @@ import java.sql.SQLException;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class Controller {
@@ -82,7 +86,7 @@ public class Controller {
     @FXML
     TextField profitTargetField;
     @FXML
-    LineChart<Number, Number> portfolioChart;
+    LineChart<String, Double> portfolioChart;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -127,14 +131,66 @@ public class Controller {
         NewsAPIHandler.authenticate("be7afde61f5e10bb20393025c35e50c7", "1ff9ab03aa8e5bd073345d70d588abde");
     }
 
+    private void updateProfitLossChart() throws SQLException {
+        portfolioChart.getData().clear();
+        //TODO: Refactor this to not regather all data each iteration
+        portfolioChart.setAnimated(false);
+        ArrayList<String> portfolioRecords = dh.executeQuery("SELECT Symbol, Held, Investment, LastUpdated FROM portfolio ORDER BY LastUpdated ASC;");
+
+        Map<String, Double> timeAndPrice = new HashMap<>();
+
+        for (String record : portfolioRecords) {
+            String[] splitRecord = record.split(",");
+
+            double held = Double.parseDouble(splitRecord[1]),
+                    cost = Double.parseDouble(splitRecord[2]);
+
+            for (String iRecord : dh.executeQuery("SELECT ClosePrice, TradeDate FROM dailystockprices WHERE Symbol = '" + splitRecord[0] + "' AND TradeDate >= DATE('" + splitRecord[3] + "');")) {
+                String[] splitIRecord = iRecord.split(",");
+
+                double profitLoss = (Double.parseDouble(splitIRecord[0]) * held) - cost;
+
+                timeAndPrice.put(splitIRecord[1], timeAndPrice.getOrDefault(splitIRecord[1], 0.0) + profitLoss);
+            }
+        }
+
+        XYChart.Series<String, Double> profitLossData = new XYChart.Series<>();
+
+        int i = 0;
+
+        double currProfitLoss = 0;
+
+        for (String time : timeAndPrice.keySet()) {
+            XYChart.Data<String, Double> point = new XYChart.Data(time, timeAndPrice.get(time));
+            Rectangle rect = new Rectangle(0, 0);
+            rect.setVisible(false);
+            point.setNode(rect);
+
+            profitLossData.getData().add(i++, point);
+
+            if (i == timeAndPrice.size())
+                currProfitLoss = timeAndPrice.get(time);
+        }
+
+        portfolioChart.getData().add(profitLossData);
+
+        if (currProfitLoss < 0)
+            profitLossData.nodeProperty().get().setStyle("-fx-stroke: red;   -fx-stroke-width: 1px;");
+        else if (currProfitLoss > 0)
+            profitLossData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
+        else profitLossData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
+
+
+    }
+
     @FXML
     public void setAutonomyLevel() {
         String level = autonomyLevelDropdown.getValue().toString();
         boolean fullyAutonomous = level == "Full-Autonomy",
                 semiAutonomous = level == "Semi-Autonomy";
 
-        autonomousToolbox.setDisable(fullyAutonomous || !semiAutonomous);
-        manualToolbox.setDisable(fullyAutonomous);
+        autonomousToolbox.setDisable(fullyAutonomous);
+        manualToolbox.setDisable(fullyAutonomous || semiAutonomous);
 
         //TODO: Set autonomy settings
     }
@@ -143,6 +199,9 @@ public class Controller {
     public void initialize() throws SQLException, JSONException, InterruptedException {
         autonomyLevelDropdown.getItems().addAll("Manual", "Semi-Autonomy", "Full-Autonomy");
         autonomyLevelDropdown.getSelectionModel().selectFirst();
+        portfolioChart.getXAxis().setVisible(false);
+        portfolioChart.getXAxis().setTickLabelsVisible(false);
+        portfolioChart.getXAxis().setOpacity(0);
 
         initialiseConnections();
         initialiseDatabase();
@@ -163,6 +222,12 @@ public class Controller {
         updateAllocationChart();
         updateComponentChart();
         updateStocksOwned();
+
+        try {
+            updateProfitLossChart();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
         calculateLossCutoff(0.1);
         checkServices();
@@ -290,10 +355,10 @@ public class Controller {
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0, PRIMARY KEY (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (Hash varchar(32) NOT NULL PRIMARY KEY, Gram text NOT NULL, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, IncreaseAmount double DEFAULT 0, DecreaseAmount double DEFAULT 0, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0);");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS portfolio (Symbol varchar(7) NOT NULL, Allocation double NOT NULL, Held int NOT NULL DEFAULT 0, Investment double NOT NULL DEFAULT 0, PRIMARY KEY (Symbol), FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS portfolio (Symbol varchar(7) NOT NULL PRIMARY KEY, Allocation double NOT NULL, Held int NOT NULL DEFAULT 0, Investment double NOT NULL DEFAULT 0, LastUpdated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS sentences (Hash varchar(32) NOT NULL PRIMARY KEY, Sentence text NOT NULL, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 0 NOT NULL, Blacklisted BIT DEFAULT 0);");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline text NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Enumerated BIT DEFAULT 0 NOT NULL, Tokenised BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4), Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL,PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL PRIMARY KEY, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4), Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL, FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS banktransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(10), Amount double SIGNED NOT NULL, PRIMARY KEY (ID));");
 
             int bankTransactions = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM banktransactions;").get(0));
@@ -453,6 +518,13 @@ public class Controller {
                     if (m == 0 && h == 0) new Thread(() -> updateDailyStockData()).start();
                     new Thread(() -> {
                         updateIntradayStockData();
+                        Platform.runLater(() -> {
+                            try {
+                                updateProfitLossChart();
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+                        });
                         try {
                             checkServices();
                         } catch (SQLException e) {

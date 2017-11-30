@@ -7,7 +7,7 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
+            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/9"
             fx:controller="Controller">
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
@@ -113,9 +113,9 @@
                                             <FlowPane prefHeight="210.0" prefWidth="401.0"
                                                       BorderPane.alignment="CENTER">
                                                 <children>
-                                                    <Label text="Autonomy Level: "/>
+                                                    <Label prefHeight="17.0" prefWidth="110.0" text="Autonomy Level: "/>
                                                     <ComboBox fx:id="autonomyLevelDropdown" onAction="#setAutonomyLevel"
-                                                              prefHeight="25.0" prefWidth="305.0">
+                                                              prefHeight="27.0" prefWidth="290.0">
                                                         <effect>
                                                             <SepiaTone level="0.25"/>
                                                         </effect>
@@ -123,9 +123,9 @@
                                                     <Separator prefHeight="15.0" prefWidth="400.0"/>
                                                     <FlowPane fx:id="manualToolbox" prefHeight="70.0" prefWidth="400.0">
                                                         <children>
-                                                            <Label prefHeight="17.0" prefWidth="40.0" text="Stock:"/>
-                                                            <ComboBox fx:id="stockDropdown" prefHeight="25.0"
-                                                                      prefWidth="150.0"/>
+                                                            <Label prefHeight="17.0" prefWidth="50.0" text="Stock:"/>
+                                                            <ComboBox fx:id="stockDropdown" prefHeight="27.0"
+                                                                      prefWidth="140.0"/>
                                                             <Separator orientation="VERTICAL" prefHeight="25.0"
                                                                        prefWidth="21.0" visible="false"/>
                                                             <Label prefHeight="17.0" prefWidth="55.0" text="Amount:"/>
@@ -147,26 +147,30 @@
                                                     <FlowPane fx:id="autonomousToolbox" prefHeight="90.0"
                                                               prefWidth="400.0">
                                                         <children>
-                                                            <Label prefHeight="17.0" prefWidth="80.0"
+                                                            <Label prefHeight="17.0" prefWidth="90.0"
                                                                    text="Loss Cut-off: "/>
-                                                            <TextField fx:id="lossCutoffField"/>
+                                                            <TextField fx:id="lossCutoffField" prefHeight="27.0"
+                                                                       prefWidth="120.0"/>
                                                             <Separator orientation="VERTICAL" prefHeight="25.0"
                                                                        prefWidth="14.0" visible="false"/>
                                                             <Label fx:id="lossCutoffPercentageLabel" prefHeight="17.0"
-                                                                   prefWidth="55.0" text="0.0%"/>
+                                                                   prefWidth="50.0" text="0.0%"/>
                                                             <Button fx:id="setLossCutoffButton" mnemonicParsing="false"
+                                                                    prefHeight="27.0" prefWidth="125.0"
                                                                     text="Set Loss Cut-Off"/>
                                                             <Separator prefHeight="5.0" prefWidth="400.0"
                                                                        visible="false"/>
-                                                            <Label prefHeight="17.0" prefWidth="80.0"
+                                                            <Label prefHeight="17.0" prefWidth="90.0"
                                                                    text="Profit Target:"/>
-                                                            <TextField fx:id="profitTargetField"/>
+                                                            <TextField fx:id="profitTargetField" prefHeight="27.0"
+                                                                       prefWidth="120.0"/>
                                                             <Separator orientation="VERTICAL" prefHeight="25.0"
                                                                        prefWidth="14.0" visible="false"/>
                                                             <Label fx:id="profitTargetPercentageLabel" prefHeight="17.0"
-                                                                   prefWidth="55.0" text="0.0%"/>
+                                                                   prefWidth="50.0" text="0.0%"/>
                                                             <Button fx:id="setProfitTargetButton"
-                                                                    mnemonicParsing="false" text="Set Profit Target"/>
+                                                                    mnemonicParsing="false" prefHeight="27.0"
+                                                                    prefWidth="125.0" text="Set Profit Target"/>
                                                             <Separator prefHeight="10.0" prefWidth="400.0"
                                                                        visible="false"/>
                                                             <Button mnemonicParsing="false" prefHeight="25.0"

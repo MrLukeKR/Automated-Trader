@@ -1,7 +1,5 @@
 import javafx.scene.control.ProgressBar;
 
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.text.BreakIterator;
 import java.util.*;
@@ -161,7 +159,7 @@ public class NaturalLanguageProcessor {
         return (priceOnDate - priceOnPrev) / priceOnDate * 100.0;
     }
 
-    static public void enumerateNGramsFromArticles(int n, ProgressBar pb) throws SQLException, FileNotFoundException {
+    static public void enumerateNGramsFromArticles(int n, ProgressBar pb) throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) != CURDATE()");
         System.out.println("Enumerating n-grams for " + unprocessedIDs.size() + " documents...");
 
@@ -221,18 +219,15 @@ public class NaturalLanguageProcessor {
         k = 0;
         t = temporaryDatabase.size() - 1;
 
-        PrintWriter pr = new PrintWriter("res/NGrams.sql");
-
         for (String key : temporaryDatabase.keySet()) {
             Double[] values = temporaryDatabase.get(key);
-            pr.println("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease, IncreaseAmount, DecreaseAmount) VALUES (MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + values[0] + "," + values[1] + "," + values[2] + "," + values[3] + "," + values[4] + "," + values[5] + ") ON DUPLICATE KEY UPDATE Documents = Documents + " + Math.round(values[0]) + ", Occurrences = Occurrences + " + Math.round(values[1]) + ", Increase = Increase + " + values[2] + ", Decrease = Decrease + " + values[3] + ", IncreaseAmount = " + values[4] + ", DecreaseAmount = " + values[5] + ";");
+            dh.executeCommand("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease, IncreaseAmount, DecreaseAmount) VALUES (MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + values[0] + "," + values[1] + "," + values[2] + "," + values[3] + "," + values[4] + "," + values[5] + ") ON DUPLICATE KEY UPDATE Documents = Documents + " + Math.round(values[0]) + ", Occurrences = Occurrences + " + Math.round(values[1]) + ", Increase = Increase + " + values[2] + ", Decrease = Decrease + " + values[3] + ", IncreaseAmount = " + values[4] + ", DecreaseAmount = " + values[5] + ";");
             Controller.updateProgress(k++, t, pb);
         }
 
         for (String unprocessedID : unprocessedIDs)
-            pr.println("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
+            dh.executeCommand("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
 
-        pr.close();
         System.out.println("Finished processing n-grams");
     }
 
@@ -268,17 +263,9 @@ public class NaturalLanguageProcessor {
      * @param document - Text to be analysed
      * @return String with all NOT phrases converted to single words e.g. NOT GOOD = !GOOD
      */
-    static public String applyLogic(String document) {
-        //TODO
-        return null;
-    }
 
     static public double calculateSentiment(ArrayList<String> wordList) {
         //TODO
         return 0.0;
-    }
-
-    static public void addToPhraseList(String phrase) {
-        //TODO
     }
 }

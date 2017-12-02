@@ -23,6 +23,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -86,7 +89,7 @@ public class Controller {
     @FXML
     TextField profitTargetField;
     @FXML
-    LineChart<String, Double> portfolioChart;
+    LineChart<Integer, Double> portfolioChart;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -131,13 +134,15 @@ public class Controller {
         NewsAPIHandler.authenticate("be7afde61f5e10bb20393025c35e50c7", "1ff9ab03aa8e5bd073345d70d588abde");
     }
 
-    private void updateProfitLossChart() throws SQLException {
+    private void updateProfitLossChart() throws SQLException, ParseException {
         portfolioChart.getData().clear();
         //TODO: Refactor this to not regather all data each iteration
         portfolioChart.setAnimated(false);
         ArrayList<String> portfolioRecords = dh.executeQuery("SELECT Symbol, Held, Investment, LastUpdated FROM portfolio ORDER BY LastUpdated ASC;");
 
-        Map<String, Double> timeAndPrice = new HashMap<>();
+        Map<Long, Double> timeAndPrice = new HashMap<>();
+
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
         for (String record : portfolioRecords) {
             String[] splitRecord = record.split(",");
@@ -150,18 +155,20 @@ public class Controller {
 
                 double profitLoss = (Double.parseDouble(splitIRecord[0]) * held) - cost;
 
-                timeAndPrice.put(splitIRecord[1], timeAndPrice.getOrDefault(splitIRecord[1], 0.0) + profitLoss);
+                long epoch = format.parse(splitIRecord[1]).getTime();
+
+                timeAndPrice.put(epoch, timeAndPrice.getOrDefault(epoch, 0.0) + profitLoss);
             }
         }
 
-        XYChart.Series<String, Double> profitLossData = new XYChart.Series<>();
+        XYChart.Series<Integer, Double> profitLossData = new XYChart.Series<>();
 
         int i = 0;
 
         double currProfitLoss = 0;
 
-        for (String time : timeAndPrice.keySet()) {
-            XYChart.Data<String, Double> point = new XYChart.Data(time, timeAndPrice.get(time));
+        for (Long time : timeAndPrice.keySet()) {
+            XYChart.Data<Integer, Double> point = new XYChart.Data(i, timeAndPrice.get(time));
             Rectangle rect = new Rectangle(0, 0);
             rect.setVisible(false);
             point.setNode(rect);
@@ -179,8 +186,6 @@ public class Controller {
         else if (currProfitLoss > 0)
             profitLossData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
         else profitLossData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
-
-
     }
 
     @FXML
@@ -196,7 +201,7 @@ public class Controller {
     }
 
     @FXML
-    public void initialize() throws SQLException, JSONException, InterruptedException {
+    public void initialize() throws SQLException {
         autonomyLevelDropdown.getItems().addAll("Manual", "Semi-Autonomy", "Full-Autonomy");
         autonomyLevelDropdown.getSelectionModel().selectFirst();
         portfolioChart.getXAxis().setVisible(false);
@@ -225,7 +230,7 @@ public class Controller {
 
         try {
             updateProfitLossChart();
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -515,13 +520,13 @@ public class Controller {
                 int cycle = m % downloadInterval;
 
                 if (cycle == 0 && s == 0) {
-                    if (m == 0 && h == 0) new Thread(() -> updateDailyStockData()).start();
                     new Thread(() -> {
                         updateIntradayStockData();
+                        updateDailyStockData();
                         Platform.runLater(() -> {
                             try {
                                 updateProfitLossChart();
-                            } catch (SQLException e) {
+                            } catch (Exception e) {
                                 e.printStackTrace();
                             }
                         });
@@ -632,7 +637,7 @@ public class Controller {
         }
     }
 
-    private String downloadArticle(String url) throws IOException, InterruptedException {
+    private String downloadArticle(String url) throws IOException {
         URL site = new URL(url);
         HttpURLConnection.setFollowRedirects(true);
         HttpURLConnection conn = (HttpURLConnection) site.openConnection(); //Written by https://stackoverflow.com/questions/15057329/how-to-get-redirected-url-and-content-using-httpurlconnection

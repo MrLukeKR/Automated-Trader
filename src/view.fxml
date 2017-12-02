@@ -7,7 +7,7 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/9"
+            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
             fx:controller="Controller">
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
@@ -192,6 +192,11 @@
                      <bottom>
                         <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
                             <TextArea fx:id="infoBox" editable="false" prefHeight="200.0" prefWidth="1920.0"/>
+                            <ToolBar prefHeight="40.0" prefWidth="200.0">
+                                <items>
+                                    <Label fx:id="currentTaskLabel" text="Idle"/>
+                                </items>
+                            </ToolBar>
                         </VBox>
                      </bottom>
                      <left>
@@ -286,7 +291,7 @@
                         </VBox>
                                     <LineChart fx:id="portfolioChart" prefHeight="150.0" prefWidth="600.0">
                                             <xAxis>
-                                              <CategoryAxis side="BOTTOM" />
+                                                <NumberAxis side="BOTTOM"/>
                                             </xAxis>
                                             <yAxis>
                                               <NumberAxis side="LEFT" />

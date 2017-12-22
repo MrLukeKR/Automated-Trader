@@ -1,3 +1,5 @@
+import javafx.scene.control.ProgressBar;
+
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -8,29 +10,34 @@ public class TechnicalAnalyser {
         dh = db;
     }
 
-    static public void processUncalculated() {
+    static public void processUncalculated(ProgressBar pb) throws SQLException {
         System.out.println("Processing uncalculated technical indicators (This could take a while)");
+        ArrayList<String> uncalculatedRecords = null;
+
         try {
-            ArrayList<String> uncalculatedRecords =
+            uncalculatedRecords =
                     dh.executeQuery("SELECT dailystockprices.Symbol, dailystockprices.TradeDate FROM dailystockprices " +
                             "LEFT JOIN dailytechnicalindicators ON dailystockprices.TradeDate = dailytechnicalindicators.TradeDate " +
                             "WHERE dailytechnicalindicators.TradeDate IS NULL AND dailystockprices.TradeDate < CURDATE()");
-
-            for (String record : uncalculatedRecords) {
-                String symbol = record.split(",")[0];
-                String date = record.split(",")[1];
-                float EMA12 = calculateEMA12(symbol, date);
-                float EMA26 = calculateEMA26(symbol, date);
-                float MACD = calculateMACD(symbol, date);
-                float RSI = calculateRSI(symbol, date);
-
-                if (RSI >= 0)
-                    dh.executeCommand("INSERT INTO dailytechnicalindicators (Symbol, TradeDate, MACD, RSI, EMA12, EMA26) VALUES ('" + symbol + "','" + date + "','" + MACD + "','" + RSI + "','" + EMA12 + "','" + EMA26 + "');");
-                else
-                    dh.executeCommand("INSERT INTO dailytechnicalindicators (Symbol, TradeDate, MACD, EMA12, EMA26) VALUES ('" + symbol + "','" + date + "','" + MACD + "','" + EMA12 + "','" + EMA26 + "');");
-            }
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+
+        if (uncalculatedRecords == null || uncalculatedRecords.isEmpty()) return;
+
+        ArrayList<String> commands = new ArrayList<>();
+        int i = 0, t = uncalculatedRecords.size() - 1;
+        for (String record : uncalculatedRecords) {
+            String symbol = record.split(",")[0];
+            String date = record.split(",")[1];
+            float EMA12 = calculateEMA12(symbol, date);
+            float EMA26 = calculateEMA26(symbol, date);
+            float MACD = calculateMACD(symbol, date);
+            float RSI = calculateRSI(symbol, date);
+
+            dh.executeCommand("INSERT INTO dailytechnicalindicators (Symbol, TradeDate, MACD, RSI, EMA12, EMA26) VALUES ('" + symbol + "','" + date + "','" + MACD + "','" + RSI + "','" + EMA12 + "','" + EMA26 + "');");
+
+            Controller.updateProgress(i++, t, pb);
         }
     }
 

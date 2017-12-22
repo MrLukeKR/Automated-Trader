@@ -4,10 +4,10 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.effect.SepiaTone?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.shape.*?>
 <?import javafx.scene.text.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
+            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/9"
             fx:controller="Controller">
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
@@ -23,92 +23,6 @@
                                         text="Control Panel">
                                 <content>
                                     <BorderPane prefHeight="200.0" prefWidth="200.0">
-                                        <bottom>
-                                            <FlowPane prefHeight="110.0" prefWidth="401.0"
-                                                      BorderPane.alignment="CENTER">
-                                                <children>
-                                                    <BorderPane prefHeight="25.0" prefWidth="398.0">
-                                                        <left>
-                                                            <Circle fx:id="stockFeedAvailability" fill="#ff0000"
-                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"
-                                                                    BorderPane.alignment="CENTER"/>
-                                                        </left>
-                                                        <right>
-                                                            <ProgressBar fx:id="stockFeedProgress" prefHeight="20.0"
-                                                                         prefWidth="230.0" progress="0.0"
-                                                                         visible="false" BorderPane.alignment="CENTER"/>
-                                                        </right>
-                                                        <center>
-                                                            <Label text="Stock Quote Feed"
-                                                                   BorderPane.alignment="CENTER">
-                                                                <font>
-                                                                    <Font name="System Bold" size="14.0"/>
-                                                                </font>
-                                                            </Label>
-                                                        </center>
-                                                    </BorderPane>
-                                                    <BorderPane prefHeight="25.0" prefWidth="398.0">
-                                                        <left>
-                                                            <Circle fx:id="newsFeedAvailability" fill="#ff0000"
-                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"
-                                                                    BorderPane.alignment="CENTER"/>
-                                                        </left>
-                                                        <right>
-                                                            <ProgressBar fx:id="newsFeedProgress" prefHeight="18.0"
-                                                                         prefWidth="275.0" progress="0.0"
-                                                                         visible="false" BorderPane.alignment="CENTER"/>
-                                                        </right>
-                                                        <center>
-                                                            <Label text="News Feed" BorderPane.alignment="CENTER">
-                                                                <font>
-                                                                    <Font name="System Bold" size="14.0"/>
-                                                                </font>
-                                                            </Label>
-                                                        </center>
-                                                    </BorderPane>
-                                                    <BorderPane prefHeight="25.0" prefWidth="398.0">
-                                                        <left>
-                                                            <Circle fx:id="nlpAvailability" fill="#ff0000" radius="5.0"
-                                                                    stroke="#ff0000" strokeType="INSIDE"
-                                                                    BorderPane.alignment="CENTER"/>
-                                                        </left>
-                                                        <right>
-                                                            <ProgressBar fx:id="nlpProgress" prefHeight="18.0"
-                                                                         prefWidth="160.0" progress="0.0"
-                                                                         visible="false" BorderPane.alignment="CENTER"/>
-                                                        </right>
-                                                        <center>
-                                                            <Label text="Natural Language Processor"
-                                                                   BorderPane.alignment="CENTER">
-                                                                <font>
-                                                                    <Font name="System Bold" size="14.0"/>
-                                                                </font>
-                                                            </Label>
-                                                        </center>
-                                                    </BorderPane>
-                                                    <BorderPane prefHeight="25.0" prefWidth="398.0">
-                                                        <left>
-                                                            <Circle fx:id="stockForecastAvailability" fill="#ff0000"
-                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"
-                                                                    BorderPane.alignment="CENTER"/>
-                                                        </left>
-                                                        <right>
-                                                            <ProgressBar fx:id="stockForecastProgress" prefHeight="20.0"
-                                                                         prefWidth="235.0" progress="0.0"
-                                                                         visible="false" BorderPane.alignment="CENTER"/>
-                                                        </right>
-                                                        <center>
-                                                            <Label text="Stock Forecaster"
-                                                                   BorderPane.alignment="CENTER">
-                                                                <font>
-                                                                    <Font name="System Bold" size="14.0"/>
-                                                                </font>
-                                                            </Label>
-                                                        </center>
-                                                    </BorderPane>
-                                                </children>
-                                            </FlowPane>
-                                        </bottom>
                                         <top>
                                             <FlowPane prefHeight="210.0" prefWidth="401.0"
                                                       BorderPane.alignment="CENTER">
@@ -184,6 +98,93 @@
                                             <Separator prefHeight="10.0" prefWidth="401.0"
                                                        BorderPane.alignment="CENTER"/>
                                         </center>
+                                        <bottom>
+                                            <BorderPane prefHeight="95.0" prefWidth="401.0"
+                                                        BorderPane.alignment="CENTER">
+                                                <right>
+                                                    <VBox prefHeight="108.0" prefWidth="190.0"
+                                                          BorderPane.alignment="CENTER">
+                                                        <children>
+                                                            <ProgressBar fx:id="stockFeedProgress" prefHeight="20.0"
+                                                                         prefWidth="190.0" progress="0.0"
+                                                                         visible="false"/>
+                                                            <ProgressBar fx:id="newsFeedProgress" prefHeight="20.0"
+                                                                         prefWidth="190.0" progress="0.0"
+                                                                         visible="false"/>
+                                                            <ProgressBar fx:id="nlpProgress" prefHeight="20.0"
+                                                                         prefWidth="190.0" progress="0.0"
+                                                                         visible="false"/>
+                                                            <ProgressBar fx:id="stockForecastProgress" prefHeight="20.0"
+                                                                         prefWidth="190.0" progress="0.0"
+                                                                         visible="false"/>
+                                                            <ProgressBar fx:id="technicalAnalyserProgress"
+                                                                         prefHeight="20.0" prefWidth="190.0"
+                                                                         progress="0.0" visible="false"/>
+                                                        </children>
+                                                    </VBox>
+                                                </right>
+                                                <left>
+                                                    <VBox prefHeight="100.0" prefWidth="15.0"
+                                                          BorderPane.alignment="CENTER">
+                                                        <children>
+                                                            <Separator prefHeight="5.0" prefWidth="10.0"
+                                                                       visible="false"/>
+                                                            <Circle fx:id="stockFeedAvailability" fill="#ff0000"
+                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"/>
+                                                            <Separator prefHeight="10.0" prefWidth="10.0"
+                                                                       visible="false"/>
+                                                            <Circle fx:id="newsFeedAvailability" fill="#ff0000"
+                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"/>
+                                                            <Separator prefHeight="10.0" prefWidth="10.0"
+                                                                       visible="false"/>
+                                                            <Circle fx:id="nlpAvailability" fill="#ff0000" radius="5.0"
+                                                                    stroke="#ff0000" strokeType="INSIDE"/>
+                                                            <Separator prefHeight="10.0" prefWidth="10.0"
+                                                                       visible="false"/>
+                                                            <Circle fx:id="stockForecastAvailability" fill="#ff0000"
+                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"/>
+                                                            <Separator prefHeight="10.0" prefWidth="10.0"
+                                                                       visible="false"/>
+                                                            <Circle fx:id="technicalAnalyserAvailability" fill="#ff0000"
+                                                                    radius="5.0" stroke="#ff0000" strokeType="INSIDE"/>
+                                                        </children>
+                                                    </VBox>
+                                                </left>
+                                                <center>
+                                                    <VBox prefHeight="108.0" prefWidth="200.0"
+                                                          BorderPane.alignment="CENTER">
+                                                        <children>
+                                                            <Label prefHeight="20.0" text="Stock Quote Feed">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                            <Label prefHeight="20.0" text="News Feed">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                            <Label prefHeight="20.0" text="Natural Language Processor">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                            <Label prefHeight="20.0" text="Stock Forecaster">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                            <Label prefHeight="20.0" prefWidth="125.0"
+                                                                   text="Technical Analyser">
+                                                                <font>
+                                                                    <Font name="System Bold" size="14.0"/>
+                                                                </font>
+                                                            </Label>
+                                                        </children>
+                                                    </VBox>
+                                                </center>
+                                            </BorderPane>
+                                        </bottom>
                                     </BorderPane>
                                 </content>
                               </TitledPane>

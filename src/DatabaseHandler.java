@@ -4,7 +4,7 @@ import java.util.ArrayList;
 public class DatabaseHandler {
     private Connection connection = null;
 
-    public boolean init(String username, String password) throws SQLException, ClassNotFoundException {
+    public boolean init(String username, String password) throws ClassNotFoundException {
         Class.forName("com.mysql.jdbc.Driver");
 
         try {
@@ -21,7 +21,7 @@ public class DatabaseHandler {
         }
 
         if(connection == null)  System.err.println("Failed to initialise database connection!");
-        else                    System.out.println("Initialised database connection");
+        else System.out.println("Initialised database connection for '" + username + "'");
 
         return (connection != null);
     }

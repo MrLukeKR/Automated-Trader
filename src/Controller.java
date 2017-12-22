@@ -36,7 +36,10 @@ import java.util.concurrent.TimeUnit;
 public class Controller {
     static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
     static DatabaseHandler dh = new DatabaseHandler();
-    static DatabaseHandler mdh = new DatabaseHandler(); //Manual DB (No auto-commit)
+    static DatabaseHandler nlpdh = new DatabaseHandler();
+    static DatabaseHandler tadh = new DatabaseHandler();
+    static DatabaseHandler nadh = new DatabaseHandler();
+
     static AlphaVantageHandler avh = new AlphaVantageHandler();
     static boolean quit = false;
     final int downloadInterval = 1;
@@ -90,6 +93,10 @@ public class Controller {
     TextField profitTargetField;
     @FXML
     LineChart<Integer, Double> portfolioChart;
+    @FXML
+    ProgressBar technicalAnalyserProgress;
+    @FXML
+    Circle technicalAnalyserAvailability;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -124,11 +131,15 @@ public class Controller {
         System.out.println("Initialising Connections...");
         try {
             dh.init("agent", "0Y5q0m28pSB9jj2O");
-            mdh.init("agent", "0Y5q0m28pSB9jj2O");
-            mdh.executeCommand("USE automated_trader"); //TODO: Fix the init calls for databases
-
+            nlpdh.init("agent", "0Y5q0m28pSB9jj2O");
+            tadh.init("agent", "0Y5q0m28pSB9jj2O"); //TODO: Use different accounts
+            nadh.init("agent", "0Y5q0m28pSB9jj2O");
+            nadh.executeCommand("USE automated_trader"); //TODO: Fix the init calls for databases
+            nlpdh.executeCommand("USE automated_trader");  //TODO: Fix the init calls for databases
+            tadh.executeCommand("USE automated_trader"); //TODO: Fix the init calls for databases
         } catch (Exception e) {
         }
+
         avh.init("PBATJ7L9N8SNK835");
 
         NewsAPIHandler.authenticate("be7afde61f5e10bb20393025c35e50c7", "1ff9ab03aa8e5bd073345d70d588abde");
@@ -153,7 +164,7 @@ public class Controller {
             for (String iRecord : dh.executeQuery("SELECT ClosePrice, TradeDate FROM dailystockprices WHERE Symbol = '" + splitRecord[0] + "' AND TradeDate >= DATE('" + splitRecord[3] + "');")) {
                 String[] splitIRecord = iRecord.split(",");
 
-                double profitLoss = (Double.parseDouble(splitIRecord[0]) * held) - cost;
+                double profitLoss = (Double.parseDouble(splitIRecord[0]) * held) - cost; //TODO: This still isn't working as expected - incorrectly ordering graph points
 
                 long epoch = format.parse(splitIRecord[1]).getTime();
 
@@ -211,14 +222,26 @@ public class Controller {
         initialiseConnections();
         initialiseDatabase();
 
-        TechnicalAnalyser.initialise(dh);
-        NaturalLanguageProcessor.initialise(mdh);
+        TechnicalAnalyser.initialise(tadh);
+        NaturalLanguageProcessor.initialise(nlpdh);
 
         initialiseStocks();
         initialiseClocks();
         initialiseDisplay();
 
-        updateDailyStockData();
+        new Thread(() -> {
+            try {
+                processYahooHistories();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            downloadStockHistory();
+            try {
+                TechnicalAnalyser.processUncalculated(technicalAnalyserProgress);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }).start();
 
         updateStockValues();
         updateBankBalance();
@@ -240,11 +263,6 @@ public class Controller {
         startRealTime();
 
         new Thread(() -> {
-            try {processYahooHistories();} catch (SQLException e) { e.printStackTrace(); }
-            downloadStockHistory();
-        }).start();
-
-        new Thread(() -> {
             try {
                 updateNews();
                 downloadArticles();
@@ -253,7 +271,6 @@ public class Controller {
                 NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
             } catch (Exception e) {e.printStackTrace();}
         }).start();
-        //new Thread(() -> TechnicalAnalyser.processUncalculated()).start();
     }
 
     private void updateBankBalance() {
@@ -592,8 +609,8 @@ public class Controller {
             ArrayList<String> symbols = null;
             ArrayList<String> headlines = null;
             try {
-                symbols = dh.executeQuery("SELECT Symbol FROM newsarticles WHERE Published >= CURDATE() ORDER BY Published DESC");
-                headlines = dh.executeQuery("SELECT Headline FROM newsarticles WHERE Published >= CURDATE() ORDER BY Published DESC");
+                symbols = dh.executeQuery("SELECT Symbol FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
+                headlines = dh.executeQuery("SELECT Headline FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -719,7 +736,7 @@ public class Controller {
 
             curr.updateRecord(dh);
             curr.setUpdating(false);
-            curr.updateChart(dh, false);
+            Platform.runLater(() -> curr.updateChart(dh, false));
 
             Platform.runLater(() -> {
                 updateStockValues();

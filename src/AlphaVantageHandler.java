@@ -16,7 +16,7 @@ public class AlphaVantageHandler {
         BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
 
         //TODO: Ensure the download is successful
-        String sTemp = null;
+        String sTemp;
         ArrayList<String> temp = new ArrayList<>();
 
         while((sTemp = reader.readLine()) != null)

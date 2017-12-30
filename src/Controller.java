@@ -182,7 +182,6 @@ public class Controller {
                 String[] splitIRecord = iRecord.split(",");
 
                 double profitLoss = (Double.parseDouble(splitIRecord[0]) * held) - cost; //TODO: This still isn't working as expected - incorrectly ordering graph points
-
                 long epoch = format.parse(splitIRecord[1]).getTime();
 
                 timeAndPrice.put(epoch, timeAndPrice.getOrDefault(epoch, 0.0) + profitLoss);
@@ -228,13 +227,14 @@ public class Controller {
         initialiseDatabase();
 
         StockQuoteDownloader.initialise(dh, avh, stockFeedProgress);
-        TechnicalAnalyser.initialise(tadh);
         NaturalLanguageProcessor.initialise(nlpdh);
+        TechnicalAnalyser.initialise(tadh, technicalAnalyserProgress);
 
         initialiseStocks();
         initialiseClocks();
         initialiseDisplay();
         startClocks();
+
         new Thread(() -> {
             try {
                 updateSystem();
@@ -319,7 +319,11 @@ public class Controller {
                 e.printStackTrace();
             }
             StockQuoteDownloader.downloadStockHistory(stocks); //TODO: ONLY if the data is out of date or incomplete
-            //try {     TechnicalAnalyser.processUncalculated(technicalAnalyserProgress); } catch (SQLException e) { e.printStackTrace(); }
+            try {
+                TechnicalAnalyser.calculateTechnicalIndicators(stocks);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
 
         Thread newsThread = new Thread(() -> {
@@ -356,7 +360,7 @@ public class Controller {
         newsThread.start();
 
         stockThread.join();
-        //newsThread.join();
+        newsThread.join();
 
         startRealTime();
     }
@@ -791,7 +795,8 @@ public class Controller {
                 e.printStackTrace();
                 dh.executeCommand("UPDATE newsarticles SET Blacklisted = 1 WHERE ID = " + id + ";"); //Blacklist if the Content causes SQL error (i.e. truncation)
             }
-            newsFeedProgress.setProgress(i++ / t);
+
+            updateProgress(t++, t, newsFeedProgress);
         }
     }
 }

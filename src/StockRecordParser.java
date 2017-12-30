@@ -2,14 +2,13 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 
 
 public class StockRecordParser {
     static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
 
-    static public void importDailyMarketData(File csvFile, String symbol, DatabaseHandler dh) throws IOException, SQLException {
+    static public void importDailyMarketData(File csvFile, String symbol, DatabaseHandler dh) throws IOException {
         FileReader fr = new FileReader(csvFile);
         BufferedReader br = new BufferedReader(fr);
 
@@ -29,7 +28,7 @@ public class StockRecordParser {
             if (curr != null) {
                 String[] split = curr.split(",");
                 if (split.length == 6 && split[1].matches(IS_NUMERIC)) {
-                    String statement = "INSERT INTO dailystockprices VALUES(";
+                    String statement = "INSERT INTO dailystockprices (Symbol, TradeDate, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume) VALUES(";
 
                     statement += "'" + symbol + "','" + split[0] + "'" + curr.replaceAll(split[0],"")
                             + ") ON DUPLICATE KEY UPDATE " +

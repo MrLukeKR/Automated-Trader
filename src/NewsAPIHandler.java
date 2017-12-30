@@ -32,7 +32,7 @@ public class NewsAPIHandler {
         });
     }
 
-    static public void getHistoricNews(String stock, DatabaseHandler dh) throws IOException, SQLException, JSONException, InterruptedException {
+    static public void getHistoricNews(String stock, DatabaseHandler dh) throws IOException, SQLException, InterruptedException {
         if(isOverLimit(dh)) return;
 
         int values[] = getCSVMetaData(stock, dh);
@@ -73,7 +73,7 @@ public class NewsAPIHandler {
         return isOverLimit(dh, 0);
     }
 
-    static public int[] getCSVMetaData(String stock, DatabaseHandler dh) throws JSONException, IOException, SQLException, InterruptedException {
+    static public int[] getCSVMetaData(String stock, DatabaseHandler dh) throws IOException, SQLException, InterruptedException {
         URL url = new URL(INTRINIO_CSV_CALL + stock);
 
         TimeUnit.MILLISECONDS.sleep(1000); // To prevent blocking
@@ -192,7 +192,7 @@ public class NewsAPIHandler {
         else
             System.out.println("Downloading Historical News (Page " + page + ") for " + stock + "...");
 
-        String doc = null;
+        String doc;
         try (InputStream in = url.openStream()) {
             Scanner s = new Scanner(in).useDelimiter(("\\A"));
             doc = s.next();

@@ -1,15 +1,17 @@
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 
 import java.io.IOException;
 import java.sql.SQLException;
 
 public class Main extends Application {
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
     public void start(Stage primaryStage) throws IOException {
@@ -17,16 +19,13 @@ public class Main extends Application {
         primaryStage.setScene(new Scene(root, 1920, 1080));
         primaryStage.setTitle("Automated Stock Trader");
         primaryStage.show();
-        primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
-            @Override
-            public void handle(WindowEvent event) {
-                System.exit(1);
+        primaryStage.setOnCloseRequest(event -> {
+            try {
+                Controller.shutdown();
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
+            System.exit(1);
         });
-    }
-
-
-    public static void main(String[] args) throws SQLException, ClassNotFoundException, IOException {
-       launch(args);
     }
 }

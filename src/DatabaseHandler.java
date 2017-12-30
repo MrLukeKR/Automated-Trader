@@ -2,10 +2,12 @@ import java.sql.*;
 import java.util.ArrayList;
 
 public class DatabaseHandler {
+    private String user = null;
     private Connection connection = null;
 
-    public boolean init(String username, String password) throws ClassNotFoundException {
+    public boolean init(String username, String password) throws ClassNotFoundException, SQLException {
         Class.forName("com.mysql.jdbc.Driver");
+        user = username;
 
         try {
             connection = DriverManager.getConnection("jdbc:mysql://localhost", username, password);
@@ -21,7 +23,10 @@ public class DatabaseHandler {
         }
 
         if(connection == null)  System.err.println("Failed to initialise database connection!");
-        else System.out.println("Initialised database connection for '" + username + "'");
+        else {
+            System.out.println("Initialised database connection for '" + username + "'");
+            executeCommand("USE automated_trader");
+        }
 
         return (connection != null);
     }
@@ -64,5 +69,6 @@ public class DatabaseHandler {
 
     public void close() throws SQLException {
         connection.close();
+        System.out.println("Closed database connection for '" + user + "'");
     }
 }

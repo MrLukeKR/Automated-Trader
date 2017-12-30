@@ -1,198 +1,179 @@
+import com.tictactec.ta.lib.Core;
+import com.tictactec.ta.lib.MInteger;
+import com.tictactec.ta.lib.RetCode;
 import javafx.scene.control.ProgressBar;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.sql.Date;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.TreeMap;
 
 public class TechnicalAnalyser {
+    static private PrintWriter pw;
+    static private Core ta = new Core();
     static private DatabaseHandler dh;
+    static private ProgressBar pb;
 
-    static public void initialise(DatabaseHandler db) {
-        dh = db;
-    }
-
-    static public void processUncalculated(ProgressBar pb) throws SQLException {
-        System.out.println("Processing uncalculated technical indicators (This could take a while)");
-        ArrayList<String> uncalculatedRecords = null;
-
+    static {
         try {
-            uncalculatedRecords =
-                    dh.executeQuery("SELECT dailystockprices.Symbol, dailystockprices.TradeDate FROM dailystockprices " +
-                            "LEFT JOIN dailytechnicalindicators ON dailystockprices.TradeDate = dailytechnicalindicators.TradeDate " +
-                            "WHERE dailytechnicalindicators.TradeDate IS NULL AND dailystockprices.TradeDate < CURDATE()");
-        } catch (SQLException e) {
+            pw = new PrintWriter("res/SQLTotal.sql");
+        } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-
-        if (uncalculatedRecords == null || uncalculatedRecords.isEmpty()) return;
-
-        ArrayList<String> commands = new ArrayList<>();
-        int i = 0, t = uncalculatedRecords.size() - 1;
-        for (String record : uncalculatedRecords) {
-            String symbol = record.split(",")[0];
-            String date = record.split(",")[1];
-            float EMA12 = calculateEMA12(symbol, date);
-            float EMA26 = calculateEMA26(symbol, date);
-            float MACD = calculateMACD(symbol, date);
-            float RSI = calculateRSI(symbol, date);
-
-            dh.executeCommand("INSERT INTO dailytechnicalindicators (Symbol, TradeDate, MACD, RSI, EMA12, EMA26) VALUES ('" + symbol + "','" + date + "','" + MACD + "','" + RSI + "','" + EMA12 + "','" + EMA26 + "');");
-
-            Controller.updateProgress(i++, t, pb);
-        }
     }
 
-    static public float calculateSMA(String stock, String date, int days) {
-        float SMA = 0;
-
-        ArrayList<String> records = null;
-        try {
-            records = dh.executeQuery("SELECT ClosePrice FROM (SELECT * FROM dailystockprices WHERE TradeDate <= '" + date + "' AND Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT " + days + ") AS t ORDER BY t.TradeDate ASC;");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        for (int i = Math.max(0, records.size() - days); i < records.size(); i++) {
-            SMA += Float.parseFloat(records.get(i));
-        }
-
-        return SMA / days;
+    static public void initialise(DatabaseHandler tadh, ProgressBar pb) {
+        dh = tadh;
+        TechnicalAnalyser.pb = pb;
     }
 
-    static public float calculateEMA12(String stock, String date) {
-        ArrayList<String> cPrice = null;
-        ArrayList<String> pEMA = null;
-        try {
-            cPrice = dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE TradeDate = '" + date + "' AND Symbol = '" + stock + "';");
-            pEMA = dh.executeQuery("SELECT EMA12 FROM dailytechnicalindicators WHERE TradeDate < '" + date + "' AND Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1;");
-        } catch (SQLException e) {
-            e.printStackTrace();
+    static private String technicalIndicatorToString(TechnicalIndicator indicator) {
+        switch (indicator) {
+            case SMA10:
+                return "SMA10";
+            case MACD:
+                return "MACD";
+            case EMA10:
+                return "EMA10";
+            case RSI10:
+                return "RSI10";
+            case ADX10:
+                return "ADX10";
+            case OBV:
+                return "OBV";
         }
 
-        //TODO: Validation of arrays
-
-        float price = Float.parseFloat(cPrice.get(0));
-
-        if (!pEMA.isEmpty())
-            return calculateEMA(Float.parseFloat(pEMA.get(0)), price, 12);
-        else
-            return calculateEMA(stock, date, 12);
+        return null;
     }
 
-    static public float calculateEMA26(String stock, String date) {
-        ArrayList<String> cPrice = null;
-        ArrayList<String> pEMA = null;
-        try {
-            cPrice = dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE TradeDate = '" + date + "' AND Symbol = '" + stock + "';");
-            pEMA = dh.executeQuery("SELECT EMA26 FROM dailytechnicalindicators WHERE TradeDate < '" + date + "' AND Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1;");
-        } catch (SQLException e) {
-            e.printStackTrace();
+    static private int technicalIndicatorToDays(TechnicalIndicator indicator) {
+        switch (indicator) {
+            case SMA10:
+                return 10;
+            case EMA10:
+                return 12;
+            case RSI10:
+                return 10;
+            case ADX10:
+                return 10;
         }
 
-        //TODO: Validation of arrays
-
-        float price = Float.parseFloat(cPrice.get(0));
-
-        if (!pEMA.isEmpty())
-            return calculateEMA(Float.parseFloat(pEMA.get(0)), price, 26);
-        else
-            return calculateEMA(stock, date, 26);
+        return 0;
     }
 
-    static public float calculateEMA(float prevEMA, float currPrice, float days) {
-        float multiplier = 2.0f / (days + 1.0f);
-        return currPrice * multiplier + prevEMA * (1 - multiplier);
-    }
+    static public void calculateTechnicalIndicators(ArrayList<String> stocks) throws SQLException, FileNotFoundException {
+        double c = 0, t = (stocks.size() * TechnicalIndicator.values().length) - 1;
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
 
-    static public float calculateEMA(String stock, String date, int days) {
-        float EMA = 0;
+        for (String stock : stocks) {
+            TreeMap<Date, Double> closePrices = getFromDatabase(stock, "ClosePrice");
+            TreeMap<Date, Double> volumes = getFromDatabase(stock, "TradeVolume");
+            TreeMap<Date, Double> openPrices = getFromDatabase(stock, "OpenPrice");
+            TreeMap<Date, Double> lowPrices = getFromDatabase(stock, "LowPrice");
+            TreeMap<Date, Double> highPrices = getFromDatabase(stock, "HighPrice");
 
-        ArrayList<String> records = null;
-        try {
-            records = dh.executeQuery("SELECT ClosePrice, TradeDate FROM (SELECT * FROM dailystockprices WHERE TradeDate <= '" + date + "' AND Symbol = '" + stock + "' ORDER BY TradeDate ASC) AS t ORDER BY t.TradeDate ASC;");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        if (records.size() < days)
-            return calculateSMA(stock, date, days);
-
-        String cDate, cPrice;
-        int count = 1;
-        for (String record : records) {
-            if (records.size() == days) {
-                cDate = record.split(",")[1];
-                EMA = calculateSMA(stock, cDate, days);
-            } else if (count > days) {
-                cPrice = record.split(",")[0];
-                EMA = calculateEMA(EMA, Float.parseFloat(cPrice), days);
+            for (TechnicalIndicator ti : TechnicalIndicator.values()) {
+                sendToDatabase(stock, technicalIndicatorToString(ti), calculateTechnicalIndicator(ti, stock, openPrices, highPrices, lowPrices, closePrices, volumes, technicalIndicatorToDays(ti)));
+                Controller.updateProgress(c++, t, pb);
             }
-            count++;
         }
-
-        return EMA;
     }
 
-    static public float calculateMACD(String stock, String date) {
-        try {
-            ArrayList<String> records = dh.executeQuery("SELECT ClosePrice FROM (SELECT * FROM dailystockprices WHERE TradeDate <= '" + date + "' AND Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 26) AS t ORDER BY t.TradeDate ASC;");
+    static private TreeMap<Date, Double> getFromDatabase(String stock, String field) throws SQLException {
+        ArrayList<String> temp = dh.executeQuery("SELECT TradeDate, " + field + " FROM dailystockprices WHERE Symbol='" + stock + "' ORDER BY TradeDate ASC");
+        TreeMap<Date, Double> records = new TreeMap();
 
-            float EMA12 = calculateEMA12(stock, date);
-            float EMA26 = calculateEMA26(stock, date);
-
-            return EMA12 - EMA26;
-        } catch (SQLException e) {
-            e.printStackTrace();
+        for (String record : temp) {
+            String[] splitString = record.split(",");
+            double price = Double.parseDouble(splitString[1]);
+            records.put(Date.valueOf(splitString[0]), price);
         }
-        return -1;
+
+        return records;
     }
 
-    static public float calculateRSI(String stock, String date) {
-        try {
-            ArrayList<String> records = dh.executeQuery("SELECT ClosePrice FROM (SELECT * FROM dailystockprices WHERE TradeDate <= '" + date + "' AND Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 28) AS t ORDER BY t.TradeDate ASC;");
+    static private void sendToDatabase(String stock, String indicator, TreeMap<Date, Double> records) throws SQLException {
+        ArrayList<String> dates = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol = '" + stock + "' AND " + indicator + " IS NOT NULL ORDER BY TradeDate DESC LIMIT 1");
 
-            if (records.size() < 14)
-                return -1;
+        Date updateFrom;
 
-            int count = 0;
-            float gain = 0;
-            float loss = 0;
-            float amount;
+        if (dates.isEmpty())
+            updateFrom = Date.valueOf(dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC LIMIT 1").get(0));
+        else
+            updateFrom = Date.valueOf(dates.get(0));
 
-            float prevPrice = 0;
-
-            for (String record : records) {
-                if (count >= 1 && count < 14) {
-                    amount = Float.parseFloat(record) - prevPrice;
-                    if (amount >= 0)
-                        gain += amount;
-                    else
-                        loss += Math.abs(amount);
-                }
-
-                if (count == 14) {
-                    gain /= 14.0;
-                    loss /= 14.0;
-                }
-
-                if (count >= 14) {
-                    amount = Float.parseFloat(record) - prevPrice;
-                    if (amount >= 0) {
-                        gain = (gain * 13 + amount) / 14;
-                        loss = (loss * 13 + 0) / 14;
-                    } else {
-                        gain = (gain * 13 + 0) / 14;
-                        loss = (loss * 13 + Math.abs(amount)) / 14;
-                    }
-                }
-                prevPrice = Float.parseFloat(record);
-                count++;
-            }
-            if (loss == 0)
-                return 0;
-            return 100 - (100 / (1 + (gain / loss)));
-        } catch (Exception e) {
-            e.printStackTrace();
+        for (Date key : records.keySet()) {
+            if (key.getTime() >= updateFrom.getTime())
+                //pw.println("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "'");
+                dh.executeCommand("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "'");
         }
-        return -1;
     }
+
+    static private double[] recordMapToPriceArray(TreeMap<Date, Double> map) {
+        double[] prices = new double[map.size()];
+        int i = 0;
+
+        for (Date key : map.keySet())
+            prices[i++] = map.get(key);
+
+        return prices;
+    }
+
+    static private TreeMap<Date, Double> priceArrayToRecordMap(Set<Date> dates, int startInd, int length, double[] values) {
+        TreeMap<Date, Double> outputValues = new TreeMap();
+        int i = 0;
+
+        for (Date key : dates) {
+            if (i >= startInd && i < length)
+                outputValues.put(key, values[i]);
+            i++;
+        }
+
+        return outputValues;
+    }
+
+    static public TreeMap<Date, Double> calculateTechnicalIndicator(TechnicalIndicator indicator, String stock, TreeMap<Date, Double> openPrices, TreeMap<Date, Double> highPrices, TreeMap<Date, Double> lowPrices, TreeMap<Date, Double> closePrices, TreeMap<Date, Double> volumes, int days) {
+        System.out.println("Calculating " + technicalIndicatorToString(indicator) + " for " + stock + "...");
+
+        MInteger begin = new MInteger(), length = new MInteger();
+        double[] out = new double[closePrices.size()];
+        double[] cPrices = recordMapToPriceArray(closePrices);
+        double[] oPrices = recordMapToPriceArray(openPrices);
+        double[] lPrices = recordMapToPriceArray(lowPrices);
+        double[] hPrices = recordMapToPriceArray(highPrices);
+        double[] volume = recordMapToPriceArray(volumes);
+
+        RetCode rc = null;
+
+        switch (indicator) {
+            case SMA10:
+                rc = ta.sma(0, cPrices.length - 1, cPrices, days, begin, length, out);
+                break;
+            case MACD:
+                rc = ta.macd(0, cPrices.length - 1, cPrices, 12, 26, 9, begin, length, out, new double[closePrices.size()], new double[closePrices.size()]);
+                break;
+            case EMA10:
+                rc = ta.ema(0, cPrices.length - 1, cPrices, days, begin, length, out);
+                break;
+            case RSI10:
+                rc = ta.rsi(0, cPrices.length - 1, cPrices, days, begin, length, out);
+                break;
+            case OBV:
+                rc = ta.obv(0, cPrices.length - 1, cPrices, volume, begin, length, out);
+                break;
+            case ADX10:
+                rc = ta.adx(0, cPrices.length - 1, hPrices, lPrices, cPrices, days, begin, length, out);
+                break;
+        }
+
+        if (rc != null && rc == RetCode.Success)
+            return priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out);
+        else
+            return null;
+    }
+
+    public enum TechnicalIndicator {SMA10, MACD, EMA10, RSI10, OBV, ADX10}
 }

@@ -29,8 +29,8 @@ import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 public class Controller {
@@ -38,7 +38,7 @@ public class Controller {
     static DatabaseHandler dh = new DatabaseHandler();
     static DatabaseHandler nlpdh = new DatabaseHandler();
     static DatabaseHandler tadh = new DatabaseHandler();
-    static DatabaseHandler nadh = new DatabaseHandler();
+    static DatabaseHandler nddh = new DatabaseHandler();
 
     static AlphaVantageHandler avh = new AlphaVantageHandler();
     static boolean quit = false;
@@ -51,6 +51,8 @@ public class Controller {
     FlowPane stockList;
     @FXML
     ProgressBar liveStockProgressBar;
+    @FXML
+    ProgressBar stockFeedProgress;
     @FXML
     FlowPane timePane;
     @FXML
@@ -127,22 +129,37 @@ public class Controller {
         Platform.runLater(() -> pb.setProgress(val));
     }
 
+    static public void shutdown() throws SQLException {
+        dh.close();
+        nddh.close();
+        nlpdh.close();
+        tadh.close();
+    }
+
     private void initialiseConnections() {
         System.out.println("Initialising Connections...");
         try {
             dh.init("agent", "0Y5q0m28pSB9jj2O");
-            nlpdh.init("agent", "0Y5q0m28pSB9jj2O");
-            tadh.init("agent", "0Y5q0m28pSB9jj2O"); //TODO: Use different accounts
-            nadh.init("agent", "0Y5q0m28pSB9jj2O");
-            nadh.executeCommand("USE automated_trader"); //TODO: Fix the init calls for databases
-            nlpdh.executeCommand("USE automated_trader");  //TODO: Fix the init calls for databases
-            tadh.executeCommand("USE automated_trader"); //TODO: Fix the init calls for databases
+            nlpdh.init("NaturalLanguageProcessor", "p1pONM8zhI6GgCfy");
+            tadh.init("TechnicalAnalyser", "n6qvdUkFOoFCxPq5");
+            nddh.init("NewsDownloader", "wu0Ni6YF3yLTVp2A");
         } catch (Exception e) {
         }
 
         avh.init("PBATJ7L9N8SNK835");
-
         NewsAPIHandler.authenticate("be7afde61f5e10bb20393025c35e50c7", "1ff9ab03aa8e5bd073345d70d588abde");
+    }
+
+    @FXML
+    public void setAutonomyLevel() {
+        String level = autonomyLevelDropdown.getValue().toString();
+        boolean fullyAutonomous = level == "Full-Autonomy",
+                semiAutonomous = level == "Semi-Autonomy";
+
+        autonomousToolbox.setDisable(fullyAutonomous);
+        manualToolbox.setDisable(fullyAutonomous || semiAutonomous);
+
+        //TODO: Set autonomy settings
     }
 
     private void updateProfitLossChart() throws SQLException, ParseException {
@@ -151,7 +168,7 @@ public class Controller {
         portfolioChart.setAnimated(false);
         ArrayList<String> portfolioRecords = dh.executeQuery("SELECT Symbol, Held, Investment, LastUpdated FROM portfolio ORDER BY LastUpdated ASC;");
 
-        Map<Long, Double> timeAndPrice = new HashMap<>();
+        Map<Long, Double> timeAndPrice = new TreeMap<>();
 
         DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -200,18 +217,6 @@ public class Controller {
     }
 
     @FXML
-    public void setAutonomyLevel() {
-        String level = autonomyLevelDropdown.getValue().toString();
-        boolean fullyAutonomous = level == "Full-Autonomy",
-                semiAutonomous = level == "Semi-Autonomy";
-
-        autonomousToolbox.setDisable(fullyAutonomous);
-        manualToolbox.setDisable(fullyAutonomous || semiAutonomous);
-
-        //TODO: Set autonomy settings
-    }
-
-    @FXML
     public void initialize() throws SQLException {
         autonomyLevelDropdown.getItems().addAll("Manual", "Semi-Autonomy", "Full-Autonomy");
         autonomyLevelDropdown.getSelectionModel().selectFirst();
@@ -222,54 +227,33 @@ public class Controller {
         initialiseConnections();
         initialiseDatabase();
 
+        StockQuoteDownloader.initialise(dh, avh, stockFeedProgress);
         TechnicalAnalyser.initialise(tadh);
         NaturalLanguageProcessor.initialise(nlpdh);
 
         initialiseStocks();
         initialiseClocks();
         initialiseDisplay();
-
+        startClocks();
         new Thread(() -> {
             try {
-                processYahooHistories();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-            downloadStockHistory();
-            try {
-                TechnicalAnalyser.processUncalculated(technicalAnalyserProgress);
-            } catch (SQLException e) {
+                updateSystem();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }).start();
+    }
 
-        updateStockValues();
-        updateBankBalance();
-        updateTotalWorth();
-        updateProfitLoss();
-        updateAllocationChart();
-        updateComponentChart();
-        updateStocksOwned();
-
-        try {
-            updateProfitLossChart();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        calculateLossCutoff(0.1);
-        checkServices();
-
-        startRealTime();
-
+    private void startClocks() {
         new Thread(() -> {
-            try {
-                updateNews();
-                downloadArticles();
-                NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
-                NaturalLanguageProcessor.determineUselessSentences();
-                NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
-            } catch (Exception e) {e.printStackTrace();}
+            while (true) {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                updateClocks();
+            }
         }).start();
     }
 
@@ -327,11 +311,54 @@ public class Controller {
         for (StockClock clock : clocks) timePane.getChildren().add(clock.getNode());
     }
 
-    private void updateClocks() {
-        new Thread(() -> {
-            for (StockClock clock : clocks)
-                clock.updateTime();
-        }).start();
+    private void updateSystem() throws SQLException, InterruptedException {
+        Thread stockThread = new Thread(() -> {
+            try {
+                processYahooHistories();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            StockQuoteDownloader.downloadStockHistory(stocks); //TODO: ONLY if the data is out of date or incomplete
+            //try {     TechnicalAnalyser.processUncalculated(technicalAnalyserProgress); } catch (SQLException e) { e.printStackTrace(); }
+        });
+
+        Thread newsThread = new Thread(() -> {
+            try {
+                updateNews();
+                downloadArticles();
+                NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
+                NaturalLanguageProcessor.determineUselessSentences();
+                NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        //TODO: Put the following into one large update function?
+        updateStockValues();
+        updateBankBalance();
+        updateTotalWorth();
+        updateProfitLoss();
+        updateAllocationChart();
+        updateComponentChart();
+        updateStocksOwned();
+        //////////////////////////////////////////////////////////
+
+        try {
+            updateProfitLossChart();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        calculateLossCutoff(0.1);
+        checkServices();
+
+        stockThread.start();
+        newsThread.start();
+
+        stockThread.join();
+        //newsThread.join();
+
+        startRealTime();
     }
 
     private void checkServices() throws SQLException {
@@ -420,28 +447,6 @@ public class Controller {
         }
     }
 
-    private void downloadStockHistory() {
-        for (String symbol : stocks) {
-            ArrayList<String> temp = null;
-            try {
-                temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&datatype=csv&outputsize=full&apikey=" + avh.getApiKey());
-            } catch (Exception e) {e.printStackTrace();} //TODO: Process offline (503, 500 errors) handling
-
-            System.out.println("Downloaded full history of " + symbol);
-            StockRecordParser.importDailyMarketData(temp, symbol, dh);
-            System.out.println("Successully committed " + symbol + " full history to the database!");
-        }
-
-        for (String symbol : stocks) {
-            try {
-                ArrayList<String> temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=" + symbol + "&interval=1min&datatype=csv&outputsize=full&apikey=" + avh.getApiKey());
-                System.out.println("Downloaded intraday history of " + symbol);
-                StockRecordParser.importIntradayMarketData(temp, symbol, dh);
-                System.out.println("Successully committed " + symbol + " intraday history to the database!");
-            } catch (Exception e) {e.printStackTrace();}
-        }
-    }
-
     @FXML
     private void buyStock(int amount, String stock) throws SQLException {
         float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
@@ -465,6 +470,10 @@ public class Controller {
                 } catch (SQLException e) {  e.printStackTrace(); }
             });
         }
+    }
+
+    private void updateClocks() {
+        for (StockClock clock : clocks) clock.updateTime();
     }
 
     private void updateStocksOwned() throws SQLException {
@@ -522,14 +531,12 @@ public class Controller {
     @FXML
     public void startRealTime() {
         new Thread(() -> {
-
             while (!quit) {
                 try {
                     TimeUnit.MILLISECONDS.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                updateClocks();
 
                 int s = LocalTime.now().getSecond();
                 int m = LocalTime.now().getMinute();
@@ -591,36 +598,6 @@ public class Controller {
 
         allocationChart.getData().clear();
         allocationChart.getData().addAll(piechartData);
-    }
-
-    private void updateNews() throws SQLException, JSONException, InterruptedException {
-        if (newsUpdating) return;
-        newsUpdating = true;
-
-        try {
-            NewsAPIHandler.getHistoricNews(stocks, dh, newsFeedProgress);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        Platform.runLater(() -> {
-            newsBox.getChildren().clear();
-
-            ArrayList<String> symbols = null;
-            ArrayList<String> headlines = null;
-            try {
-                symbols = dh.executeQuery("SELECT Symbol FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
-                headlines = dh.executeQuery("SELECT Headline FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-            for (int i = 0; i < headlines.size(); i++) {
-                NewsRecord temp = new NewsRecord(symbols.get(i), headlines.get(i));
-                newsBox.getChildren().add(temp.getNode());
-            }
-        });
-        newsUpdating = false;
     }
 
     @FXML
@@ -696,6 +673,36 @@ public class Controller {
         return cleanHTML;
     }
 
+    private void updateNews() throws SQLException, JSONException, InterruptedException {
+        if (newsUpdating) return;
+        newsUpdating = true;
+
+        try {
+            NewsAPIHandler.getHistoricNews(stocks, nddh, newsFeedProgress);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Platform.runLater(() -> {
+            newsBox.getChildren().clear();
+
+            ArrayList<String> symbols = null;
+            ArrayList<String> headlines = null;
+            try {
+                symbols = dh.executeQuery("SELECT Symbol FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
+                headlines = dh.executeQuery("SELECT Headline FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            for (int i = 0; i < headlines.size(); i++) {
+                NewsRecord temp = new NewsRecord(symbols.get(i), headlines.get(i));
+                newsBox.getChildren().add(temp.getNode());
+            }
+        });
+        newsUpdating = false;
+    }
+
     private void updateDailyStockData() {
         if (priceUpdating) return;
         priceUpdating = true;
@@ -704,7 +711,7 @@ public class Controller {
             ArrayList<String> temp = null;
 
             try {
-                temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + curr.getSymbol() + "&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
+                temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.DAILY, StockQuoteDownloader.OutputSize.COMPACT);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -725,7 +732,7 @@ public class Controller {
             curr.setUpdating(true);
             ArrayList<String> temp = null;
             try {
-                temp = avh.submitRequest("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=" + curr.getSymbol() + "&interval=1min&datatype=csv&outputsize=compact&apikey=" + avh.getApiKey());
+                temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.INTRADAY, StockQuoteDownloader.OutputSize.COMPACT);
             } catch (IOException e) {
             }
 

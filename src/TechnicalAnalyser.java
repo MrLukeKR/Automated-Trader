@@ -3,7 +3,6 @@ import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 import javafx.scene.control.ProgressBar;
 
-import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.sql.Date;
 import java.sql.SQLException;
@@ -16,14 +15,6 @@ public class TechnicalAnalyser {
     static private Core ta = new Core();
     static private DatabaseHandler dh;
     static private ProgressBar pb;
-
-    static {
-        try {
-            pw = new PrintWriter("res/SQLTotal.sql");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
 
     static public void initialise(DatabaseHandler tadh, ProgressBar pb) {
         dh = tadh;
@@ -64,7 +55,7 @@ public class TechnicalAnalyser {
         return 0;
     }
 
-    static public void calculateTechnicalIndicators(ArrayList<String> stocks) throws SQLException, FileNotFoundException {
+    static public void calculateTechnicalIndicators(ArrayList<String> stocks) throws SQLException {
         double c = 0, t = (stocks.size() * TechnicalIndicator.values().length) - 1;
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
 

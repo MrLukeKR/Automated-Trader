@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 public class Controller {
     static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
     static DatabaseHandler dh = new DatabaseHandler();
+    static DatabaseHandler sqdh = new DatabaseHandler();
     static DatabaseHandler nlpdh = new DatabaseHandler();
     static DatabaseHandler tadh = new DatabaseHandler();
     static DatabaseHandler nddh = new DatabaseHandler();
@@ -134,6 +135,7 @@ public class Controller {
         nddh.close();
         nlpdh.close();
         tadh.close();
+        sqdh.close();
     }
 
     private void initialiseConnections() {
@@ -143,6 +145,7 @@ public class Controller {
             nlpdh.init("NaturalLanguageProcessor", "p1pONM8zhI6GgCfy");
             tadh.init("TechnicalAnalyser", "n6qvdUkFOoFCxPq5");
             nddh.init("NewsDownloader", "wu0Ni6YF3yLTVp2A");
+            sqdh.init("StockQuoteDownloader", "j2wbvx19Gg1Be22J");
         } catch (Exception e) {
         }
 
@@ -226,9 +229,10 @@ public class Controller {
         initialiseConnections();
         initialiseDatabase();
 
-        StockQuoteDownloader.initialise(dh, avh, stockFeedProgress);
+        StockQuoteDownloader.initialise(sqdh, avh, stockFeedProgress);
         NaturalLanguageProcessor.initialise(nlpdh);
         TechnicalAnalyser.initialise(tadh, technicalAnalyserProgress);
+        NewsAPIHandler.initialise(nddh);
 
         initialiseStocks();
         initialiseClocks();
@@ -237,7 +241,22 @@ public class Controller {
 
         new Thread(() -> {
             try {
+                tadh.setWriteToFile(true);
+                nlpdh.setWriteToFile(true);
+                nddh.setWriteToFile(true);
+                sqdh.setWriteToFile(true);
+
                 updateSystem();
+
+                sqdh.setWriteToFile(false);
+                tadh.setWriteToFile(false);
+                nlpdh.setWriteToFile(false);
+                nddh.setWriteToFile(false);
+
+                sqdh.sendSQLFileToDatabase();
+                tadh.sendSQLFileToDatabase();
+                nddh.sendSQLFileToDatabase();
+                nlpdh.sendSQLFileToDatabase();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -355,6 +374,7 @@ public class Controller {
         }
         calculateLossCutoff(0.1);
         checkServices();
+
 
         stockThread.start();
         newsThread.start();
@@ -682,7 +702,7 @@ public class Controller {
         newsUpdating = true;
 
         try {
-            NewsAPIHandler.getHistoricNews(stocks, nddh, newsFeedProgress);
+            NewsAPIHandler.getHistoricNews(stocks, newsFeedProgress);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -693,8 +713,8 @@ public class Controller {
             ArrayList<String> symbols = null;
             ArrayList<String> headlines = null;
             try {
-                symbols = dh.executeQuery("SELECT Symbol FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
-                headlines = dh.executeQuery("SELECT Headline FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
+                symbols = nddh.executeQuery("SELECT Symbol FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
+                headlines = nddh.executeQuery("SELECT Headline FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -721,7 +741,7 @@ public class Controller {
             }
 
             if (temp != null && temp.size() > 1) {
-                StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), dh);
+                StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), sqdh);
                 System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
             }
             curr.setUpdating(false);
@@ -741,13 +761,13 @@ public class Controller {
             }
 
             if (temp != null && temp.size() >= 2) {
-                StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), dh);
+                StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), sqdh);
                 System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1));
             }
 
-            curr.updateRecord(dh);
+            curr.updateRecord(sqdh);
             curr.setUpdating(false);
-            Platform.runLater(() -> curr.updateChart(dh, false));
+            Platform.runLater(() -> curr.updateChart(sqdh, false));
 
             Platform.runLater(() -> {
                 updateStockValues();
@@ -764,7 +784,8 @@ public class Controller {
 
     private void downloadArticles() throws SQLException {
         System.out.println("Downloading missing news article content...");
-        ArrayList<String> undownloadedArticles = dh.executeQuery("SELECT ID, URL FROM newsarticles WHERE Content IS NULL AND Blacklisted = 0 AND Redirected = 0 AND Duplicate = 0 AND URL != \"\";");
+        updateProgress(ProgressBar.INDETERMINATE_PROGRESS, newsFeedProgress);
+        ArrayList<String> undownloadedArticles = nddh.executeQuery("SELECT ID, URL FROM newsarticles WHERE Content IS NULL AND Blacklisted = 0 AND Redirected = 0 AND Duplicate = 0 AND URL != \"\";");
 
         if (undownloadedArticles == null || undownloadedArticles.isEmpty()) return;
 
@@ -786,17 +807,17 @@ public class Controller {
             try {
                 if (site != null)
                     if (site == "redirect")
-                        dh.executeCommand("UPDATE newsarticles SET Redirected = 1 WHERE ID = " + id + ";");
+                        nddh.executeCommand("UPDATE newsarticles SET Redirected = 1 WHERE ID = " + id + ";");
                     else
-                        dh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
+                        nddh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
                 else
-                    dh.executeCommand("UPDATE newsarticles SET Blacklisted = 1 WHERE ID = " + id + ";"); //Blacklist if the document could not be retrieved
+                    nddh.executeCommand("UPDATE newsarticles SET Blacklisted = 1 WHERE ID = " + id + ";"); //Blacklist if the document could not be retrieved
             } catch (Exception e) {
                 e.printStackTrace();
-                dh.executeCommand("UPDATE newsarticles SET Blacklisted = 1 WHERE ID = " + id + ";"); //Blacklist if the Content causes SQL error (i.e. truncation)
+                nddh.executeCommand("UPDATE newsarticles SET Blacklisted = 1 WHERE ID = " + id + ";"); //Blacklist if the Content causes SQL error (i.e. truncation)
             }
 
-            updateProgress(t++, t, newsFeedProgress);
+            updateProgress(i++, t, newsFeedProgress);
         }
     }
 }

@@ -1,13 +1,55 @@
+import java.io.*;
 import java.sql.*;
 import java.util.ArrayList;
 
 public class DatabaseHandler {
     private String user = null;
     private Connection connection = null;
+    private final int MAXIMUM_UNCOMMITTED_STATEMENTS = -1;
+    private PrintWriter diskSQL;
+    private int uncommittedStatements = 0;
+    private boolean WRITE_TO_FILE = false;
+
+    private void initialiseDiskSQL() {
+        try {
+            diskSQL = new PrintWriter("res/" + user + ".sql");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setWriteToFile(boolean wtf) {
+        WRITE_TO_FILE = wtf;
+    }
+
+    public void sendSQLFileToDatabase() throws SQLException, IOException {
+        boolean autoCommit = connection.getAutoCommit();
+        setAutoCommit(false);
+
+        diskSQL.close();
+
+        BufferedReader reader = new BufferedReader(new FileReader("res/" + user + ".sql"));
+        String line;
+
+        setWriteToFile(false);
+
+        while ((line = reader.readLine()) != null)
+            executeCommand(line);
+
+        commit();
+
+        setWriteToFile(true);
+        setAutoCommit(autoCommit);
+
+        reader.close();
+        initialiseDiskSQL();
+    }
 
     public boolean init(String username, String password) throws ClassNotFoundException, SQLException {
         Class.forName("com.mysql.jdbc.Driver");
         user = username;
+
+        initialiseDiskSQL();
 
         try {
             connection = DriverManager.getConnection("jdbc:mysql://localhost", username, password);
@@ -24,8 +66,8 @@ public class DatabaseHandler {
 
         if(connection == null)  System.err.println("Failed to initialise database connection!");
         else {
-            System.out.println("Initialised database connection for '" + username + "'");
             executeCommand("USE automated_trader");
+            System.out.println("Initialised database connection for '" + username + "'");
         }
 
         return (connection != null);
@@ -44,11 +86,27 @@ public class DatabaseHandler {
 
     public Boolean executeCommand(String command) throws SQLException {
         Statement statement = connection.createStatement();
-        return statement.execute(command);
+
+        boolean result;
+
+        if (!WRITE_TO_FILE)
+            result = statement.execute(command);
+        else {
+            result = true;
+            diskSQL.println(command);
+        }
+
+        if (!connection.getAutoCommit() && !WRITE_TO_FILE && MAXIMUM_UNCOMMITTED_STATEMENTS > 0 && uncommittedStatements++ >= MAXIMUM_UNCOMMITTED_STATEMENTS) {
+            commit();
+            System.out.println("----COMMITTED UNCOMMITTED STATEMENTS----");
+            uncommittedStatements = 0;
+        }
+
+        return result;
     }
 
     public ArrayList<String> executeQuery(String command) throws SQLException{
-            Statement query = connection.createStatement();
+        Statement query = connection.createStatement();
 
         ArrayList<String> tempArr = new ArrayList<>();
 

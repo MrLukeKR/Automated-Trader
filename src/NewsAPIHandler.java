@@ -1,6 +1,5 @@
 import javafx.scene.control.ProgressBar;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -19,6 +18,7 @@ public class NewsAPIHandler {
     static private String INTRINIO_USERNAME;
     static private String INTRINIO_PASSWORD;
     static private final int PAGES = 0, ARTICLES = 1; //Indices for accessing JSON metadata
+    static private DatabaseHandler dh;
 
     static public void authenticate(String username, String password){
         INTRINIO_USERNAME = username;
@@ -33,9 +33,9 @@ public class NewsAPIHandler {
     }
 
     static public void getHistoricNews(String stock, DatabaseHandler dh) throws IOException, SQLException, InterruptedException {
-        if(isOverLimit(dh)) return;
+        if (isOverLimit()) return;
 
-        int values[] = getCSVMetaData(stock, dh);
+        int values[] = getCSVMetaData(stock);
 
         double pageSize = 10000; //TODO: Maybe make this variable if necessary
 
@@ -48,11 +48,15 @@ public class NewsAPIHandler {
 
         int i = startPage;
 
-        while(i >= 1 && !isOverLimit(dh))
-            getCSVNews(stock, dh, i--);
+        while (i >= 1 && !isOverLimit())
+            getCSVNews(stock, i--);
     }
 
-    static public int getCurrentCalls(DatabaseHandler dh) throws SQLException {
+    static public void initialise(DatabaseHandler nddh) {
+        dh = nddh;
+    }
+
+    static public int getCurrentCalls() throws SQLException {
         ArrayList<String> sCalls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Date = CURDATE() AND Name='INTRINIO';");
 
         int calls = 0;
@@ -63,17 +67,17 @@ public class NewsAPIHandler {
         return calls;
     }
 
-    static public boolean isOverLimit(DatabaseHandler dh, int callsToPerform) throws SQLException {
+    static public boolean isOverLimit(int callsToPerform) throws SQLException {
         int limit = Integer.parseInt(dh.executeQuery("SELECT DailyLimit FROM apimanagement WHERE Name='INTRINIO';").get(0));
 
-        return (callsToPerform + getCurrentCalls(dh)) == limit;
+        return (callsToPerform + getCurrentCalls()) == limit;
     }
 
-    static public boolean isOverLimit(DatabaseHandler dh) throws SQLException {
-        return isOverLimit(dh, 0);
+    static public boolean isOverLimit() throws SQLException {
+        return isOverLimit(0);
     }
 
-    static public int[] getCSVMetaData(String stock, DatabaseHandler dh) throws IOException, SQLException, InterruptedException {
+    static public int[] getCSVMetaData(String stock) throws IOException, SQLException, InterruptedException {
         URL url = new URL(INTRINIO_CSV_CALL + stock);
 
         TimeUnit.MILLISECONDS.sleep(1000); // To prevent blocking
@@ -114,7 +118,7 @@ public class NewsAPIHandler {
         return values;
     }
 
-    static public void getCSVNews(String stock, DatabaseHandler dh, int page) throws IOException, SQLException, InterruptedException {
+    static public void getCSVNews(String stock, int page) throws IOException, SQLException, InterruptedException {
         System.out.println("Getting headlines for " + stock + " (Page " + page + ")");
         URL url = new URL(INTRINIO_CSV_CALL + stock + "&page_number=" + page);
 
@@ -183,7 +187,7 @@ public class NewsAPIHandler {
         }
     }
 
-    static public void getNews(String stock, DatabaseHandler dh, int page) throws IOException, SQLException {
+    static public void getNews(String stock, int page) throws IOException, SQLException {
 
         URL url = new URL(INTRINIO_API_CALL + stock + "&page_number=" + page);
 
@@ -233,7 +237,7 @@ public class NewsAPIHandler {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    static public void getHistoricNews(ArrayList<String> stockList, DatabaseHandler dh, ProgressBar pb) throws IOException, SQLException, JSONException, InterruptedException {
+    static public void getHistoricNews(ArrayList<String> stockList, ProgressBar pb) throws IOException, SQLException, InterruptedException {
         double i = 0, t = stockList.size() - 1;
         for (String symbol : stockList) {
             getHistoricNews(symbol, dh);

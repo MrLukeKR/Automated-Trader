@@ -3,7 +3,6 @@ import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 import javafx.scene.control.ProgressBar;
 
-import java.io.PrintWriter;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -11,15 +10,9 @@ import java.util.Set;
 import java.util.TreeMap;
 
 public class TechnicalAnalyser {
-    static private PrintWriter pw;
     static private Core ta = new Core();
     static private DatabaseHandler dh;
     static private ProgressBar pb;
-
-    static public void initialise(DatabaseHandler tadh, ProgressBar pb) {
-        dh = tadh;
-        TechnicalAnalyser.pb = pb;
-    }
 
     static private String technicalIndicatorToString(TechnicalIndicator indicator) {
         switch (indicator) {
@@ -35,9 +28,18 @@ public class TechnicalAnalyser {
                 return "ADX10";
             case OBV:
                 return "OBV";
+            case CCI10:
+                return "CCI10";
+            case AD:
+                return "AD";
         }
 
         return null;
+    }
+
+    static public void initialise(DatabaseHandler tadh, ProgressBar pb) {
+        dh = tadh;
+        TechnicalAnalyser.pb = pb;
     }
 
     static private int technicalIndicatorToDays(TechnicalIndicator indicator) {
@@ -50,9 +52,27 @@ public class TechnicalAnalyser {
                 return 10;
             case ADX10:
                 return 10;
+            case CCI10:
+                return 10;
         }
 
         return 0;
+    }
+
+    static private void sendToDatabase(String stock, String indicator, TreeMap<Date, Double> records) throws SQLException {
+        ArrayList<String> dates = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol = '" + stock + "' AND " + indicator + " IS NOT NULL ORDER BY TradeDate DESC LIMIT 1;");
+
+        Date updateFrom;
+
+        if (dates.isEmpty())
+            updateFrom = Date.valueOf(dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC LIMIT 1;").get(0));
+        else
+            updateFrom = Date.valueOf(dates.get(0));
+
+        for (Date key : records.keySet()) {
+            if (key.getTime() >= updateFrom.getTime())
+                dh.executeCommand("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "';");
+        }
     }
 
     static public void calculateTechnicalIndicators(ArrayList<String> stocks) throws SQLException {
@@ -86,21 +106,17 @@ public class TechnicalAnalyser {
         return records;
     }
 
-    static private void sendToDatabase(String stock, String indicator, TreeMap<Date, Double> records) throws SQLException {
-        ArrayList<String> dates = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol = '" + stock + "' AND " + indicator + " IS NOT NULL ORDER BY TradeDate DESC LIMIT 1");
+    static private TreeMap<Date, Double> priceArrayToRecordMap(Set<Date> dates, int startInd, int length, double[] values) {
+        TreeMap<Date, Double> outputValues = new TreeMap();
+        int i = 0;
 
-        Date updateFrom;
-
-        if (dates.isEmpty())
-            updateFrom = Date.valueOf(dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC LIMIT 1").get(0));
-        else
-            updateFrom = Date.valueOf(dates.get(0));
-
-        for (Date key : records.keySet()) {
-            if (key.getTime() >= updateFrom.getTime())
-                //pw.println("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "'");
-                dh.executeCommand("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "'");
+        for (Date key : dates) {
+            if (i >= startInd && i < (startInd + length - 1))
+                outputValues.put(key, values[i]);
+            i++;
         }
+
+        return outputValues;
     }
 
     static private double[] recordMapToPriceArray(TreeMap<Date, Double> map) {
@@ -111,19 +127,6 @@ public class TechnicalAnalyser {
             prices[i++] = map.get(key);
 
         return prices;
-    }
-
-    static private TreeMap<Date, Double> priceArrayToRecordMap(Set<Date> dates, int startInd, int length, double[] values) {
-        TreeMap<Date, Double> outputValues = new TreeMap();
-        int i = 0;
-
-        for (Date key : dates) {
-            if (i >= startInd && i < length)
-                outputValues.put(key, values[i]);
-            i++;
-        }
-
-        return outputValues;
     }
 
     static public TreeMap<Date, Double> calculateTechnicalIndicator(TechnicalIndicator indicator, String stock, TreeMap<Date, Double> openPrices, TreeMap<Date, Double> highPrices, TreeMap<Date, Double> lowPrices, TreeMap<Date, Double> closePrices, TreeMap<Date, Double> volumes, int days) {
@@ -158,6 +161,12 @@ public class TechnicalAnalyser {
             case ADX10:
                 rc = ta.adx(0, cPrices.length - 1, hPrices, lPrices, cPrices, days, begin, length, out);
                 break;
+            case CCI10:
+                rc = ta.cci(0, cPrices.length - 1, hPrices, lPrices, cPrices, 10, begin, length, out);
+                break;
+            case AD:
+                rc = ta.ad(0, cPrices.length - 1, hPrices, lPrices, cPrices, volume, begin, length, out);
+                break;
         }
 
         if (rc != null && rc == RetCode.Success)
@@ -166,5 +175,5 @@ public class TechnicalAnalyser {
             return null;
     }
 
-    public enum TechnicalIndicator {SMA10, MACD, EMA10, RSI10, OBV, ADX10}
+    public enum TechnicalIndicator {SMA10, MACD, EMA10, RSI10, OBV, ADX10, CCI10, AD}
 }

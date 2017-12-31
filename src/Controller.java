@@ -9,7 +9,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
-import org.json.JSONException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -147,6 +146,8 @@ public class Controller {
             nddh.init("NewsDownloader", "wu0Ni6YF3yLTVp2A");
             sqdh.init("StockQuoteDownloader", "j2wbvx19Gg1Be22J");
         } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(-1);
         }
 
         avh.init("PBATJ7L9N8SNK835");
@@ -241,22 +242,7 @@ public class Controller {
 
         new Thread(() -> {
             try {
-                tadh.setWriteToFile(true);
-                nlpdh.setWriteToFile(true);
-                nddh.setWriteToFile(true);
-                sqdh.setWriteToFile(true);
-
                 updateSystem();
-
-                sqdh.setWriteToFile(false);
-                tadh.setWriteToFile(false);
-                nlpdh.setWriteToFile(false);
-                nddh.setWriteToFile(false);
-
-                sqdh.sendSQLFileToDatabase();
-                tadh.sendSQLFileToDatabase();
-                nddh.sendSQLFileToDatabase();
-                nlpdh.sendSQLFileToDatabase();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -332,32 +318,77 @@ public class Controller {
 
     private void updateSystem() throws SQLException, InterruptedException {
         Thread stockThread = new Thread(() -> {
+            sqdh.setWriteToFile(true);
+
             try {
                 processYahooHistories();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
-            StockQuoteDownloader.downloadStockHistory(stocks); //TODO: ONLY if the data is out of date or incomplete
+            StockQuoteDownloader.downloadStockHistory(stocks);
+
+            sqdh.setWriteToFile(false);
+            try {
+                sqdh.sendSQLFileToDatabase(false);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            tadh.setWriteToFile(true);
             try {
                 TechnicalAnalyser.calculateTechnicalIndicators(stocks);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            tadh.setWriteToFile(false);
+
+            try {
+                tadh.sendSQLFileToDatabase(false);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         });
 
         Thread newsThread = new Thread(() -> {
+            nddh.setWriteToFile(true);
+
             try {
                 updateNews();
                 downloadArticles();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            nddh.setWriteToFile(false);
+
+            try {
+                nddh.sendSQLFileToDatabase(false);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        Thread nlpThread = new Thread(() -> {
+            nlpdh.setWriteToFile(true);
+
+            try {
                 NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
                 NaturalLanguageProcessor.determineUselessSentences();
                 NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            nlpdh.setWriteToFile(false);
+            try {
+                nlpdh.sendSQLFileToDatabase(false);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         });
 
         //TODO: Put the following into one large update function?
+
         updateStockValues();
         updateBankBalance();
         updateTotalWorth();
@@ -375,12 +406,13 @@ public class Controller {
         calculateLossCutoff(0.1);
         checkServices();
 
-
         stockThread.start();
         newsThread.start();
 
         stockThread.join();
         newsThread.join();
+        nlpThread.start();
+        nlpThread.join();
 
         startRealTime();
     }
@@ -568,7 +600,6 @@ public class Controller {
                 int cycle = m % downloadInterval;
 
                 if (cycle == 0 && s == 0) {
-                    new Thread(() -> {
                         updateIntradayStockData();
                         updateDailyStockData();
                         Platform.runLater(() -> {
@@ -583,7 +614,6 @@ public class Controller {
                         } catch (SQLException e) {
                             e.printStackTrace();
                         }
-                    }).start();
 
                     //new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
 
@@ -697,7 +727,7 @@ public class Controller {
         return cleanHTML;
     }
 
-    private void updateNews() throws SQLException, JSONException, InterruptedException {
+    private void updateNews() throws SQLException, InterruptedException {
         if (newsUpdating) return;
         newsUpdating = true;
 

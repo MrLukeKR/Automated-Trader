@@ -32,7 +32,7 @@ public class NewsAPIHandler {
         });
     }
 
-    static public void getHistoricNews(String stock, DatabaseHandler dh) throws IOException, SQLException, InterruptedException {
+    static public void getHistoricNews(String stock) throws IOException, SQLException, InterruptedException {
         if (isOverLimit()) return;
 
         int values[] = getCSVMetaData(stock);
@@ -240,7 +240,7 @@ public class NewsAPIHandler {
     static public void getHistoricNews(ArrayList<String> stockList, ProgressBar pb) throws IOException, SQLException, InterruptedException {
         double i = 0, t = stockList.size() - 1;
         for (String symbol : stockList) {
-            getHistoricNews(symbol, dh);
+            getHistoricNews(symbol);
             Controller.updateProgress(i++, t, pb);
         }
     }

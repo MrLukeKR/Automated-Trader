@@ -9,47 +9,48 @@ public class DatabaseHandler {
     private PrintWriter diskSQL;
     private int uncommittedStatements = 0;
     private boolean WRITE_TO_FILE = false;
+    private Statement batchStatement = null;
 
-    private void initialiseDiskSQL() {
-        try {
+    private void initialiseDiskSQL() throws IOException {
             diskSQL = new PrintWriter("res/" + user + ".sql");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
     }
 
     public void setWriteToFile(boolean wtf) {
         WRITE_TO_FILE = wtf;
     }
 
-    public void sendSQLFileToDatabase() throws SQLException, IOException {
-        boolean autoCommit = connection.getAutoCommit();
+    public void sendSQLFileToDatabase(boolean flush) throws SQLException, IOException {
+        File file = new File("res/" + user + ".sql");
+
+        if (!file.exists())
+            return;
+
+        System.out.println("Flushing '" + user + "' SQL file to database...");
+
         setAutoCommit(false);
 
-        diskSQL.close();
+        if (diskSQL != null)
+            diskSQL.close();
 
-        BufferedReader reader = new BufferedReader(new FileReader("res/" + user + ".sql"));
+        BufferedReader reader = new BufferedReader(new FileReader(file));
         String line;
 
-        setWriteToFile(false);
-
         while ((line = reader.readLine()) != null)
-            executeCommand(line);
-
-        commit();
-
-        setWriteToFile(true);
-        setAutoCommit(autoCommit);
+            addBatchCommand(line);
 
         reader.close();
-        initialiseDiskSQL();
+
+        executeBatch();
+
+        setAutoCommit(true);
+
+        if (!flush)
+            initialiseDiskSQL();
     }
 
-    public boolean init(String username, String password) throws ClassNotFoundException, SQLException {
+    public boolean init(String username, String password) throws ClassNotFoundException, SQLException, IOException {
         Class.forName("com.mysql.jdbc.Driver");
         user = username;
-
-        initialiseDiskSQL();
 
         try {
             connection = DriverManager.getConnection("jdbc:mysql://localhost", username, password);
@@ -68,14 +69,29 @@ public class DatabaseHandler {
         else {
             executeCommand("USE automated_trader");
             System.out.println("Initialised database connection for '" + username + "'");
+            sendSQLFileToDatabase(true);
+            initialiseDiskSQL();
         }
 
         return (connection != null);
     }
 
 
-    public void commit() throws SQLException {
-        connection.commit();
+    public void commit() {
+        if (uncommittedStatements == 0)
+            return;
+
+        System.out.println("COMMITTING " + uncommittedStatements + " UNCOMMITTED STATEMENTS...");
+
+        try {
+            connection.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+
+        uncommittedStatements = 0;
+        System.out.println("COMMITTED!");
     }
 
     public boolean setAutoCommit(boolean autoCommit) throws SQLException {
@@ -84,22 +100,42 @@ public class DatabaseHandler {
         return connection.getAutoCommit() == autoCommit;
     }
 
+    public void addBatchCommand(String command) throws SQLException {
+        if (batchStatement == null)
+            batchStatement = connection.createStatement();
+
+        batchStatement.addBatch(command);
+    }
+
+    public void executeBatch() throws SQLException {
+        if (batchStatement == null) return;
+        System.out.println("Executing batch command...");
+        batchStatement.executeBatch();
+        connection.commit();
+        batchStatement.clearBatch();
+
+    }
+
     public Boolean executeCommand(String command) throws SQLException {
         Statement statement = connection.createStatement();
 
         boolean result;
 
-        if (!WRITE_TO_FILE)
+        if (connection.getAutoCommit() && !WRITE_TO_FILE) {
             result = statement.execute(command);
-        else {
+            statement.close();
+        } else if (!connection.getAutoCommit() && !WRITE_TO_FILE) {
+            addBatchCommand(command);
+            result = true;
+        } else {
             result = true;
             diskSQL.println(command);
         }
 
-        if (!connection.getAutoCommit() && !WRITE_TO_FILE && MAXIMUM_UNCOMMITTED_STATEMENTS > 0 && uncommittedStatements++ >= MAXIMUM_UNCOMMITTED_STATEMENTS) {
-            commit();
-            System.out.println("----COMMITTED UNCOMMITTED STATEMENTS----");
-            uncommittedStatements = 0;
+        if (!connection.getAutoCommit() && !WRITE_TO_FILE) {
+            uncommittedStatements++;
+            if (MAXIMUM_UNCOMMITTED_STATEMENTS > 0 && uncommittedStatements >= MAXIMUM_UNCOMMITTED_STATEMENTS)
+                executeBatch();
         }
 
         return result;
@@ -108,7 +144,7 @@ public class DatabaseHandler {
     public ArrayList<String> executeQuery(String command) throws SQLException{
         Statement query = connection.createStatement();
 
-        ArrayList<String> tempArr = new ArrayList<>();
+        ArrayList<String> tempArr = new ArrayList();
 
         ResultSet tempRs = query.executeQuery(command);
         ResultSetMetaData rsmd = tempRs.getMetaData();

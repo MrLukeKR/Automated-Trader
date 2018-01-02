@@ -113,7 +113,7 @@ public class DatabaseHandler {
         batchStatement.executeBatch();
         connection.commit();
         batchStatement.clearBatch();
-
+        System.out.println("Batch command committed successfully!");
     }
 
     public Boolean executeCommand(String command) throws SQLException {
@@ -158,6 +158,7 @@ public class DatabaseHandler {
             tempArr.add(temp);
         }
 
+        query.close();
         return tempArr;
     }
 

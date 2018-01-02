@@ -14,6 +14,11 @@ public class TechnicalAnalyser {
     static private DatabaseHandler dh;
     static private ProgressBar pb;
 
+    static public void initialise(DatabaseHandler tadh, ProgressBar pb) {
+        dh = tadh;
+        TechnicalAnalyser.pb = pb;
+    }
+
     static private String technicalIndicatorToString(TechnicalIndicator indicator) {
         switch (indicator) {
             case SMA10:
@@ -32,15 +37,11 @@ public class TechnicalAnalyser {
                 return "CCI10";
             case AD:
                 return "AD";
+            default:
+                return null;
         }
-
-        return null;
     }
 
-    static public void initialise(DatabaseHandler tadh, ProgressBar pb) {
-        dh = tadh;
-        TechnicalAnalyser.pb = pb;
-    }
 
     static private int technicalIndicatorToDays(TechnicalIndicator indicator) {
         switch (indicator) {
@@ -162,7 +163,7 @@ public class TechnicalAnalyser {
                 rc = ta.adx(0, cPrices.length - 1, hPrices, lPrices, cPrices, days, begin, length, out);
                 break;
             case CCI10:
-                rc = ta.cci(0, cPrices.length - 1, hPrices, lPrices, cPrices, 10, begin, length, out);
+                rc = ta.cci(0, cPrices.length - 1, hPrices, lPrices, cPrices, days, begin, length, out);
                 break;
             case AD:
                 rc = ta.ad(0, cPrices.length - 1, hPrices, lPrices, cPrices, volume, begin, length, out);

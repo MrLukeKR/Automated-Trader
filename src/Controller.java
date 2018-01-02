@@ -9,18 +9,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.safety.Whitelist;
-import org.jsoup.select.Elements;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -233,7 +224,7 @@ public class Controller {
         StockQuoteDownloader.initialise(sqdh, avh, stockFeedProgress);
         NaturalLanguageProcessor.initialise(nlpdh);
         TechnicalAnalyser.initialise(tadh, technicalAnalyserProgress);
-        NewsAPIHandler.initialise(nddh);
+        NewsAPIHandler.initialise(nddh, newsFeedProgress);
 
         initialiseStocks();
         initialiseClocks();
@@ -351,16 +342,26 @@ public class Controller {
 
         Thread newsThread = new Thread(() -> {
             nddh.setWriteToFile(true);
-
             try {
                 updateNews();
-                downloadArticles();
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
             nddh.setWriteToFile(false);
+            try {
+                nddh.sendSQLFileToDatabase(false);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
+            nddh.setWriteToFile(true);
+            try {
+                NewsAPIHandler.downloadArticles(); //Has to be done individually to check for duplicate values
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            nddh.setWriteToFile(false);
             try {
                 nddh.sendSQLFileToDatabase(false);
             } catch (Exception e) {
@@ -454,15 +455,14 @@ public class Controller {
             //dh.executeCommand("GRANT ALL ON automated_trader.* TO 'agent'@'%';");
             dh.executeCommand("USE automated_trader");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS indices (Symbol varchar(7) UNIQUE NOT NULL, Name text NOT NULL, StartedTrading date NOT NULL, CeasedTrading date, TwitterUsername varchar(15), PRIMARY KEY (Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS dailystockprices (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS dailytechnicalindicators (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, EMA12 double DEFAULT NULL, EMA26 double DEFAULT NULL, MACD double DEFAULT NULL, RSI double DEFAULT NULL, StoOsc double DEFAULT NULL, OBV double DEFAULT NULL, ADX double DEFAULT NULL, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS dailystockprices (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, SMA10 double, EMA10 double, MACD double, RSI10 double, ADX10 double, CCI10 double, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0, PRIMARY KEY (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (Hash varchar(32) NOT NULL PRIMARY KEY, Gram text NOT NULL, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, IncreaseAmount double DEFAULT 0, DecreaseAmount double DEFAULT 0, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0);");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS portfolio (Symbol varchar(7) NOT NULL PRIMARY KEY, Allocation double NOT NULL, Held int NOT NULL DEFAULT 0, Investment double NOT NULL DEFAULT 0, LastUpdated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS sentences (Hash varchar(32) NOT NULL PRIMARY KEY, Sentence text NOT NULL, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 0 NOT NULL, Blacklisted BIT DEFAULT 0);");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL, Symbol varchar(7) NOT NULL, Headline text NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Enumerated BIT DEFAULT 0 NOT NULL, Tokenised BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, PRIMARY KEY (ID), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL PRIMARY KEY, Symbol varchar(7) NOT NULL, Headline text NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Enumerated BIT DEFAULT 0 NOT NULL, Tokenised BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL PRIMARY KEY, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4), Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL, FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS banktransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(10), Amount double SIGNED NOT NULL, PRIMARY KEY (ID));");
 
@@ -685,54 +685,12 @@ public class Controller {
         }
     }
 
-    private String downloadArticle(String url) throws IOException {
-        URL site = new URL(url);
-        HttpURLConnection.setFollowRedirects(true);
-        HttpURLConnection conn = (HttpURLConnection) site.openConnection(); //Written by https://stackoverflow.com/questions/15057329/how-to-get-redirected-url-and-content-using-httpurlconnection
-        conn.setInstanceFollowRedirects(true);
-        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
-
-        conn.connect();
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-
-        String input;
-        StringBuilder html = new StringBuilder();
-
-        while ((input = br.readLine()) != null)
-            html.append(input);
-
-        conn.disconnect();
-        br.close();
-
-        Document doc = Jsoup.parse(html.toString());
-        Elements p = doc.getElementsByTag("p");
-
-        String strippedHTML = "";
-
-        int i = 0;
-        for (Element el : p) {
-            strippedHTML += el.text();
-            if (i++ < p.size()) strippedHTML += " ";
-        }
-
-        if (html.toString().toLowerCase() == "redirect")
-            return "redirect";
-
-        String cleanHTML = Jsoup.clean(strippedHTML, Whitelist.basic()).replaceAll("'", "").trim();
-
-        if (cleanHTML.isEmpty())
-            return null;
-
-        return cleanHTML;
-    }
-
     private void updateNews() throws SQLException, InterruptedException {
         if (newsUpdating) return;
         newsUpdating = true;
 
         try {
-            NewsAPIHandler.getHistoricNews(stocks, newsFeedProgress);
+            NewsAPIHandler.getHistoricNews(stocks);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -810,44 +768,5 @@ public class Controller {
             });
         }
         priceUpdating = false;
-    }
-
-    private void downloadArticles() throws SQLException {
-        System.out.println("Downloading missing news article content...");
-        updateProgress(ProgressBar.INDETERMINATE_PROGRESS, newsFeedProgress);
-        ArrayList<String> undownloadedArticles = nddh.executeQuery("SELECT ID, URL FROM newsarticles WHERE Content IS NULL AND Blacklisted = 0 AND Redirected = 0 AND Duplicate = 0 AND URL != \"\";");
-
-        if (undownloadedArticles == null || undownloadedArticles.isEmpty()) return;
-
-        String[] splitArticle;
-        double i = 0, t = undownloadedArticles.size() - 1;
-        for (String article : undownloadedArticles) {
-            splitArticle = article.split(",");
-            int id = Integer.parseInt(splitArticle[0]);
-
-            System.out.println("Downloading news article " + splitArticle[0] + ": " + splitArticle[1]);
-
-            String site = null;
-            try {
-                site = downloadArticle(splitArticle[1]);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            try {
-                if (site != null)
-                    if (site == "redirect")
-                        nddh.executeCommand("UPDATE newsarticles SET Redirected = 1 WHERE ID = " + id + ";");
-                    else
-                        nddh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
-                else
-                    nddh.executeCommand("UPDATE newsarticles SET Blacklisted = 1 WHERE ID = " + id + ";"); //Blacklist if the document could not be retrieved
-            } catch (Exception e) {
-                e.printStackTrace();
-                nddh.executeCommand("UPDATE newsarticles SET Blacklisted = 1 WHERE ID = " + id + ";"); //Blacklist if the Content causes SQL error (i.e. truncation)
-            }
-
-            updateProgress(i++, t, newsFeedProgress);
-        }
     }
 }

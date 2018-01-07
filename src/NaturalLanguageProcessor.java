@@ -259,11 +259,6 @@ public class NaturalLanguageProcessor {
         return new ArrayList<>(Arrays.asList(document.split(" ")));
     }
 
-    /**
-     * @param document - Text to be analysed
-     * @return String with all NOT phrases converted to single words e.g. NOT GOOD = !GOOD
-     */
-
     static public double calculateSentiment(ArrayList<String> wordList) {
         //TODO
         return 0.0;

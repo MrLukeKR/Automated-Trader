@@ -13,7 +13,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class NewsAPIHandler {
     static final String INTRINIO_API_CALL = "https://api.intrinio.com/news?ticker=";
@@ -56,26 +60,44 @@ public class NewsAPIHandler {
         if (missingArticles == 0)
             return;
 
-        int startPage = (int) Math.ceil((double) missingArticles / (double) PAGE_SIZE);
+        //int startPage = (int) Math.ceil((double) missingArticles / (double) PAGE_SIZE);
 
-        int i = startPage;
+        //int i = startPage;
 
         int expected = missingArticles % PAGE_SIZE;
         int before = missingArticles;
 
         if (missingArticles < 0) {
-            System.err.println("NEGATIVE MISSING ARTICLE VALUE");
-            System.exit(-1);
+            System.err.println("NEGATIVE MISSING ARTICLE VALUE - May be due to API inaccessibility");
+            return;
         }
 
+        int i = 1;
+
+        while (i <= values[PAGES] && missingArticles > 0) {
+            missingArticles -= getCSVNews(stock, i++, missingArticles);
+        }
+
+        if (missingArticles > 0)
+            System.err.println("DID NOT DOWNLOAD ALL ARTICLES");
+
+      /*
         while (i >= 1 && !isOverLimit()) {
-            missingArticles -= getCSVNews(stock, i--, missingArticles);
+            int downloaded = getCSVNews(stock, i--, missingArticles);
+            if(downloaded >=0)
+                missingArticles -= downloaded;
+            else {
+                System.err.println("News Article download error for '" + stock + "': Please try again later!");
+                break;
+            }
+
             if (missingArticles != (before - expected))
                 dh.executeCommand("INSERT INTO duplicatemanager (Symbol, duplicateNewsArticles) VALUES('" + stock + "', " + Math.abs(missingArticles - (before - expected)) + ") ON DUPLICATE KEY UPDATE duplicateNewsArticles = duplicateNewsArticles + VALUES(duplicateNewsArticles);");
             missingArticles = before - expected;
             before = missingArticles;
             expected = PAGE_SIZE;
         }
+        */
     }
 
     static public void initialise(DatabaseHandler nddh, ProgressBar pb) {
@@ -104,10 +126,10 @@ public class NewsAPIHandler {
         return isOverLimit(0);
     }
 
-    static public int[] getCSVMetaData(String stock) throws IOException, SQLException {
+    static public int[] getCSVMetaData(String stock) throws IOException, SQLException, InterruptedException {
         URL url = new URL(INTRINIO_CSV_CALL + stock);
 
-        //TimeUnit.MILLISECONDS.sleep(1000); // To prevent blocking
+        TimeUnit.MILLISECONDS.sleep(1000); // To prevent blocking
 
         URLConnection connect = url.openConnection();
         InputStreamReader isr = null;
@@ -145,11 +167,11 @@ public class NewsAPIHandler {
         return values;
     }
 
-    static public int getCSVNews(String stock, int page, int missingArticles) throws IOException, SQLException {
+    static public int getCSVNews(String stock, int page, int missingArticles) throws IOException, SQLException, InterruptedException {
         System.out.println("Getting headlines for " + stock + " (Page " + page + ")");
         URL url = new URL(INTRINIO_CSV_CALL + stock + "&page_number=" + page);
 
-        //TimeUnit.MILLISECONDS.sleep(1000);
+        TimeUnit.MILLISECONDS.sleep(1000);
         URLConnection connect = url.openConnection();
         InputStreamReader isr = null;
 
@@ -167,7 +189,7 @@ public class NewsAPIHandler {
 
         if (isr == null) {
             System.out.println("Could not connect URL Stream");
-            return 0;
+            return -1;
         }
 
         BufferedReader br = new BufferedReader(isr);
@@ -188,7 +210,7 @@ public class NewsAPIHandler {
 
         System.out.println("Sorting '" + stock + "' PAGE " + page + " news file into chronological order...");
         //Preprocess news data to remove corrupted entries
-        Collections.reverse(newsArray); //Reverse to put in chronological order
+        // Collections.reverse(newsArray); //Reverse to put in chronological order
 
         Set<String> newsSet = new LinkedHashSet(); //Linked hashset retains insertion order and removes duplicates
 
@@ -196,33 +218,39 @@ public class NewsAPIHandler {
 
         for (String news : newsArray) {
             String[] splitString = news.split(",");
-            if (splitString.length > 7) {
+            if (splitString.length >= 7) {
                 //Usual case: 1.STOCK, 2 TICKER, 3 CODE,4 HEADLINE, 5 DATE, 6 URL, 7 DESCRIPTION
-                news = splitString[0] + "," + splitString[1] + "," + splitString[2] + ",";
+                news = splitString[0].replace(",", "") + "," + splitString[1].replace(",", "") + "," + splitString[2] + ",";
+                ///////////////// START CLEANING:
                 int i = 3;
                 String headline = "", date, link;
 
-                while (!splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}\\s.\\d{4}"))
-                    headline += splitString[i++];
+                while (i < splitString.length && !(splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}\\s.\\d{4}") || splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}"))) {
+                    headline += splitString[i++].replace(",", "");
+                }
 
+                if (i < splitString.length) { //TODO: may need fixing
+                    date = splitString[i++];
+                    link = splitString[i++];
+                    news += headline + "," + date + "," + link + ",";
 
-                date = splitString[i++];
-                link = splitString[i++];
-                news += headline + "," + date + "," + link + ",";
+                    for (; i < splitString.length; i++)
+                        news += splitString[i];
+                }
 
-                for (; i < splitString.length; i++)
-                    news += splitString[i];
+                ///////////END CLEANING
             }
-
             String[] fixedSplit = news.split(",");
 
             if (fixedSplit.length == 6)
                 if (fixedSplit[5].contains("http"))
                     news += "NULL";
 
-            if (news.split(",").length == 7)
+            if (news.split(",").length == 7) {
+                if (!(news.split(",")[4].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}\\s.\\d{4}") || news.split(",")[4].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}")))
+                    System.err.println("NO DATE FOUND IN: " + news);
                 newsSet.add(news);
-            else
+            } else
                 corrupted.add(news);
         }
 
@@ -231,44 +259,57 @@ public class NewsAPIHandler {
         int downloaded = 0;
         int newsSize = newsSet.size();
 
-        int startPoint;
+        //int startPoint;
 
-        int remainder = missingArticles % PAGE_SIZE;
+        //int remainder = missingArticles % PAGE_SIZE;
 
-        if (remainder == 0)
-            startPoint = 0;
-        else
-            startPoint = newsSize - remainder; //TODO: Missing articles can be negative - fix this
+        //if (remainder == 0)
+        //   startPoint = 0;
+        //else
+        //   startPoint = newsSize - remainder; //TODO: Missing articles can be negative - fix this
 
         int processed = 0;
 
-        System.out.println("'" + stock + "' PAGE " + page + " WITH " + newsSize + " ARTICLES START POINT: " + startPoint + " (Missing " + missingArticles + " articles)");
+//        System.out.println("'" + stock + "' PAGE " + page + " WITH " + newsSize + " ARTICLES START POINT: " + startPoint + " (Missing " + missingArticles + " articles)");
+        System.out.println("'" + stock + "' PAGE " + page + " WITH " + newsSize + " (Missing " + missingArticles + " articles)");
+
 
         for (String news : newsSet) {
-            if (processed++ >= startPoint) {
             String[] splitNews = news.split(",");
-                String title = splitNews[3];
-                String summary = splitNews[6];
-                String date = splitNews[4];
-                String link = splitNews[5];
-                date = date.split(" ")[0] + " " + date.split(" ")[1];
+            String title = splitNews[3];
+            String summary = splitNews[6];
+            String date = splitNews[4];
+            String link = splitNews[5];
+            date = date.split(" ")[0] + " " + date.split(" ")[1];
 
-                String data = "'" + stock + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
+            if (!date.matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}"))
+                System.err.println("NO DATE FOUND IN: " + news);
 
+            String data = "'" + stock + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
+
+            String query = "SELECT 1 FROM newsarticles WHERE Symbol='" + stock + "' AND Headline='" + title + "' AND Published='" + date + "' AND URL ='" + link + "';";
+            ArrayList<String> result = dh.executeQuery(query);
+
+            if (result.isEmpty()) {
                 System.out.println("Discovered News Article for " + stock + ": " + title);
                 String command;
 
-                command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL,Duplicate) VALUES (" + data + ", (SELECT COALESCE((SELECT * FROM (SELECT 1 FROM newsarticles WHERE Headline='" + title + "' OR URL='" + link + "' AND Symbol='" + stock + "') as t),0)));";
+                command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL,Duplicate) VALUES (" + data + ", (SELECT COALESCE((SELECT * FROM (SELECT 1 FROM newsarticles WHERE Symbol='" + stock + "' AND (Headline='" + title + "' OR URL='" + link + "') LIMIT 1) as t),0)));";
 
                 try {
                     dh.executeCommand(command);
                 } catch (Exception e) {
                 }
+                //try { dh.addBatchCommand(command);  } catch (Exception e) { }
 
+                missingArticles--;
                 downloaded++;
+
+                if (missingArticles == 0)
+                    return downloaded;
             }
         }
-
+        //dh.executeBatch();
         return downloaded;
     }
 
@@ -331,19 +372,24 @@ public class NewsAPIHandler {
         conn.disconnect();
         br.close();
 
-        Document doc = Jsoup.parse(html.toString());
-        Elements p = doc.getElementsByTag("p");
-
         String strippedHTML = "";
 
-        int i = 0;
-        for (Element el : p) {
-            strippedHTML += el.text();
-            if (i++ < p.size()) strippedHTML += " ";
-        }
+        try {
+            Document doc = Jsoup.parse(html.toString());
+            Elements p = doc.getElementsByTag("p");
 
-        if (html.toString().toLowerCase() == "redirect")
-            return "redirect";
+
+            int i = 0;
+            for (Element el : p) {
+                strippedHTML += el.text();
+                if (i++ < p.size()) strippedHTML += " ";
+            }
+
+            if (html.toString().toLowerCase() == "redirect")
+                return "redirect";
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         String cleanHTML = Jsoup.clean(strippedHTML, Whitelist.basic()).replaceAll("'", "").trim();
 
@@ -408,6 +454,7 @@ public class NewsAPIHandler {
         for (String symbol : stockList) {
             getHistoricNews(symbol);
             Controller.updateProgress(i++, t, pb);
+            dh.sendSQLFileToDatabase(false); //TODO: Remove this when necessary
         }
     }
 }

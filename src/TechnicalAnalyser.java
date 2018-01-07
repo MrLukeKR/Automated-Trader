@@ -109,11 +109,11 @@ public class TechnicalAnalyser {
 
     static private TreeMap<Date, Double> priceArrayToRecordMap(Set<Date> dates, int startInd, int length, double[] values) {
         TreeMap<Date, Double> outputValues = new TreeMap();
-        int i = 0;
+        int i = startInd;
 
         for (Date key : dates) {
-            if (i >= startInd && i < (startInd + length - 1))
-                outputValues.put(key, values[i]);
+            if (i >= startInd && i <= length)
+                outputValues.put(key, values[i - startInd]);
             i++;
         }
 

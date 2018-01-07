@@ -355,18 +355,19 @@ public class Controller {
                 e.printStackTrace();
             }
 
-            nddh.setWriteToFile(true);
+            //          nddh.setWriteToFile(true);
             try {
                 NewsAPIHandler.downloadArticles(); //Has to be done individually to check for duplicate values
             } catch (SQLException e) {
                 e.printStackTrace();
             }
-            nddh.setWriteToFile(false);
-            try {
+            //        nddh.setWriteToFile(false);
+      /*      try {
                 nddh.sendSQLFileToDatabase(false);
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        */
         });
 
         Thread nlpThread = new Thread(() -> {

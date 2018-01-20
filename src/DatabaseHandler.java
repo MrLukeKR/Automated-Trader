@@ -5,7 +5,7 @@ import java.util.ArrayList;
 public class DatabaseHandler {
     private String user = null;
     private Connection connection = null;
-    private final int MAXIMUM_UNCOMMITTED_STATEMENTS = -1;
+    private final int MAXIMUM_UNCOMMITTED_STATEMENTS = 100000;
     private PrintWriter diskSQL;
     private int uncommittedStatements = 0;
     private boolean WRITE_TO_FILE = false;
@@ -105,6 +105,13 @@ public class DatabaseHandler {
             batchStatement = connection.createStatement();
 
         batchStatement.addBatch(command);
+
+        if (uncommittedStatements++ >= MAXIMUM_UNCOMMITTED_STATEMENTS) {
+            boolean previousSetting = connection.getAutoCommit();
+            setAutoCommit(false);
+            executeBatch();
+            setAutoCommit(previousSetting);
+        }
     }
 
     public void executeBatch() throws SQLException {

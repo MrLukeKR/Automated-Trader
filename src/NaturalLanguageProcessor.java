@@ -90,6 +90,8 @@ public class NaturalLanguageProcessor {
 
         double i = 0, t = unprocessedIDs.size() - 1;
 
+        dh.setAutoCommit(false);
+
         Map<String, Integer[]> temporaryDatabase = new HashMap<>();
 
         for (String unprocessedID : unprocessedIDs) {
@@ -107,13 +109,13 @@ public class NaturalLanguageProcessor {
                 Set<String> noDuplicateSentences = new HashSet<>(cSentences);
                 for (String cSentence : noDuplicateSentences)
                     try {
-                        Integer[] accumulations = {1,Collections.frequency(cSentences,cSentence)};
-                        Integer[] existingAccumulations = {0,0};
+                        Integer[] accumulations = {1, Collections.frequency(cSentences, cSentence)};
+                        Integer[] existingAccumulations = {0, 0};
 
-                        if(temporaryDatabase.containsKey(cSentence))
+                        if (temporaryDatabase.containsKey(cSentence))
                             existingAccumulations = temporaryDatabase.get(cSentence);
 
-                        for(int a = 0; a < 2; a++) accumulations[a] += existingAccumulations[a];
+                        for (int a = 0; a < 2; a++) accumulations[a] += existingAccumulations[a];
 
                         temporaryDatabase.put(cSentence, accumulations);
                     } catch (Exception e) {
@@ -121,26 +123,26 @@ public class NaturalLanguageProcessor {
                     }
             }
 
-            Controller.updateProgress(i++, t, pb);
-        }
+            for (String key : temporaryDatabase.keySet()) {
+                Integer[] accumulations = temporaryDatabase.get(key);
+                dh.addBatchCommand("INSERT INTO sentences(Hash, Sentence, Documents, Occurrences) VALUES (MD5('" + key + "'), '" + key + "', '" + accumulations[0] + "','" + accumulations[1] + "') ON DUPLICATE KEY UPDATE Documents = Documents + " + accumulations[0] + ", Occurrences = Occurrences + " + accumulations[1] + ";");
+            }
 
-        i = 0;
-        t = temporaryDatabase.size() - 1;
-
-        for(String key : temporaryDatabase.keySet()){
-            Integer[] accumulations = temporaryDatabase.get(key);
-            dh.executeCommand("INSERT INTO sentences(Hash, Sentence, Documents, Occurrences) VALUES (MD5('" + key + "'), '" + key + "', '" + accumulations[0] + "','" + accumulations[1] + "') ON DUPLICATE KEY UPDATE Documents = Documents + " + accumulations[0] + ", Occurrences = Occurrences + " + accumulations[1] + ";");
 
             Controller.updateProgress(i++, t, pb);
+
+            dh.addBatchCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = '" + unprocessedID + "';");
+            System.out.println("Enumerated " + temporaryDatabase.size() + " sentences");
+            dh.executeBatch();
+
+            temporaryDatabase.clear();
         }
 
-        for(String id : unprocessedIDs)
-            dh.executeCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = '" + id + "';");
-
+        dh.setAutoCommit(true);
     }
 
     static public void determineUselessSentences() throws SQLException {
-        dh.executeCommand("UPDATE Sentences SET Blacklisted = 1 WHERE Occurrences > 1;"); //If not unique, blacklist
+        dh.executeCommand("UPDATE Sentences SET Blacklisted = 1 WHERE Occurrences > 5;");
 
         ArrayList<String> uselessSentences = dh.executeQuery("SELECT Sentence FROM sentences WHERE Blacklisted = 1");
 
@@ -164,6 +166,7 @@ public class NaturalLanguageProcessor {
         System.out.println("Enumerating n-grams for " + unprocessedIDs.size() + " documents...");
 
         int k = 0, t = unprocessedIDs.size() - 1;
+
         Map<String, Double[]> temporaryDatabase = new HashMap<>();
 
         for (String unprocessedID : unprocessedIDs) {
@@ -180,7 +183,7 @@ public class NaturalLanguageProcessor {
                                 ngrams.addAll(splitToNGrams(cSentence, Locale.US, i));
                 }
 
-                Set<String> noDuplicateNGrams = new HashSet<>(ngrams);
+                sentences.clear();
 
                 String[] symbolAndDate = dh.executeQuery("SELECT Symbol, Published FROM newsarticles WHERE ID = " + unprocessedID).get(0).split(",");
 
@@ -195,6 +198,8 @@ public class NaturalLanguageProcessor {
                     increaseAmount = priceChange;
                 }
 
+                Set<String> noDuplicateNGrams = new HashSet<>(ngrams);
+
                 for (String ngram : noDuplicateNGrams)
                     if (ngram != null)
                         try {
@@ -204,31 +209,69 @@ public class NaturalLanguageProcessor {
                             if (temporaryDatabase.containsKey(ngram))
                                 existingAccumulations = temporaryDatabase.get(ngram);
 
-                            for (int a = 0; a < 6; a++) accumulations[a] += existingAccumulations[a];
+                            for (int a = 0; a < 6; a++) {
+                                accumulations[a] += existingAccumulations[a];
+                                if (accumulations[a] == Double.NaN) accumulations[a] = 0.0;
+                                if (accumulations[a] == Double.POSITIVE_INFINITY)
+                                    accumulations[a] = Double.MAX_VALUE; //TODO: Maybe don't use this method for determining an ngrams impact
+                            }
 
                             temporaryDatabase.put(ngram, accumulations);
 
+                            if (temporaryDatabase.size() >= 100000) {
+                                sendNGramsToDatabase(temporaryDatabase);
+                                temporaryDatabase.clear();
+                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
+
+                dh.addBatchCommand("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID + ";");
+
+                ngrams.clear();
+                noDuplicateNGrams.clear();
             }
 
             Controller.updateProgress(k++, t, pb);
         }
 
-        k = 0;
-        t = temporaryDatabase.size() - 1;
+        sendNGramsToDatabase(temporaryDatabase);
+        temporaryDatabase.clear();
+        System.out.println("Finished processing n-grams");
+    }
 
+    static private void sendNGramsToDatabase(Map<String, Double[]> temporaryDatabase) throws SQLException {
+        if (temporaryDatabase.isEmpty()) return;
+
+        final int INSERT_SIZE = 30;
+        int i = 0;
+
+        dh.setAutoCommit(false);
+
+        String command = "INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES ";
         for (String key : temporaryDatabase.keySet()) {
+            if (i % INSERT_SIZE == INSERT_SIZE - 1) {
+                command += " ON DUPLICATE KEY UPDATE Documents = Documents + VALUES(Documents), Occurrences = Occurrences + VALUES(Occurrences), Increase = Increase + VALUES(Increase), Decrease = Decrease + VALUES(Decrease)";
+                dh.addBatchCommand(command);
+                i++;
+                command = "INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES ";
+            }
+
+            if (i % INSERT_SIZE != 0)
+                command += ",";
+
+            i++;
+
             Double[] values = temporaryDatabase.get(key);
-            dh.executeCommand("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease, IncreaseAmount, DecreaseAmount) VALUES (MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + values[0] + "," + values[1] + "," + values[2] + "," + values[3] + "," + values[4] + "," + values[5] + ") ON DUPLICATE KEY UPDATE Documents = Documents + " + Math.round(values[0]) + ", Occurrences = Occurrences + " + Math.round(values[1]) + ", Increase = Increase + " + values[2] + ", Decrease = Decrease + " + values[3] + ", IncreaseAmount = " + values[4] + ", DecreaseAmount = " + values[5] + ";");
-            Controller.updateProgress(k++, t, pb);
+
+            command += "(MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + values[0] + "," + values[1] + "," + values[2] + "," + values[3] + ")";//TODO: Potentially reimplement adding up average change
         }
 
-        for (String unprocessedID : unprocessedIDs)
-            dh.executeCommand("UPDATE newsarticles SET Tokenised = 1 WHERE ID = " + unprocessedID);
+        command += " ON DUPLICATE KEY UPDATE Documents = Documents + VALUES(Documents), Occurrences = Occurrences + VALUES(Occurrences), Increase = Increase + VALUES(Increase), Decrease = Decrease + VALUES(Decrease)";
 
-        System.out.println("Finished processing n-grams");
+        dh.addBatchCommand(command);
+        dh.executeBatch();
+        dh.setAutoCommit(true);
     }
 
     static public ArrayList<String> splitToNGrams(ArrayList<String> cleanedSentences, Locale languageLocale, int n) {
@@ -249,6 +292,8 @@ public class NaturalLanguageProcessor {
             String phrase = wordList.get(i);
             for (int x = i + 1; x <= j; x++)
                 phrase += " " + wordList.get(x);
+
+            phrase.replaceAll("[^a-zA-Z\\s]", "");
             ngrams.add(phrase);
         }
 

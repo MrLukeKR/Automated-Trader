@@ -7,22 +7,23 @@
 <?import javafx.scene.shape.*?>
 <?import javafx.scene.text.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity" prefHeight="1080.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/9"
+            minWidth="-Infinity" prefHeight="1030.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
             fx:controller="Controller">
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
-                  <BorderPane prefHeight="200.0" prefWidth="200.0">
+              <BorderPane maxHeight="1000.0" prefHeight="974.0" prefWidth="1920.0">
                      <right>
-                        <VBox prefHeight="851.0" prefWidth="400.0" BorderPane.alignment="CENTER">
-                              <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0" text="Latest Headlines">
-                                    <ScrollPane prefHeight="403.0" prefWidth="398.0">
+                         <VBox maxHeight="750.0" prefHeight="750.0" prefWidth="422.0" BorderPane.alignment="TOP_CENTER">
+                             <TitledPane animated="false" collapsible="false" prefHeight="375.0" prefWidth="422.0"
+                                         text="Latest Headlines">
+                                 <ScrollPane prefHeight="403.0" prefWidth="420.0">
                                           <VBox fx:id="newsBox" prefHeight="330.0" prefWidth="400.0" />
                                     </ScrollPane>
                               </TitledPane>
-                            <TitledPane animated="false" collapsible="false" prefHeight="425.0" prefWidth="400.0"
-                                        text="Control Panel">
+                             <TitledPane animated="false" collapsible="false" prefHeight="375.0" prefWidth="422.0"
+                                         text="Control Panel">
                                 <content>
-                                    <BorderPane prefHeight="200.0" prefWidth="200.0">
+                                    <BorderPane prefHeight="200.0" prefWidth="420.0">
                                         <top>
                                             <FlowPane prefHeight="210.0" prefWidth="401.0"
                                                       BorderPane.alignment="CENTER">
@@ -191,9 +192,9 @@
                         </VBox>
                      </right>
                      <bottom>
-                        <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
-                            <TextArea fx:id="infoBox" editable="false" prefHeight="200.0" prefWidth="1920.0"/>
-                            <ToolBar prefHeight="40.0" prefWidth="200.0">
+                         <VBox prefHeight="160.0" prefWidth="1920.0" BorderPane.alignment="TOP_CENTER">
+                             <TextArea fx:id="infoBox" editable="false" prefHeight="130.0" prefWidth="1920.0"/>
+                             <ToolBar prefHeight="30.0" prefWidth="1920.0">
                                 <items>
                                     <Label fx:id="currentTaskLabel" text="Idle"/>
                                 </items>
@@ -201,12 +202,12 @@
                         </VBox>
                      </bottom>
                      <left>
-                        <TitledPane animated="false" collapsible="false" prefHeight="751.0" prefWidth="650.0" text="Stocks" BorderPane.alignment="CENTER">
-                              <VBox prefHeight="851.0" prefWidth="250.0">
+                         <TitledPane animated="false" collapsible="false" prefHeight="750.0" prefWidth="650.0"
+                                     text="Stocks">
+                             <VBox prefHeight="743.0" prefWidth="648.0">
                                     <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER">
-                                          <FlowPane fx:id="stockList" prefHeight="786.0" prefWidth="226.0" />
+                                        <FlowPane fx:id="stockList" prefHeight="750.0" prefWidth="626.0"/>
                                     </ScrollPane>
-                                    <ProgressBar fx:id="liveStockProgressBar" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" progress="0.0" />
                               </VBox>
                         </TitledPane>
                      </left>
@@ -214,15 +215,15 @@
                         <FlowPane fx:id="timePane" prefHeight="100.0" prefWidth="1920.0" BorderPane.alignment="CENTER" />
                      </top>
                      <center>
-                        <VBox BorderPane.alignment="CENTER">
-                            <TitledPane animated="false" collapsible="false" prefHeight="300.0" prefWidth="870.0"
-                                        text="Stock Prediction">
+                         <VBox maxHeight="750.0" prefHeight="826.0" prefWidth="848.0" BorderPane.alignment="TOP_CENTER">
+                             <TitledPane animated="false" collapsible="false" prefHeight="250.0" prefWidth="848.0"
+                                         text="Stock Prediction">
                                 <content>
                                     <BorderPane prefHeight="200.0" prefWidth="200.0"/>
                                 </content>
                             </TitledPane>
-                            <TitledPane animated="false" collapsible="false" prefHeight="300.0" prefWidth="870.0"
-                                        text="Portfolio Optimisation">
+                             <TitledPane animated="false" collapsible="false" prefHeight="300.0" prefWidth="870.0"
+                                         text="Portfolio Optimisation">
                                 <content>
                                     <BorderPane prefHeight="200.0" prefWidth="200.0">
                                         <left>
@@ -254,8 +255,8 @@
                                     </BorderPane>
                                 </content>
                             </TitledPane>
-                            <TitledPane animated="false" collapsible="false" prefHeight="200.0" prefWidth="200.0"
-                                        text="Profit/Loss">
+                             <TitledPane animated="false" collapsible="false" prefHeight="200.0" prefWidth="200.0"
+                                         text="Profit/Loss">
                                 <FlowPane prefHeight="171.0" prefWidth="868.0">
                                     <VBox prefHeight="151.0" prefWidth="190.0">
                            <children>

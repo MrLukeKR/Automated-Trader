@@ -350,6 +350,7 @@ public class NewsAPIHandler {
 
             Controller.updateProgress(i++, t, pb);
         }
+        Controller.updateProgress(0, pb);
     }
 
     static public String downloadArticle(String url) throws IOException {

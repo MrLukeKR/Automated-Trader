@@ -15,7 +15,7 @@ public class StockQuoteDownloader {
         stockProgressBar = pb;
     }
 
-    static public ArrayList<String> downloadStockData(String stock, Interval interval, OutputSize outputSize) throws IOException {
+    static public ArrayList<String> downloadStockData(String stock, Interval interval, OutputSize outputSize) throws IOException, InterruptedException {
         if (databaseHandler == null || alphaVantageHandler == null) return null;
 
         String url = "https://www.alphavantage.co/query?",

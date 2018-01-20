@@ -309,8 +309,6 @@ public class Controller {
 
     private void updateSystem() throws SQLException, InterruptedException {
         Thread stockThread = new Thread(() -> {
-            sqdh.setWriteToFile(true);
-
             try {
                 processYahooHistories();
             } catch (SQLException e) {
@@ -318,23 +316,8 @@ public class Controller {
             }
             StockQuoteDownloader.downloadStockHistory(stocks);
 
-            sqdh.setWriteToFile(false);
-            try {
-                sqdh.sendSQLFileToDatabase(false);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            tadh.setWriteToFile(true);
             try {
                 TechnicalAnalyser.calculateTechnicalIndicators(stocks);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            tadh.setWriteToFile(false);
-
-            try {
-                tadh.sendSQLFileToDatabase(false);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -355,36 +338,17 @@ public class Controller {
                 e.printStackTrace();
             }
 
-            //          nddh.setWriteToFile(true);
             try {
                 NewsAPIHandler.downloadArticles(); //Has to be done individually to check for duplicate values
             } catch (SQLException e) {
                 e.printStackTrace();
             }
-            //        nddh.setWriteToFile(false);
-      /*      try {
-                nddh.sendSQLFileToDatabase(false);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        */
-        });
-
-        Thread nlpThread = new Thread(() -> {
-            nlpdh.setWriteToFile(true);
 
             try {
                 NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
                 NaturalLanguageProcessor.determineUselessSentences();
                 NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
             } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-            nlpdh.setWriteToFile(false);
-            try {
-                nlpdh.sendSQLFileToDatabase(false);
-            } catch (Exception e) {
                 e.printStackTrace();
             }
         });
@@ -405,16 +369,13 @@ public class Controller {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        calculateLossCutoff(0.1);
+        calculateLossCutoff(0.1); //TODO: Make this calculation based, based on risk/variance of portfolio
         checkServices();
 
-        stockThread.start();
         newsThread.start();
-
-        stockThread.join();
         newsThread.join();
-        nlpThread.start();
-        nlpThread.join();
+        stockThread.start();
+        stockThread.join();
 
         startRealTime();
     }
@@ -460,7 +421,7 @@ public class Controller {
             dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0, PRIMARY KEY (Name));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (Hash varchar(32) NOT NULL PRIMARY KEY, Gram text NOT NULL, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, IncreaseAmount double DEFAULT 0, DecreaseAmount double DEFAULT 0, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0);");
+            dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (Hash varchar(32) NOT NULL PRIMARY KEY, Gram text NOT NULL, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0);");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS portfolio (Symbol varchar(7) NOT NULL PRIMARY KEY, Allocation double NOT NULL, Held int NOT NULL DEFAULT 0, Investment double NOT NULL DEFAULT 0, LastUpdated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS sentences (Hash varchar(32) NOT NULL PRIMARY KEY, Sentence text NOT NULL, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 0 NOT NULL, Blacklisted BIT DEFAULT 0);");
             dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL PRIMARY KEY, Symbol varchar(7) NOT NULL, Headline text NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Enumerated BIT DEFAULT 0 NOT NULL, Tokenised BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
@@ -699,17 +660,16 @@ public class Controller {
         Platform.runLater(() -> {
             newsBox.getChildren().clear();
 
-            ArrayList<String> symbols = null;
-            ArrayList<String> headlines = null;
+            ArrayList<String> results = null;
             try {
-                symbols = nddh.executeQuery("SELECT Symbol FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
-                headlines = nddh.executeQuery("SELECT Headline FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
+                results = nddh.executeQuery("SELECT DISTINCT Symbol, Headline FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
             } catch (SQLException e) {
                 e.printStackTrace();
             }
 
-            for (int i = 0; i < headlines.size(); i++) {
-                NewsRecord temp = new NewsRecord(symbols.get(i), headlines.get(i));
+            for (String result : results) {
+                String[] splitString = result.split(",");
+                NewsRecord temp = new NewsRecord(splitString[0], splitString[1]);
                 newsBox.getChildren().add(temp.getNode());
             }
         });
@@ -747,6 +707,7 @@ public class Controller {
             try {
                 temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.INTRADAY, StockQuoteDownloader.OutputSize.COMPACT);
             } catch (IOException e) {
+            } catch (InterruptedException e) {
             }
 
             if (temp != null && temp.size() >= 2) {

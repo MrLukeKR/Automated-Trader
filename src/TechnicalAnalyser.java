@@ -61,19 +61,21 @@ public class TechnicalAnalyser {
     }
 
     static private void sendToDatabase(String stock, String indicator, TreeMap<Date, Double> records) throws SQLException {
-        ArrayList<String> dates = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol = '" + stock + "' AND " + indicator + " IS NOT NULL ORDER BY TradeDate DESC LIMIT 1;");
+        dh.setAutoCommit(false);
 
-        Date updateFrom;
+        ArrayList<String> result = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol='" + stock + "' AND " + indicator + " is not null ORDER BY TradeDate DESC LIMIT 1");
 
-        if (dates.isEmpty())
-            updateFrom = Date.valueOf(dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC LIMIT 1;").get(0));
-        else
-            updateFrom = Date.valueOf(dates.get(0));
+        Date dateFrom = null;
+        if (!result.isEmpty())
+            dateFrom = Date.valueOf(result.get(0));
 
         for (Date key : records.keySet()) {
-            if (key.getTime() >= updateFrom.getTime())
-                dh.executeCommand("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "';");
+            if (result.isEmpty() || key.after(dateFrom) || key == dateFrom)
+                dh.addBatchCommand("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "' AND (" + indicator + " is null OR " + indicator + "!='" + records.get(key) + "');");
         }
+
+        dh.executeBatch();
+        dh.setAutoCommit(true);
     }
 
     static public void calculateTechnicalIndicators(ArrayList<String> stocks) throws SQLException {
@@ -109,12 +111,14 @@ public class TechnicalAnalyser {
 
     static private TreeMap<Date, Double> priceArrayToRecordMap(Set<Date> dates, int startInd, int length, double[] values) {
         TreeMap<Date, Double> outputValues = new TreeMap();
-        int i = startInd;
+        int i = 0;
+        int j = 0;
 
         for (Date key : dates) {
-            if (i >= startInd && i <= length)
-                outputValues.put(key, values[i - startInd]);
-            i++;
+            if (j >= startInd && i < length)
+                outputValues.put(key, values[i++]);
+            else
+                j++;
         }
 
         return outputValues;

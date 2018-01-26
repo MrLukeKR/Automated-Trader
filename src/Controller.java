@@ -19,6 +19,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +31,7 @@ public class Controller {
     static DatabaseHandler nlpdh = new DatabaseHandler();
     static DatabaseHandler tadh = new DatabaseHandler();
     static DatabaseHandler nddh = new DatabaseHandler();
+    static DatabaseHandler pmdh = new DatabaseHandler();
 
     static AlphaVantageHandler avh = new AlphaVantageHandler();
     static boolean quit = false;
@@ -38,10 +40,11 @@ public class Controller {
     ArrayList<LiveStockRecord> records = new ArrayList<>();
     ArrayList<StockClock> clocks = new ArrayList<>();
 
+
+    @FXML
+    ComboBox<String> stockDropdown;
     @FXML
     FlowPane stockList;
-    @FXML
-    ProgressBar liveStockProgressBar;
     @FXML
     ProgressBar stockFeedProgress;
     @FXML
@@ -90,9 +93,51 @@ public class Controller {
     ProgressBar technicalAnalyserProgress;
     @FXML
     Circle technicalAnalyserAvailability;
+    @FXML
+    TextField stockAmountField;
+    @FXML
+    Button sellButton;
+    @FXML
+    Button buyButton;
+    @FXML
+    Button exportToMLFileButton;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
+
+    static public void shutdown() throws SQLException {
+        dh.close();
+        nddh.close();
+        nlpdh.close();
+        tadh.close();
+        sqdh.close();
+        pmdh.close();
+    }
+
+    @FXML
+    private void enableAmountField() {
+        stockAmountField.setDisable(false);
+    }
+
+    @FXML
+    private void exportToMLFile() {
+        new Thread(() -> {
+            Platform.runLater(() -> exportToMLFileButton.setDisable(true));
+            System.out.println("Exporting to ML File...");
+            ArrayList<String> priceValues = null;
+            try {
+                priceValues = dh.executeQuery("SELECT * FROM dailystockprices WHERE SMA10 is not null AND EMA10 is not null AND MACD is not null AND RSI10 is not null AND ADX10 is not null AND CCI10 is not null AND AD is not null AND OBV is not null ORDER BY Symbol ASC, TradeDate ASC ");
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            for (String record : priceValues) {
+                String[] splitString = record.split(",");
+                String symbolBytes = Utils.stringToByteValue(splitString[0]);
+            }
+            Platform.runLater(() -> exportToMLFileButton.setDisable(false));
+        }).start();
+    }
 
     static public void updateProgress(double current, double total, ProgressBar pb) {
         final double val = current / total;
@@ -110,6 +155,14 @@ public class Controller {
         cutoffLabel.setText(String.valueOf(amount));
     }
 
+    @FXML
+    private void enableBuyAndSell() {
+        sellButton.setDisable(false);
+        buyButton.setDisable(false);
+
+        //TODO: Make this conditional based on if any of the stocks are owned or if the number in the amount box is <= number held
+    }
+
     static public void updateProgress(double value, ProgressBar pb) {
         final double val = value;
         if (value == 0 || value == 1)
@@ -120,12 +173,10 @@ public class Controller {
         Platform.runLater(() -> pb.setProgress(val));
     }
 
-    static public void shutdown() throws SQLException {
-        dh.close();
-        nddh.close();
-        nlpdh.close();
-        tadh.close();
-        sqdh.close();
+    private void calculateTargetCutoff(double percentage) throws SQLException {
+        double amount = Double.parseDouble(dh.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions WHERE Type='DEPOSIT';").get(0)) * (1 + percentage);
+
+        targetLabel.setText(String.valueOf(amount));
     }
 
     private void initialiseConnections() {
@@ -136,6 +187,7 @@ public class Controller {
             tadh.init("TechnicalAnalyser", "n6qvdUkFOoFCxPq5");
             nddh.init("NewsDownloader", "wu0Ni6YF3yLTVp2A");
             sqdh.init("StockQuoteDownloader", "j2wbvx19Gg1Be22J");
+            pmdh.init("PortfolioManager", "mAjwa22NdsrRihi4");
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);
@@ -212,12 +264,6 @@ public class Controller {
 
     @FXML
     public void initialize() throws SQLException {
-        autonomyLevelDropdown.getItems().addAll("Manual", "Semi-Autonomy", "Full-Autonomy");
-        autonomyLevelDropdown.getSelectionModel().selectFirst();
-        portfolioChart.getXAxis().setVisible(false);
-        portfolioChart.getXAxis().setTickLabelsVisible(false);
-        portfolioChart.getXAxis().setOpacity(0);
-
         initialiseConnections();
         initialiseDatabase();
 
@@ -225,11 +271,22 @@ public class Controller {
         NaturalLanguageProcessor.initialise(nlpdh);
         TechnicalAnalyser.initialise(tadh, technicalAnalyserProgress);
         NewsAPIHandler.initialise(nddh, newsFeedProgress);
+        PortfolioManager.initialise(pmdh); //TODO: Get a progessbar for this
+
+        autonomyLevelDropdown.getItems().addAll("Manual", "Semi-Autonomy", "Full-Autonomy");
+        autonomyLevelDropdown.getSelectionModel().selectFirst();
+        portfolioChart.getXAxis().setVisible(false);
+        portfolioChart.getXAxis().setTickLabelsVisible(false);
+        portfolioChart.getXAxis().setOpacity(0);
+        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol FROM indices ORDER BY Symbol ASC");
+        stockDropdown.getItems().addAll(stocks);
 
         initialiseStocks();
         initialiseClocks();
         initialiseDisplay();
         startClocks();
+
+        PortfolioManager.optimisePortfolio();
 
         new Thread(() -> {
             try {
@@ -344,10 +401,16 @@ public class Controller {
                 e.printStackTrace();
             }
 
+            boolean priceDataAvailable = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) != Calendar.SATURDAY
+                    && Calendar.getInstance().get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY
+                    && Calendar.getInstance().get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY;
+
             try {
                 NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
                 NaturalLanguageProcessor.determineUselessSentences();
-                NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
+
+                if (priceDataAvailable)
+                    NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -370,11 +433,12 @@ public class Controller {
             e.printStackTrace();
         }
         calculateLossCutoff(0.1); //TODO: Make this calculation based, based on risk/variance of portfolio
+        calculateTargetCutoff(0.1);
         checkServices();
 
         newsThread.start();
-        newsThread.join();
         stockThread.start();
+        newsThread.join();
         stockThread.join();
 
         startRealTime();
@@ -466,6 +530,10 @@ public class Controller {
     }
 
     @FXML
+    private void buyStock() {
+
+    }
+
     private void buyStock(int amount, String stock) throws SQLException {
         float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
         float totalCost = cost * amount;
@@ -550,18 +618,11 @@ public class Controller {
     public void startRealTime() {
         new Thread(() -> {
             while (!quit) {
-                try {
-                    TimeUnit.MILLISECONDS.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
                 int s = LocalTime.now().getSecond();
                 int m = LocalTime.now().getMinute();
                 int h = LocalTime.now().getHour();
                 int cycle = m % downloadInterval;
 
-                if (cycle == 0 && s == 0) {
                         updateIntradayStockData();
                         updateDailyStockData();
                         Platform.runLater(() -> {
@@ -578,8 +639,6 @@ public class Controller {
                         }
 
                     //new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
-
-                }
             }
         }).start();
     }
@@ -617,12 +676,14 @@ public class Controller {
     }
 
     @FXML
-    private void sellStock(int amount, String stock) throws SQLException {
+    private void sellStock() {
 
+    }
+
+    private void sellStock(int amount, String stock) throws SQLException {
         float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
 
         float totalCost = cost * amount;
-
 
         int available = getHeldStocks(stock);
 

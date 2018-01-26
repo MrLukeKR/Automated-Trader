@@ -1,16 +1,13 @@
 package GeneticAlgorithm;
 
 public class EvaluationFunction {
-    static public int constraintHolds(double[] weights) {
+    static public boolean constraintHolds(double[] weights) {
         double sum = 0;
 
         for (int i = 0; i < weights.length; i++)
             sum += weights[i];
 
-        if (sum > 0.99 && sum < 1.01)
-            return 1;
-        else
-            return 0;
+        return sum > 0.99 && sum < 1.01;
     }
 
     static public double getVariance(double[] weights, double[][] riskCovarianceMatrix) {
@@ -44,6 +41,6 @@ public class EvaluationFunction {
 
         double ratio = expectedReturn / expectedRisk;
 
-        return Math.max(0, ratio);
+        return ratio;
     }
 }

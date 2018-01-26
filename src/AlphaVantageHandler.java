@@ -24,7 +24,7 @@ public class AlphaVantageHandler {
         String sTemp;
 
             while ((sTemp = reader.readLine()) != null)
-                if (sTemp.split(",").length != 6)
+                if (sTemp.contains("Please consider optimizing your API call frequency."))
                     TimeUnit.SECONDS.sleep(++exceeded);
                 else {
                     temp.add(sTemp);

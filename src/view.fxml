@@ -39,21 +39,25 @@
                                                     <FlowPane fx:id="manualToolbox" prefHeight="70.0" prefWidth="400.0">
                                                         <children>
                                                             <Label prefHeight="17.0" prefWidth="50.0" text="Stock:"/>
-                                                            <ComboBox fx:id="stockDropdown" prefHeight="27.0"
-                                                                      prefWidth="140.0"/>
+                                                            <ComboBox fx:id="stockDropdown"
+                                                                      onAction="#enableAmountField" prefHeight="27.0"
+                                                                      prefWidth="140.0" promptText="Select Stock"/>
                                                             <Separator orientation="VERTICAL" prefHeight="25.0"
                                                                        prefWidth="21.0" visible="false"/>
                                                             <Label prefHeight="17.0" prefWidth="55.0" text="Amount:"/>
-                                                            <TextField fx:id="stockAmountField" prefHeight="25.0"
-                                                                       prefWidth="134.0"/>
+                                                            <TextField fx:id="stockAmountField" disable="true"
+                                                                       onInputMethodTextChanged="#enableBuyAndSell"
+                                                                       prefHeight="25.0" prefWidth="134.0"/>
                                                             <Separator prefHeight="15.0" prefWidth="400.0"
                                                                        visible="false"/>
-                                                            <Button fx:id="sellButton" mnemonicParsing="false"
+                                                            <Button fx:id="sellButton" disable="true"
+                                                                    mnemonicParsing="false" onAction="#sellStock"
                                                                     prefHeight="25.0" prefWidth="190.0"
                                                                     text="SELL STOCK"/>
                                                             <Separator orientation="VERTICAL" prefHeight="25.0"
                                                                        prefWidth="20.0" visible="false"/>
-                                                            <Button fx:id="buyButton" mnemonicParsing="false"
+                                                            <Button fx:id="buyButton" disable="true"
+                                                                    mnemonicParsing="false" onAction="#buyStock"
                                                                     prefHeight="25.0" prefWidth="190.0"
                                                                     text="BUY STOCK"/>
                                                         </children>
@@ -219,7 +223,14 @@
                              <TitledPane animated="false" collapsible="false" prefHeight="250.0" prefWidth="848.0"
                                          text="Stock Prediction">
                                 <content>
-                                    <BorderPane prefHeight="200.0" prefWidth="200.0"/>
+                                    <BorderPane prefHeight="200.0" prefWidth="200.0">
+                                        <bottom>
+                                            <Button fx:id="exportToMLFileButton" mnemonicParsing="false"
+                                                    onAction="#exportToMLFile" prefHeight="25.0" prefWidth="815.0"
+                                                    text="Export Database to ML Training File"
+                                                    BorderPane.alignment="CENTER"/>
+                                        </bottom>
+                                    </BorderPane>
                                 </content>
                             </TitledPane>
                              <TitledPane animated="false" collapsible="false" prefHeight="300.0" prefWidth="870.0"

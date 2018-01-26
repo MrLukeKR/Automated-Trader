@@ -162,7 +162,7 @@ public class NaturalLanguageProcessor {
     }
 
     static public void enumerateNGramsFromArticles(int n, ProgressBar pb) throws SQLException {
-        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) != CURDATE()");
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) != CURDATE()"); //TODO: Price difference can't be calculated for the weekend
         System.out.println("Enumerating n-grams for " + unprocessedIDs.size() + " documents...");
 
         int k = 0, t = unprocessedIDs.size() - 1;

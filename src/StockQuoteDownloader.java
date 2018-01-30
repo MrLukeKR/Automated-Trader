@@ -31,13 +31,13 @@ public class StockQuoteDownloader {
                 break;
             case INTRADAY:
                 dataType += "TIME_SERIES_INTRADAY";
+                time += "&interval=1min";
                 break;
         }
 
         switch (outputSize) {
             case COMPACT:
                 size += "compact";
-                time += "&interval=1min"; //TODO: If necessary, make this alterable
                 break;
             case FULL:
                 size += "full";

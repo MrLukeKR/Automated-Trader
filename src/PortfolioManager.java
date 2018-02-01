@@ -3,6 +3,7 @@ import GeneticAlgorithm.GAOptimiser;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,13 +13,17 @@ public class PortfolioManager {
 
     public static void initialise(DatabaseHandler pmdh) {
         dh = pmdh;
+
+        System.out.println("Initialised Portfolio Manager");
     }
 
     static private ArrayList<Double> getPrices(String symbol, int limit) throws SQLException {
         ArrayList<Double> prices = new ArrayList<>();
 
-        for (String record : dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND ClosePrice is not null AND ClosePrice != 0 ORDER BY TradeDate ASC LIMIT " + limit))
+        for (String record : dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND ClosePrice is not null AND ClosePrice != 0 ORDER BY TradeDate DESC LIMIT " + limit))
             prices.add(Double.valueOf(record));
+
+        Collections.reverse(prices);
 
         return prices;
     }
@@ -52,7 +57,8 @@ public class PortfolioManager {
         ArrayList<Double> returns = new ArrayList<>();
 
         for (int i = 0; i < prices.size() - amountOfDays; i++)
-            returns.add(Math.log(prices.get(i + amountOfDays) / prices.get(i)));
+            returns.add(Math.log(prices.get(i + amountOfDays) / prices.get(i))); //Logarithmic Return
+        //returns.add((prices.get(i + amountOfDays) / prices.get(i)) -1); //Arithmetic Return
 
         return returns;
     }
@@ -96,7 +102,7 @@ public class PortfolioManager {
 
         GAOptimiser ga = new GAOptimiser();
 
-        ga.initialise(stocks.size(), 10000, 100, expectedReturns, covarianceMatrix);
+        ga.initialise(stocks.size(), 1000, 200, expectedReturns, covarianceMatrix);
         ga.run();
 
         double[] best = ga.getBest();
@@ -109,9 +115,9 @@ public class PortfolioManager {
             double percentage = newVal / 100.0;
 
             if (percentage > 0)
-                portfolio.put(stocks.get(j), percentage);
+                portfolio.put(stocks.get(j), percentage / 100.0);
 
-            System.out.println(stocks.get(j) + " weight: " + percentage + "% (Expected Return: " + Math.round(expectedReturns[j] * 10000.0) / 100.0 + "\tRisk: " + calculateVariance(returns.get(j)) + "\tRatio: " + expectedReturns[j] / calculateVariance(returns.get(j)) + ")");
+            System.out.println(stocks.get(j) + " weight: " + percentage + " (Expected Return: " + Math.round(expectedReturns[j] * 10000.0) / 100.0 + "\tRisk: " + calculateVariance(returns.get(j)) + "\tRatio: " + expectedReturns[j] / calculateVariance(returns.get(j)) + ")");
         }
 
         double expectedReturn = EvaluationFunction.getReturn(best, expectedReturns);

@@ -103,6 +103,8 @@ public class NewsAPIHandler {
     static public void initialise(DatabaseHandler nddh, ProgressBar pb) {
         dh = nddh;
         NewsAPIHandler.pb = pb;
+
+        System.out.println("Initialised News API Handler");
     }
 
     static public int getCurrentCalls() throws SQLException {
@@ -318,7 +320,10 @@ public class NewsAPIHandler {
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         ArrayList<String> undownloadedArticles = dh.executeQuery("SELECT ID, URL FROM newsarticles WHERE Content IS NULL AND Blacklisted = 0 AND Redirected = 0 AND Duplicate = 0 AND URL != \"\";");
 
-        if (undownloadedArticles == null || undownloadedArticles.isEmpty()) return;
+        if (undownloadedArticles == null || undownloadedArticles.isEmpty()) {
+            Controller.updateProgress(0, pb);
+            return;
+        }
 
         String[] splitArticle;
         double i = 0, t = undownloadedArticles.size() - 1;
@@ -350,6 +355,7 @@ public class NewsAPIHandler {
 
             Controller.updateProgress(i++, t, pb);
         }
+
         Controller.updateProgress(0, pb);
     }
 

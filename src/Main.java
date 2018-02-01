@@ -5,7 +5,6 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.sql.SQLException;
 
 public class Main extends Application {
 
@@ -22,7 +21,7 @@ public class Main extends Application {
         primaryStage.setOnCloseRequest(event -> {
             try {
                 Controller.shutdown();
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             System.exit(1);

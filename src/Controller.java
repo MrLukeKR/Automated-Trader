@@ -104,7 +104,12 @@ public class Controller {
     boolean priceUpdating = false;
     boolean newsUpdating = false;
 
-    static public void shutdown() throws SQLException {
+    private static Thread mainThread;
+
+    static public void shutdown() throws SQLException, InterruptedException {
+        quit = true;
+        mainThread.join();
+
         dh.close();
         nddh.close();
         nlpdh.close();
@@ -715,7 +720,7 @@ public class Controller {
 
     @FXML
     public void startRealTime() {
-        new Thread(() -> {
+        mainThread = new Thread(() -> {
             while (!quit) {
                 int s = LocalTime.now().getSecond();
                 int m = LocalTime.now().getMinute();
@@ -739,7 +744,9 @@ public class Controller {
 
                     //new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
             }
-        }).start();
+        });
+
+        mainThread.start();
     }
 
     private void updateComponentChart() throws SQLException {

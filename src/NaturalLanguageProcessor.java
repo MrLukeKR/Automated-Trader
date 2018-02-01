@@ -7,19 +7,25 @@ import java.util.*;
 public class NaturalLanguageProcessor {
 
     static DatabaseHandler dh;
+    static ProgressBar pb;
 
     static private Set<String> STOP_WORDS = new HashSet<>();
     static private Set<String> USELESS_SENTENCES = new HashSet<>();
 
-    static public void initialise(DatabaseHandler dbh) throws SQLException {
+    static public void initialise(DatabaseHandler dbh, ProgressBar nlpProgress) {
         dh = dbh;
+        pb = nlpProgress;
 
+        /*
         ArrayList<String> stopWords = dh.executeQuery("SELECT Gram FROM ngrams WHERE Blacklisted = 1");
 
         if (STOP_WORDS.isEmpty())
             for (String word : stopWords)
                 if (!word.isEmpty())
                     STOP_WORDS.add(word);
+         */
+
+        System.out.println("Initialised Natural Language Processor");
     }
 
     static public ArrayList<String> splitToSentences(String document, Locale languageLocale) {
@@ -70,7 +76,6 @@ public class NaturalLanguageProcessor {
     }
 
     static public String cleanSentence(String sentence, boolean removeBlacklistedWords) {
-        //TODO: Stop word, blacklist and punctuation removal
         sentence = sentence.toUpperCase();                                                          //Convert to Upper Case
         sentence = sentence.replaceAll("[^a-zA-Z\\s]", "");                       //Remove non-alphabetic characters
         sentence = sentence.replaceAll("NOT ", "!");                               //Perform logic conversions
@@ -84,11 +89,13 @@ public class NaturalLanguageProcessor {
             return sentence.trim();
     }
 
-    static public void enumerateSentencesFromArticles(ProgressBar pb) throws SQLException {
+    static public void enumerateSentencesFromArticles() throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 0");
         System.out.println("Enumerating sentences for " + unprocessedIDs.size() + " documents...");
 
         double i = 0, t = unprocessedIDs.size() - 1;
+
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
 
         dh.setAutoCommit(false);
 
@@ -138,6 +145,7 @@ public class NaturalLanguageProcessor {
             temporaryDatabase.clear();
         }
 
+        Controller.updateProgress(0, pb);
         dh.setAutoCommit(true);
     }
 
@@ -152,19 +160,31 @@ public class NaturalLanguageProcessor {
                     USELESS_SENTENCES.add(sentence);
     }
 
-    static public double getPriceChangeOnDate(String symbol, String date) throws SQLException {
-        String truncDate = date.split(" ")[0];
+    static public void determineUselessNGrams() throws SQLException {
+        int mostCommonNGram = Integer.valueOf(dh.executeQuery("SELECT MAX(Documents) FROM ngrams").get(0));
 
-        double priceOnDate = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol = '" + symbol + "' AND TradeDate >= '" + truncDate + "' ORDER BY TradeDate ASC LIMIT 1;").get(0)),
-                priceOnPrev = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate < '" + truncDate + "' ORDER BY TradeDate DESC LIMIT 1;").get(0)); //TODO: Refactor this to not use as many queries
+        //TODO: Remove useless Ngrams
+    }
+
+    static public double getPriceChangeOnDate(String symbol, String date) {
+        String truncDate = date.split(" ")[0];
+        double priceOnDate = 0, priceOnPrev = 0;
+
+        try {
+            priceOnDate = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol = '" + symbol + "' AND TradeDate >= '" + truncDate + "' ORDER BY TradeDate ASC LIMIT 1;").get(0));
+            priceOnPrev = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate < '" + truncDate + "' ORDER BY TradeDate DESC LIMIT 1;").get(0)); //TODO: Refactor this to not use as many queries
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         return (priceOnDate - priceOnPrev) / priceOnDate * 100.0;
     }
 
-    static public void enumerateNGramsFromArticles(int n, ProgressBar pb) throws SQLException {
-        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) != CURDATE()"); //TODO: Price difference can't be calculated for the weekend
+    static public void enumerateNGramsFromArticles(int n) throws SQLException {
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) < SUBDATE(CURDATE(), 1)"); //TODO: Price difference can't be calculated for the weekend or after hours before the next day
         System.out.println("Enumerating n-grams for " + unprocessedIDs.size() + " documents...");
 
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         int k = 0, t = unprocessedIDs.size() - 1;
 
         Map<String, Double[]> temporaryDatabase = new HashMap<>();
@@ -237,6 +257,7 @@ public class NaturalLanguageProcessor {
 
         sendNGramsToDatabase(temporaryDatabase);
         temporaryDatabase.clear();
+        Controller.updateProgress(0, pb);
         System.out.println("Finished processing n-grams");
     }
 
@@ -304,8 +325,76 @@ public class NaturalLanguageProcessor {
         return new ArrayList<>(Arrays.asList(document.split(" ")));
     }
 
-    static public double calculateSentiment(ArrayList<String> wordList) {
-        //TODO
-        return 0.0;
+    static public void processArticlesForSentiment(int ngramSize) throws SQLException {
+        System.out.println("Processing Sentiment of Articles");
+
+
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
+        dh.setAutoCommit(false);
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Enumerated = 1 AND Tokenised = 1 AND Processed = 0");
+
+        final double t = unprocessedIDs.size() - 1;
+        double curr = 0;
+
+        for (String id : unprocessedIDs) {
+            double sentiment = evaluateArticleSentiment(Integer.valueOf(id), ngramSize);
+
+            if (sentiment != -1) {
+                dh.addBatchCommand("UPDATE newsarticles SET processed = 1, mood = " + sentiment + " WHERE ID = " + id);
+                System.out.println("Sentiment for Article ID " + id + ": " + sentiment);
+            }
+            Controller.updateProgress(curr++, t, pb);
+        }
+
+        Controller.updateProgress(0, pb);
+
+        dh.executeBatch();
+        dh.setAutoCommit(true);
+    }
+
+    static public double evaluateArticleSentiment(int articleID, int ngramSize) throws SQLException {
+        String article = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + articleID + ";").get(0);
+
+        double sentiment = 0.5;
+
+        if (article != null) {
+            ArrayList<String> sentences = splitToSentences(cleanDocument(article), Locale.US);
+            ArrayList<String> ngrams = new ArrayList<>();
+
+            for (String sentence : sentences) {
+                String cSentence = cleanSentence(sentence, false);
+                if (cSentence != null)
+                    for (int i = 1; i <= ngramSize; i++)
+                        if (cSentence.split(" ").length >= ngramSize)
+                            ngrams.addAll(splitToNGrams(cSentence, Locale.US, i));
+            }
+
+            sentences.clear();
+
+            Set<String> noDuplicateNGrams = new HashSet<>(ngrams);
+
+            sentiment = calculateSentiment(new ArrayList<>(noDuplicateNGrams));
+        }
+
+        return sentiment;
+    }
+
+    static public double calculateSentiment(ArrayList<String> wordList) throws SQLException {
+        double totalSentiment = 0;
+
+        if (wordList.isEmpty())
+            return -1;
+
+        for (String word : wordList) {
+            String result = dh.executeQuery("SELECT Increase, Decrease FROM ngrams WHERE Hash=MD5('" + word + "');").get(0);
+
+            String[] splitResult = result.split(",");
+            double increase = Double.parseDouble(splitResult[0]), decrease = Integer.parseInt(splitResult[1]);
+            double sentiment = increase / (increase + decrease);
+
+            totalSentiment += sentiment;
+        }
+
+        return totalSentiment / wordList.size();
     }
 }

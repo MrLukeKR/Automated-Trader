@@ -13,6 +13,8 @@ public class StockQuoteDownloader {
         databaseHandler = dh;
         alphaVantageHandler = avh;
         stockProgressBar = pb;
+
+        System.out.println("Initialised Stock Quote Downloader");
     }
 
     static public ArrayList<String> downloadStockData(String stock, Interval interval, OutputSize outputSize) throws IOException, InterruptedException {
@@ -70,7 +72,10 @@ public class StockQuoteDownloader {
                     temp = downloadStockData(symbol, Interval.DAILY, OutputSize.COMPACT);
 
                 System.out.println("Downloaded quote history of " + symbol);
-                StockRecordParser.importDailyMarketData(temp, symbol, databaseHandler);
+
+                if (temp != null && !temp.isEmpty())
+                    StockRecordParser.importDailyMarketData(temp, symbol);
+
                 System.out.println("Successully committed " + symbol + " history to the database!");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -86,7 +91,7 @@ public class StockQuoteDownloader {
                 else
                     temp = downloadStockData(symbol, Interval.INTRADAY, OutputSize.COMPACT);
                 System.out.println("Downloaded intraday history of " + symbol);
-                StockRecordParser.importIntradayMarketData(temp, symbol, databaseHandler);
+                StockRecordParser.importIntradayMarketData(temp, symbol);
                 System.out.println("Successully committed " + symbol + " intraday history to the database!");
             } catch (Exception e) {
                 e.printStackTrace();

@@ -92,8 +92,10 @@
                                                                     prefWidth="125.0" text="Set Profit Target"/>
                                                             <Separator prefHeight="10.0" prefWidth="400.0"
                                                                        visible="false"/>
-                                                            <Button mnemonicParsing="false" prefHeight="25.0"
-                                                                    prefWidth="400.0" text="Rebalance Portfolio"/>
+                                                            <Button fx:id="rebalanceButton" mnemonicParsing="false"
+                                                                    onAction="#manuallyRebalancePortfolio"
+                                                                    prefHeight="25.0" prefWidth="400.0"
+                                                                    text="Rebalance Portfolio"/>
                                                         </children>
                                                     </FlowPane>
                                                 </children>
@@ -241,7 +243,7 @@
                                             <VBox BorderPane.alignment="CENTER">
                                                 <children>
                                                     <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="17.0"
-                                                           prefWidth="200.0" text="Stocks Owned" textAlignment="CENTER">
+                                                           prefWidth="200.0" text="Portfolio" textAlignment="CENTER">
                                                         <font>
                                                             <Font size="16.0"/>
                                                         </font>

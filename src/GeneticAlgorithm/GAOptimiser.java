@@ -48,7 +48,7 @@ public class GAOptimiser {
         for (int i = 0; i < population.size(); i++)
             totalFitness += Math.abs(fitnesses.get(i));
 
-        for (int i = 0; i < population.size(); i++) {
+        for (int i = 0; i < population.size() / 2; i++) {
             double selectionPoint = Math.random() * totalFitness, accumulatedFitnesss = 0;
             int selectInd = 0;
 
@@ -64,22 +64,39 @@ public class GAOptimiser {
     public ArrayList<double[]> crossover(ArrayList<double[]> parents1, ArrayList<double[]> parents2, double rate) {
         ArrayList<double[]> newPopulation = new ArrayList<>();
 
-        for (int i = 0; i < parents1.size(); i++)
-            newPopulation.add(crossover(parents1.get(i), parents2.get(i), rate));
+        for (int i = 0; i < parents1.size(); i++) {
+            ArrayList<double[]> children = crossover(parents1.get(i), parents2.get(i), rate);
+
+            for (double[] child : children)
+                newPopulation.add(child);
+        }
 
         return newPopulation;
     }
 
-    public double[] crossover(double[] weights1, double[] weights2, double rate) {
-        double[] newWeights = new double[weights1.length];
+    public ArrayList<double[]> crossover(double[] parent1, double[] parent2, double rate) {
+        double[] child1 = new double[parent1.length];
+        double[] child2 = new double[parent2.length];
 
-        for (int i = 0; i < newWeights.length; i++)
-            if (Math.random() < rate)
-                newWeights[i] = weights1[i];
-            else
-                newWeights[i] = weights2[i];
+        ArrayList<double[]> children = new ArrayList<>();
 
-        return scaleWeights(newWeights);
+        for (int i = 0; i < child1.length; i++) {
+
+        }
+
+        for (int i = 0; i < child1.length; i++)
+            if (Math.random() < rate) {
+                child1[i] = parent2[i];
+                child2[i] = parent1[i];
+            } else {
+                child1[i] = parent1[i];
+                child2[i] = parent2[i];
+            }
+
+        children.add(scaleWeights(child1));
+        children.add(scaleWeights(child2));
+
+        return children;
     }
 
     public ArrayList<double[]> mutate(ArrayList<double[]> population, double rate) {
@@ -122,12 +139,14 @@ public class GAOptimiser {
             if (currFitness > best) best = currFitness;
         }
 
-        System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + "\tBEST FITNESS: " + best);
+        //System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + "\tBEST FITNESS: " + best);
 
         return sum / population.size();
     }
 
     public void run() {
+        System.out.println("Performing Genetic Portfolio Optimisation");
+
         double prevFitness = -1, currFitness, bestFitness = Double.MIN_VALUE;
         int convergenceCount = 0;
 

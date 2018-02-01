@@ -17,6 +17,8 @@ public class TechnicalAnalyser {
     static public void initialise(DatabaseHandler tadh, ProgressBar pb) {
         dh = tadh;
         TechnicalAnalyser.pb = pb;
+
+        System.out.println("Initialised Technical Analyser");
     }
 
     static private String technicalIndicatorToString(TechnicalIndicator indicator) {
@@ -94,6 +96,8 @@ public class TechnicalAnalyser {
                 Controller.updateProgress(c++, t, pb);
             }
         }
+
+        Controller.updateProgress(0, pb);
     }
 
     static private TreeMap<Date, Double> getFromDatabase(String stock, String field) throws SQLException {

@@ -18,10 +18,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Controller {
@@ -101,6 +98,8 @@ public class Controller {
     Button buyButton;
     @FXML
     Button exportToMLFileButton;
+    @FXML
+    Button rebalanceButton;
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
@@ -228,7 +227,7 @@ public class Controller {
             for (String iRecord : dh.executeQuery("SELECT ClosePrice, TradeDate FROM dailystockprices WHERE Symbol = '" + splitRecord[0] + "' AND TradeDate >= DATE('" + splitRecord[3] + "');")) {
                 String[] splitIRecord = iRecord.split(",");
 
-                double profitLoss = (Double.parseDouble(splitIRecord[0]) * held) - cost; //TODO: This still isn't working as expected - incorrectly ordering graph points
+                double profitLoss = (Double.parseDouble(splitIRecord[0]) * held) - cost;
                 long epoch = format.parse(splitIRecord[1]).getTime();
 
                 timeAndPrice.put(epoch, timeAndPrice.getOrDefault(epoch, 0.0) + profitLoss);
@@ -262,16 +261,105 @@ public class Controller {
         else profitLossData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
     }
 
+
+    @FXML
+    public void manuallyRebalancePortfolio() {
+        Alert alert = new Alert(Alert.AlertType.WARNING, "This will sell all of your currently held stocks. Please confirm.", ButtonType.YES, ButtonType.NO);
+        alert.setTitle("Sell All Stocks?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+
+        if (result.get() == ButtonType.YES)
+            new Thread(() -> {
+                Platform.runLater(() -> rebalanceButton.setDisable(true));
+                try {
+                    rebalancePortfolio();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                Platform.runLater(() -> rebalanceButton.setDisable(false));
+            }).start();
+    }
+
+    public void sellAllStock() throws SQLException {
+        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol, Held FROM Portfolio WHERE Held > 0");
+
+        for (String stock : stocks) {
+            String[] splitStock = stock.split(",");
+            sellStock(Integer.parseInt(splitStock[1]), splitStock[0]);
+        }
+
+        dh.executeCommand("DELETE FROM Portfolio;");
+    }
+
+    public void rebalancePortfolio() throws SQLException {
+        sellAllStock();
+
+        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio();
+
+        String command = "INSERT INTO Portfolio (Symbol, Allocation, Held) VALUES \r\n";
+
+        int count = 1;
+        double availableFunds = Double.parseDouble(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions;").get(0));
+
+        for (String stock : portfolio.keySet()) {
+            double allocation = availableFunds * portfolio.get(stock);
+
+            command += "('" + stock + "', " + allocation + ", 0)";
+            if (count++ < portfolio.size())
+                command += ", \r\n";
+            else
+                command += ";";
+        }
+
+        dh.executeCommand(command);
+
+        Platform.runLater(() -> {
+            try {
+                updateStocksOwned();
+                updateComponentChart();
+                updateAllocationChart();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void enforceNumericValues(TextField tf) {
+        tf.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*"))
+                tf.setText(newValue.replaceAll("[^\\d]", ""));
+        });
+
+    }
+
+    private void initialiseListeners() {
+        enforceNumericValues(lossCutoffField);
+        enforceNumericValues(profitTargetField);
+
+        stockAmountField.textProperty().addListener(((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*"))
+                stockAmountField.setText(newValue.replaceAll("[^\\d]", ""));
+
+            boolean disable = !(!newValue.isEmpty() && newValue.matches("\\d*"));
+            buyButton.setDisable(disable); //TODO: Check the quantities and costs of stock
+            sellButton.setDisable(disable);
+        }));
+    }
+
     @FXML
     public void initialize() throws SQLException {
         initialiseConnections();
         initialiseDatabase();
 
+        initialiseListeners();
+
         StockQuoteDownloader.initialise(sqdh, avh, stockFeedProgress);
-        NaturalLanguageProcessor.initialise(nlpdh);
+        NaturalLanguageProcessor.initialise(nlpdh, nlpProgress);
         TechnicalAnalyser.initialise(tadh, technicalAnalyserProgress);
         NewsAPIHandler.initialise(nddh, newsFeedProgress);
         PortfolioManager.initialise(pmdh); //TODO: Get a progessbar for this
+        StockRecordParser.initialise(sqdh);
 
         autonomyLevelDropdown.getItems().addAll("Manual", "Semi-Autonomy", "Full-Autonomy");
         autonomyLevelDropdown.getSelectionModel().selectFirst();
@@ -286,7 +374,7 @@ public class Controller {
         initialiseDisplay();
         startClocks();
 
-        PortfolioManager.optimisePortfolio();
+        //PortfolioManager.optimisePortfolio(); //TODO: Remove this when finished testing
 
         new Thread(() -> {
             try {
@@ -298,6 +386,7 @@ public class Controller {
     }
 
     private void startClocks() {
+        System.out.println("Starting Clocks");
         new Thread(() -> {
             while (true) {
                 try {
@@ -323,7 +412,7 @@ public class Controller {
     private void updateStockValues() {
         float worth = 0;
         try {
-            ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM tradetransactions GROUP BY symbol HAVING SUM(Volume) > 0;");
+            ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM Portfolio WHERE Held > 0;");
 
             for (String stock : heldStocks) {
                 int volume = getHeldStocks(stock);
@@ -337,16 +426,21 @@ public class Controller {
         }
     }
 
-    private void initialiseDisplay() {
+    private void initialiseDisplay() throws SQLException {
+        System.out.println("Initialising Display");
+        ArrayList<String> stockInfo = dh.executeQuery("SELECT Symbol, Name FROM indices;");
+
+        Map<String, String> stockNames = new HashMap<>();
+
+        for (String curr : stockInfo) {
+            String[] values = curr.split(",");
+            stockNames.put(values[0], values[1]);
+        }
+
         for (String curr : stocks) {
-            try {
-                String name = dh.executeQuery("SELECT Name FROM indices WHERE Symbol='" + curr + "';").get(0);
-                LiveStockRecord currRec = new LiveStockRecord(curr, name, dh);
+            LiveStockRecord currRec = new LiveStockRecord(curr, stockNames.get(curr), dh);
                 records.add(currRec);
                 stockList.getChildren().add(currRec.getNode());
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -355,6 +449,7 @@ public class Controller {
     }
 
     private void initialiseClocks() {
+        System.out.println("Initialising Clocks");
         clocks.add(new StockClock("NASDAQ", LocalTime.of(9, 30), LocalTime.of(16, 0), ZoneId.of("America/New_York")));
         clocks.add(new StockClock("London SE", LocalTime.of(8, 0), LocalTime.of(16, 30), ZoneId.of("Europe/London")));
         clocks.add(new StockClock("Tokyo SE", LocalTime.of(9, 0), LocalTime.of(15, 0), ZoneId.of("Asia/Tokyo"))); //TODO: Allow multiple open/close periods
@@ -406,11 +501,14 @@ public class Controller {
                     && Calendar.getInstance().get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY;
 
             try {
-                NaturalLanguageProcessor.enumerateSentencesFromArticles(nlpProgress);
+                NaturalLanguageProcessor.enumerateSentencesFromArticles();
                 NaturalLanguageProcessor.determineUselessSentences();
 
-                if (priceDataAvailable)
-                    NaturalLanguageProcessor.enumerateNGramsFromArticles(2, nlpProgress);
+                if (priceDataAvailable)  //TODO: Fix this to make the most of the available data
+                    NaturalLanguageProcessor.enumerateNGramsFromArticles(2);
+
+                //NaturalLanguageProcessor.determineUselessNGrams();
+                //NaturalLanguageProcessor.processArticlesForSentiment(2);
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -506,6 +604,7 @@ public class Controller {
     }
 
     @FXML public void initialiseStocks() {
+        System.out.println("Initialising stocks");
         try {
             stocks = dh.executeQuery("SELECT Symbol FROM indices");
         } catch (SQLException e) { e.printStackTrace(); }
@@ -513,13 +612,13 @@ public class Controller {
 
     private void processYahooHistories() throws SQLException {
         for (String symbol : stocks) {
-            if (!dh.executeQuery("SELECT COALESCE(COUNT(*),0) FROM dailystockprices WHERE Symbol='" + symbol + "';").isEmpty())
+            if (!sqdh.executeQuery("SELECT COALESCE(COUNT(*),0) FROM dailystockprices WHERE Symbol='" + symbol + "';").isEmpty())
                 return;
             File file = new File("res/historicstocks/" + symbol + ".csv");
 
             if (file.exists())
                 try {
-                    StockRecordParser.importDailyMarketData(file, symbol, dh);
+                    StockRecordParser.importDailyMarketData(file, symbol);
                     System.out.println("Successfully committed complete Yahoo records of " + symbol + " to the database!");
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -563,7 +662,7 @@ public class Controller {
     }
 
     private void updateStocksOwned() throws SQLException {
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT SUM(Volume), Symbol FROM tradetransactions GROUP BY Symbol HAVING SUM(Volume) > 0");
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Held, Symbol FROM Portfolio");
 
         stockBox.getChildren().clear();
 
@@ -574,17 +673,17 @@ public class Controller {
     }
 
     private float updateProfitLoss() throws SQLException {
-        float nonLiquidBalance = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(AMOUNT),0) FROM banktransactions WHERE Type!='DEPOSIT'").get(0));
+        float nonLiquidBalance = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(Investment),0) FROM Portfolio").get(0));
         float potentialTotal = 0;
 
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, SUM(Volume) FROM tradetransactions GROUP BY Symbol HAVING SUM(Volume) > 0");
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, Held FROM Portfolio WHERE Held > 0");
 
         for (String stock : heldStocks) {
             String[] splitStock = stock.split(",");
             potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
         }
 
-        float total = nonLiquidBalance + potentialTotal;
+        float total = potentialTotal - nonLiquidBalance;
 
         profitLossLabel.setText(String.valueOf(Math.round(total * 100.0) / 100.0));
         if (total > 0)
@@ -606,7 +705,7 @@ public class Controller {
 
     private int getHeldStocks(String stock){
         try {
-            return Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Volume),0) FROM tradetransactions WHERE Symbol='" + stock + "';").get(0));
+            return Integer.parseInt(dh.executeQuery("SELECT COALESCE(Held,0) FROM Portfolio WHERE Symbol='" + stock + "';").get(0));
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -644,7 +743,9 @@ public class Controller {
     }
 
     private void updateComponentChart() throws SQLException {
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, Held FROM portfolio;");
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, Held FROM portfolio WHERE Held > 0;");
+
+        if (heldStocks.isEmpty()) return;
 
         ArrayList<PieChart.Data> piechartData = new ArrayList<>();
 
@@ -658,9 +759,9 @@ public class Controller {
     }
 
     private void updateAllocationChart() throws SQLException {
-        int total = Integer.parseInt(dh.executeQuery("SELECT COALESCE(SUM(Allocation),0) FROM portfolio;").get(0));
+        double total = Double.parseDouble(dh.executeQuery("SELECT COALESCE(SUM(Allocation),0) FROM portfolio;").get(0));
 
-        ArrayList<String> allowance = dh.executeQuery("SELECT Symbol, Allocation FROM portfolio;");
+        ArrayList<String> allowance = dh.executeQuery("SELECT Symbol, Allocation FROM portfolio ORDER BY Allocation DESC;");
 
         ArrayList<PieChart.Data> piechartData = new ArrayList<>();
 
@@ -688,12 +789,14 @@ public class Controller {
         int available = getHeldStocks(stock);
 
         if (amount <= available) {
-            dh.executeCommand("INSERT INTO banktransactions(Amount) VALUES (" + totalCost + ")");
+            dh.executeCommand("INSERT INTO banktransactions(Amount, Type) VALUES (" + totalCost + ",'TRADE')");
             dh.executeCommand("INSERT INTO tradetransactions(Type,Symbol,Volume,Price) VALUES ('SELL'," +
                     "'" + stock + "'," +
                     amount + "," +
                     cost +
                     ");");
+
+            dh.executeCommand("UPDATE Portfolio SET Held = Held - " + amount + ", Investment = Investment - " + totalCost + " WHERE Symbol='" + stock + "';");
 
             Platform.runLater(() -> {
                 updateBankBalance();
@@ -751,7 +854,7 @@ public class Controller {
             }
 
             if (temp != null && temp.size() > 1) {
-                StockRecordParser.importDailyMarketData(temp, curr.getSymbol(), sqdh);
+                StockRecordParser.importDailyMarketData(temp, curr.getSymbol());
                 System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
             }
             curr.setUpdating(false);
@@ -772,7 +875,7 @@ public class Controller {
             }
 
             if (temp != null && temp.size() >= 2) {
-                StockRecordParser.importIntradayMarketData(temp, curr.getSymbol(), sqdh);
+                StockRecordParser.importIntradayMarketData(temp, curr.getSymbol());
                 System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1));
             }
 

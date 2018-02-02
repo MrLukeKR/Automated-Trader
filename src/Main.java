@@ -15,7 +15,7 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws IOException {
         Parent root = FXMLLoader.load(getClass().getResource("view.fxml"));
-        primaryStage.setScene(new Scene(root, 1920, 1080));
+        primaryStage.setScene(new Scene(root, 1920, 1030));
         primaryStage.setTitle("Automated Stock Trader");
         primaryStage.show();
         primaryStage.setOnCloseRequest(event -> {

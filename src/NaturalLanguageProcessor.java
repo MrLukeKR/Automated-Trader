@@ -331,7 +331,7 @@ public class NaturalLanguageProcessor {
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         dh.setAutoCommit(false);
-        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Enumerated = 1 AND Tokenised = 1 AND Processed = 0");
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Enumerated = 1 AND Tokenised = 1 AND Processed = 0 AND Blacklisted = 0");
 
         final double t = unprocessedIDs.size() - 1;
         double curr = 0;
@@ -386,13 +386,17 @@ public class NaturalLanguageProcessor {
             return -1;
 
         for (String word : wordList) {
-            String result = dh.executeQuery("SELECT Increase, Decrease FROM ngrams WHERE Hash=MD5('" + word + "');").get(0);
+            ArrayList<String> results = dh.executeQuery("SELECT Increase, Decrease FROM ngrams WHERE Hash=MD5('" + word + "');"); //TODO: This enumerates beyond tokenised / enumerated articles (i.e. articles that have not yet been analysed)
 
-            String[] splitResult = result.split(",");
-            double increase = Double.parseDouble(splitResult[0]), decrease = Integer.parseInt(splitResult[1]);
-            double sentiment = increase / (increase + decrease);
+            if (!results.isEmpty()) {
+                String result = results.get(0);
 
-            totalSentiment += sentiment;
+                String[] splitResult = result.split(",");
+                double increase = Double.parseDouble(splitResult[0]), decrease = Integer.parseInt(splitResult[1]);
+                double sentiment = increase / (increase + decrease);
+
+                totalSentiment += sentiment;
+            }
         }
 
         return totalSentiment / wordList.size();

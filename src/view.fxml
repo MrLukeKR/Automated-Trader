@@ -46,7 +46,6 @@
                                                                        prefWidth="21.0" visible="false"/>
                                                             <Label prefHeight="17.0" prefWidth="55.0" text="Amount:"/>
                                                             <TextField fx:id="stockAmountField" disable="true"
-                                                                       onInputMethodTextChanged="#enableBuyAndSell"
                                                                        prefHeight="25.0" prefWidth="134.0"/>
                                                             <Separator prefHeight="15.0" prefWidth="400.0"
                                                                        visible="false"/>

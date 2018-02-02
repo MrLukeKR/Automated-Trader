@@ -62,14 +62,19 @@ public class Controller {
     Label targetLabel;
     @FXML
     Label profitLossLabel;
-    @FXML PieChart allocationChart;
-    @FXML PieChart componentChart;
-    @FXML Circle newsFeedAvailability;
+    static private Thread mainThread;
+    @FXML
+    PieChart allocationChart;
+    @FXML
+    PieChart componentChart;
     @FXML
     Circle nlpAvailability;
-    @FXML ProgressBar newsFeedProgress;
-    @FXML ProgressBar nlpProgress;
-    @FXML VBox stockBox;
+    @FXML
+    Circle newsFeedAvailability;
+    @FXML
+    ProgressBar newsFeedProgress;
+    @FXML
+    ProgressBar nlpProgress;
     @FXML
     ComboBox autonomyLevelDropdown;
     @FXML
@@ -103,12 +108,13 @@ public class Controller {
 
     boolean priceUpdating = false;
     boolean newsUpdating = false;
+    @FXML
+    VBox stockBox;
 
-    private static Thread mainThread;
-
-    static public void shutdown() throws SQLException, InterruptedException {
+    public static void shutdown() throws SQLException, InterruptedException {
         quit = true;
-        mainThread.join();
+        if (mainThread.isAlive())
+            mainThread.join();
 
         dh.close();
         nddh.close();
@@ -156,15 +162,7 @@ public class Controller {
     private void calculateLossCutoff(double percentage) throws SQLException {
         double amount = Double.parseDouble(dh.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions WHERE Type='DEPOSIT';").get(0)) * (1 - percentage);
 
-        cutoffLabel.setText(String.valueOf(amount));
-    }
-
-    @FXML
-    private void enableBuyAndSell() {
-        sellButton.setDisable(false);
-        buyButton.setDisable(false);
-
-        //TODO: Make this conditional based on if any of the stocks are owned or if the number in the amount box is <= number held
+        Platform.runLater(() -> cutoffLabel.setText(String.valueOf(amount)));
     }
 
     static public void updateProgress(double value, ProgressBar pb) {
@@ -180,7 +178,7 @@ public class Controller {
     private void calculateTargetCutoff(double percentage) throws SQLException {
         double amount = Double.parseDouble(dh.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions WHERE Type='DEPOSIT';").get(0)) * (1 + percentage);
 
-        targetLabel.setText(String.valueOf(amount));
+        Platform.runLater(() -> targetLabel.setText(String.valueOf(amount)));
     }
 
     private void initialiseConnections() {
@@ -257,13 +255,18 @@ public class Controller {
                 currProfitLoss = timeAndPrice.get(time);
         }
 
-        portfolioChart.getData().add(profitLossData);
+        final double finalProfitLoss = currProfitLoss;
 
-        if (currProfitLoss < 0)
-            profitLossData.nodeProperty().get().setStyle("-fx-stroke: red;   -fx-stroke-width: 1px;");
-        else if (currProfitLoss > 0)
-            profitLossData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
-        else profitLossData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
+        Platform.runLater(() ->
+        {
+            portfolioChart.getData().add(profitLossData);
+
+            if (finalProfitLoss < 0)
+                profitLossData.nodeProperty().get().setStyle("-fx-stroke: red;   -fx-stroke-width: 1px;");
+            else if (finalProfitLoss > 0)
+                profitLossData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;");
+            else profitLossData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;");
+        });
     }
 
 
@@ -291,7 +294,7 @@ public class Controller {
 
         for (String stock : stocks) {
             String[] splitStock = stock.split(",");
-            sellStock(Integer.parseInt(splitStock[1]), splitStock[0]);
+            sellStock(splitStock[0], Integer.parseInt(splitStock[1]));
         }
 
         dh.executeCommand("DELETE FROM Portfolio;");
@@ -347,13 +350,50 @@ public class Controller {
                 stockAmountField.setText(newValue.replaceAll("[^\\d]", ""));
 
             boolean disable = !(!newValue.isEmpty() && newValue.matches("\\d*"));
-            buyButton.setDisable(disable); //TODO: Check the quantities and costs of stock
-            sellButton.setDisable(disable);
+
+            String stock = stockDropdown.getValue();
+
+
+            Platform.runLater(() -> {
+                try {
+                    buyButton.setDisable(disable || !canBuyStock(stock, Integer.parseInt(newValue)));
+                    sellButton.setDisable(disable || !canSellStock(stock, Integer.parseInt(newValue)));
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            });
+
         }));
     }
 
     @FXML
     public void initialize() throws SQLException {
+        mainThread = new Thread(() -> {
+            while (!quit) {
+                int s = LocalTime.now().getSecond();
+                int m = LocalTime.now().getMinute();
+                int h = LocalTime.now().getHour();
+                int cycle = m % downloadInterval;
+
+                updateIntradayStockData();
+                updateDailyStockData();
+                Platform.runLater(() -> {
+                    try {
+                        updateProfitLossChart();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+                try {
+                    checkServices();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+
+                //new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
+            }
+        });
+
         initialiseConnections();
         initialiseDatabase();
 
@@ -444,9 +484,11 @@ public class Controller {
 
         for (String curr : stocks) {
             LiveStockRecord currRec = new LiveStockRecord(curr, stockNames.get(curr), dh);
-                records.add(currRec);
-                stockList.getChildren().add(currRec.getNode());
+            records.add(currRec);
         }
+
+        for (LiveStockRecord rec : records)
+            Platform.runLater(() -> stockList.getChildren().add(rec.getNode()));
     }
 
     public void printToInfoBox(String string) {
@@ -512,8 +554,8 @@ public class Controller {
                 if (priceDataAvailable)  //TODO: Fix this to make the most of the available data
                     NaturalLanguageProcessor.enumerateNGramsFromArticles(2);
 
-                //NaturalLanguageProcessor.determineUselessNGrams();
-                //NaturalLanguageProcessor.processArticlesForSentiment(2);
+                NaturalLanguageProcessor.determineUselessNGrams();
+                NaturalLanguageProcessor.processArticlesForSentiment(2);
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -553,7 +595,7 @@ public class Controller {
 
         ArrayList<String> calls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Name='INTRINIO' AND Date=CURDATE()");
 
-        if(!calls.isEmpty())
+        if (!calls.isEmpty())
             newsCalls = Integer.parseInt(calls.get(0)); //TODO: See if this can be done via Event triggers
 
         if (newsCalls < callLimit) {
@@ -597,7 +639,8 @@ public class Controller {
 
             int bankTransactions = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM banktransactions;").get(0));
 
-            if (bankTransactions == 0) dh.executeCommand("INSERT INTO banktransactions(Amount, Type) VALUES (10000, 'DEPOSIT');");
+            if (bankTransactions == 0)
+                dh.executeCommand("INSERT INTO banktransactions(Amount, Type) VALUES (10000, 'DEPOSIT');");
 
             int apis = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM apimanagement;").get(0));
 
@@ -608,11 +651,14 @@ public class Controller {
         }
     }
 
-    @FXML public void initialiseStocks() {
+    @FXML
+    public void initialiseStocks() {
         System.out.println("Initialising stocks");
         try {
             stocks = dh.executeQuery("SELECT Symbol FROM indices");
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     private void processYahooHistories() throws SQLException {
@@ -633,33 +679,39 @@ public class Controller {
         }
     }
 
-    @FXML
-    private void buyStock() {
 
-    }
-
-    private void buyStock(int amount, String stock) throws SQLException {
+    private void buyStock(String stock, int amount) throws SQLException {
         float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
         float totalCost = cost * amount;
         float balance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
 
         if (totalCost <= balance) {
-            dh.executeCommand("INSERT INTO banktransactions(Amount) VALUES (" + -totalCost + ")");
+            //TODO: Allocation warning if exceeding allocation but still purchasable
+            dh.executeCommand("INSERT INTO portfolio (Symbol, Allocation, Held, Investment) VALUES ('" + stock + "', " + totalCost + ", " + amount + ", " + totalCost + ") ON DUPLICATE KEY UPDATE Allocation = GREATEST(VALUES(Allocation), (SELECT Allocation FROM (SELECT Allocation FROM portfolio WHERE Symbol='" + stock + "') as t)), Held = Held+ VALUES(Held), Investment = Investment + VALUES(Investment);");
+            dh.executeCommand("INSERT INTO banktransactions(Amount, Type) VALUES (" + -totalCost + ",'TRADE')");
             dh.executeCommand("INSERT INTO tradetransactions(Type,Symbol,Volume,Price) VALUES ('BUY'," +
                     "'" + stock + "'," +
                     amount + "," +
                     cost +
                     ");");
 
-            Platform.runLater(() -> {
+            updateAfterStockAlteration();
+        }
+    }
+
+    private void updateAfterStockAlteration() {
+        Platform.runLater(() -> {
+            try {
+                updateStocksOwned();
+                updateComponentChart();
+                updateProfitLoss();
                 updateBankBalance();
                 updateStockValues();
                 updateTotalWorth();
-                try {
-                    updateProfitLoss();
-                } catch (SQLException e) {  e.printStackTrace(); }
-            });
-        }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private void updateClocks() {
@@ -678,7 +730,7 @@ public class Controller {
     }
 
     private float updateProfitLoss() throws SQLException {
-        float nonLiquidBalance = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(Investment),0) FROM Portfolio").get(0));
+        float investmentCost = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(Investment),0) FROM Portfolio").get(0));
         float potentialTotal = 0;
 
         ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, Held FROM Portfolio WHERE Held > 0");
@@ -688,7 +740,7 @@ public class Controller {
             potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
         }
 
-        float total = potentialTotal - nonLiquidBalance;
+        float total = potentialTotal - investmentCost;
 
         profitLossLabel.setText(String.valueOf(Math.round(total * 100.0) / 100.0));
         if (total > 0)
@@ -701,14 +753,14 @@ public class Controller {
         return total;
     }
 
-    private void updateTotalWorth(){
+    private void updateTotalWorth() {
         float bankBalance = Float.parseFloat(currentBalanceLabel.getText());
         float stockWorth = Float.parseFloat(stockValueLabel.getText());
 
         totalBalanceLabel.setText(String.valueOf(Math.round((bankBalance + stockWorth) * 100.0) / 100.0));
     }
 
-    private int getHeldStocks(String stock){
+    private int getHeldStocks(String stock) {
         try {
             return Integer.parseInt(dh.executeQuery("SELECT COALESCE(Held,0) FROM Portfolio WHERE Symbol='" + stock + "';").get(0));
         } catch (SQLException e) {
@@ -720,32 +772,6 @@ public class Controller {
 
     @FXML
     public void startRealTime() {
-        mainThread = new Thread(() -> {
-            while (!quit) {
-                int s = LocalTime.now().getSecond();
-                int m = LocalTime.now().getMinute();
-                int h = LocalTime.now().getHour();
-                int cycle = m % downloadInterval;
-
-                        updateIntradayStockData();
-                        updateDailyStockData();
-                        Platform.runLater(() -> {
-                            try {
-                                updateProfitLossChart();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        });
-                        try {
-                            checkServices();
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-
-                    //new Thread(() -> { try { updateNews(); } catch (Exception e) { e.printStackTrace(); }}).start();
-            }
-        });
-
         mainThread.start();
     }
 
@@ -783,12 +809,47 @@ public class Controller {
         allocationChart.getData().addAll(piechartData);
     }
 
-    @FXML
-    private void sellStock() {
 
+    public boolean canBuyStock(String stock, int amount) throws SQLException {
+        if (amount == 0 || stock.isEmpty())
+            return false;
+
+        double availableFunds = Double.parseDouble(dh.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions;").get(0)),
+                stockCost = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM intradaystockprices WHERE Symbol='" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
+
+        return (stockCost * amount) <= availableFunds;
     }
 
-    private void sellStock(int amount, String stock) throws SQLException {
+    public boolean canSellStock(String stock, int amount) throws SQLException {
+        if (amount == 0 || stock.isEmpty())
+            return false;
+
+        double availableStocks = Double.parseDouble(dh.executeQuery("SELECT COALESCE(Held,0) FROM portfolio WHERE Symbol = '" + stock + "';").get(0));
+
+        return availableStocks >= amount;
+    }
+
+    @FXML
+    private void buyStock() throws SQLException {
+        String stock = stockDropdown.getValue();
+        int amount = Integer.parseInt(stockAmountField.getText());
+
+        stockAmountField.clear();
+
+        buyStock(stock, amount);
+    }
+
+    @FXML
+    private void sellStock() throws SQLException {
+        String stock = stockDropdown.getValue();
+        int amount = Integer.parseInt(stockAmountField.getText());
+
+        stockAmountField.clear();
+
+        sellStock(stock, amount);
+    }
+
+    private void sellStock(String stock, int amount) throws SQLException {
         float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
 
         float totalCost = cost * amount;
@@ -805,16 +866,7 @@ public class Controller {
 
             dh.executeCommand("UPDATE Portfolio SET Held = Held - " + amount + ", Investment = Investment - " + totalCost + " WHERE Symbol='" + stock + "';");
 
-            Platform.runLater(() -> {
-                updateBankBalance();
-                updateStockValues();
-                updateTotalWorth();
-                try {
-                    updateProfitLoss();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            });
+            updateAfterStockAlteration();
         }
     }
 

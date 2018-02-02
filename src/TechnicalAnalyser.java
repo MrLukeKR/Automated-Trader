@@ -1,4 +1,5 @@
 import com.tictactec.ta.lib.Core;
+import com.tictactec.ta.lib.MAType;
 import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 import javafx.scene.control.ProgressBar;
@@ -6,6 +7,7 @@ import javafx.scene.control.ProgressBar;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -39,6 +41,8 @@ public class TechnicalAnalyser {
                 return "CCI10";
             case AD:
                 return "AD";
+            case StoOsc:
+                return "StoOsc";
             default:
                 return null;
         }
@@ -92,7 +96,9 @@ public class TechnicalAnalyser {
             TreeMap<Date, Double> highPrices = getFromDatabase(stock, "HighPrice");
 
             for (TechnicalIndicator ti : TechnicalIndicator.values()) {
-                sendToDatabase(stock, technicalIndicatorToString(ti), calculateTechnicalIndicator(ti, stock, openPrices, highPrices, lowPrices, closePrices, volumes, technicalIndicatorToDays(ti)));
+                HashMap<String, TreeMap<Date, Double>> indicators = calculateTechnicalIndicator(ti, stock, openPrices, highPrices, lowPrices, closePrices, volumes, technicalIndicatorToDays(ti));
+                for (String indicator : indicators.keySet())
+                    sendToDatabase(stock, indicator, indicators.get(indicator));
                 Controller.updateProgress(c++, t, pb);
             }
         }
@@ -138,11 +144,11 @@ public class TechnicalAnalyser {
         return prices;
     }
 
-    static public TreeMap<Date, Double> calculateTechnicalIndicator(TechnicalIndicator indicator, String stock, TreeMap<Date, Double> openPrices, TreeMap<Date, Double> highPrices, TreeMap<Date, Double> lowPrices, TreeMap<Date, Double> closePrices, TreeMap<Date, Double> volumes, int days) {
+    static public HashMap<String, TreeMap<Date, Double>> calculateTechnicalIndicator(TechnicalIndicator indicator, String stock, TreeMap<Date, Double> openPrices, TreeMap<Date, Double> highPrices, TreeMap<Date, Double> lowPrices, TreeMap<Date, Double> closePrices, TreeMap<Date, Double> volumes, int days) {
         System.out.println("Calculating " + technicalIndicatorToString(indicator) + " for " + stock + "...");
 
         MInteger begin = new MInteger(), length = new MInteger();
-        double[] out = new double[closePrices.size()];
+
         double[] cPrices = recordMapToPriceArray(closePrices);
         double[] oPrices = recordMapToPriceArray(openPrices);
         double[] lPrices = recordMapToPriceArray(lowPrices);
@@ -150,39 +156,73 @@ public class TechnicalAnalyser {
         double[] volume = recordMapToPriceArray(volumes);
 
         RetCode rc = null;
+        HashMap<String, TreeMap<Date, Double>> results = new HashMap<>();
 
         switch (indicator) {
-            case SMA10:
+            case SMA10: {
+                double[] out = new double[closePrices.size()];
                 rc = ta.sma(0, cPrices.length - 1, cPrices, days, begin, length, out);
+                results.put("SMA10", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+            }
                 break;
-            case MACD:
-                rc = ta.macd(0, cPrices.length - 1, cPrices, 12, 26, 9, begin, length, out, new double[closePrices.size()], new double[closePrices.size()]);
+            case MACD: {
+                double[] macd = new double[closePrices.size()], macdSig = new double[closePrices.size()], macdHist = new double[closePrices.size()];
+                rc = ta.macd(0, cPrices.length - 1, cPrices, 12, 26, 9, begin, length, macd, macdSig, macdHist);
+                results.put("MACD", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, macd));
+                results.put("MACDSig", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, macdSig));
+                results.put("MACDHist", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, macdHist));
+            }
                 break;
-            case EMA10:
+            case EMA10: {
+                double[] out = new double[closePrices.size()];
                 rc = ta.ema(0, cPrices.length - 1, cPrices, days, begin, length, out);
+                results.put("EMA10", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+            }
                 break;
-            case RSI10:
+            case RSI10: {
+                double[] out = new double[closePrices.size()];
                 rc = ta.rsi(0, cPrices.length - 1, cPrices, days, begin, length, out);
+                results.put("RSI10", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+            }
                 break;
-            case OBV:
+            case OBV: {
+                double[] out = new double[closePrices.size()];
                 rc = ta.obv(0, cPrices.length - 1, cPrices, volume, begin, length, out);
+                results.put("OBV", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+            }
                 break;
-            case ADX10:
+            case ADX10: {
+                double[] out = new double[closePrices.size()];
                 rc = ta.adx(0, cPrices.length - 1, hPrices, lPrices, cPrices, days, begin, length, out);
+                results.put("ADX10", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+            }
                 break;
-            case CCI10:
+            case CCI10: {
+                double[] out = new double[closePrices.size()];
                 rc = ta.cci(0, cPrices.length - 1, hPrices, lPrices, cPrices, days, begin, length, out);
+                results.put("CCI10", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+            }
                 break;
-            case AD:
+            case AD: {
+                double[] out = new double[closePrices.size()];
                 rc = ta.ad(0, cPrices.length - 1, hPrices, lPrices, cPrices, volume, begin, length, out);
+                results.put("AD", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+            }
+            break;
+            case StoOsc: {
+                double[] slowK = new double[closePrices.size()], slowD = new double[closePrices.size()];
+                rc = ta.stoch(0, cPrices.length - 1, hPrices, lPrices, cPrices, 5, 3, MAType.Sma, 3, MAType.Sma, begin, length, slowK, slowD);
+                results.put("StoOscSlowD", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, slowD));
+                results.put("StoOscSlowK", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, slowK));
+            }
                 break;
         }
 
-        if (rc != null && rc == RetCode.Success)
-            return priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out);
-        else
+        if (rc != null && rc == RetCode.Success) {
+            return results;
+        } else
             return null;
     }
 
-    public enum TechnicalIndicator {SMA10, MACD, EMA10, RSI10, OBV, ADX10, CCI10, AD}
+    public enum TechnicalIndicator {SMA10, MACD, EMA10, RSI10, OBV, ADX10, CCI10, AD, StoOsc}
 }

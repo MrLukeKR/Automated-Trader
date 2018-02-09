@@ -54,7 +54,7 @@ public class TechnicalAnalyser {
             case SMA10:
                 return 10;
             case EMA10:
-                return 12;
+                return 10;
             case RSI10:
                 return 10;
             case ADX10:
@@ -75,10 +75,9 @@ public class TechnicalAnalyser {
         if (!result.isEmpty())
             dateFrom = Date.valueOf(result.get(0));
 
-        for (Date key : records.keySet()) {
-            if (result.isEmpty() || key.after(dateFrom) || key == dateFrom)
+        for (Date key : records.keySet())
+            if (result.isEmpty() || key.after(dateFrom) || key.equals(dateFrom))
                 dh.addBatchCommand("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "' AND (" + indicator + " is null OR " + indicator + "!='" + records.get(key) + "');");
-        }
 
         dh.executeBatch();
         dh.setAutoCommit(true);

@@ -9,7 +9,8 @@
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
             minWidth="-Infinity" prefHeight="1030.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/8.0.111"
             fx:controller="Controller">
-      <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1080.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
+    <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1030.0" prefWidth="1920.0"
+             tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
               <BorderPane maxHeight="1000.0" prefHeight="974.0" prefWidth="1920.0">
                      <right>
@@ -25,8 +26,8 @@
                                 <content>
                                     <BorderPane prefHeight="200.0" prefWidth="420.0">
                                         <top>
-                                            <FlowPane prefHeight="210.0" prefWidth="401.0"
-                                                      BorderPane.alignment="CENTER">
+                                            <FlowPane fx:id="controlPanel" disable="true" prefHeight="210.0"
+                                                      prefWidth="401.0" BorderPane.alignment="CENTER">
                                                 <children>
                                                     <Label prefHeight="17.0" prefWidth="110.0" text="Autonomy Level: "/>
                                                     <ComboBox fx:id="autonomyLevelDropdown" onAction="#setAutonomyLevel"
@@ -73,9 +74,9 @@
                                                                        prefWidth="14.0" visible="false"/>
                                                             <Label fx:id="lossCutoffPercentageLabel" prefHeight="17.0"
                                                                    prefWidth="50.0" text="0.0%"/>
-                                                            <Button fx:id="setLossCutoffButton" mnemonicParsing="false"
-                                                                    prefHeight="27.0" prefWidth="125.0"
-                                                                    text="Set Loss Cut-Off"/>
+                                                            <Button fx:id="setLossCutoffButton" disable="true"
+                                                                    mnemonicParsing="false" prefHeight="27.0"
+                                                                    prefWidth="125.0" text="Set Loss Cut-Off"/>
                                                             <Separator prefHeight="5.0" prefWidth="400.0"
                                                                        visible="false"/>
                                                             <Label prefHeight="17.0" prefWidth="90.0"
@@ -86,7 +87,7 @@
                                                                        prefWidth="14.0" visible="false"/>
                                                             <Label fx:id="profitTargetPercentageLabel" prefHeight="17.0"
                                                                    prefWidth="50.0" text="0.0%"/>
-                                                            <Button fx:id="setProfitTargetButton"
+                                                            <Button fx:id="setProfitTargetButton" disable="true"
                                                                     mnemonicParsing="false" prefHeight="27.0"
                                                                     prefWidth="125.0" text="Set Profit Target"/>
                                                             <Separator prefHeight="10.0" prefWidth="400.0"
@@ -228,9 +229,17 @@
                                         <bottom>
                                             <Button fx:id="exportToMLFileButton" mnemonicParsing="false"
                                                     onAction="#exportToMLFile" prefHeight="25.0" prefWidth="815.0"
-                                                    text="Export Database to ML Training File"
-                                                    BorderPane.alignment="CENTER"/>
+                                                    text="Train Model" BorderPane.alignment="CENTER"/>
                                         </bottom>
+                                        <right>
+                                            <VBox prefHeight="177.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                                                <children>
+                                                    <Label alignment="TOP_CENTER" contentDisplay="CENTER"
+                                                           prefHeight="17.0" prefWidth="200.0" text="Model Information"
+                                                           textAlignment="CENTER" underline="true"/>
+                                                </children>
+                                            </VBox>
+                                        </right>
                                     </BorderPane>
                                 </content>
                             </TitledPane>
@@ -317,6 +326,117 @@
                      </center>
                   </BorderPane>
             </Tab>
-          <Tab text="Historical Stock Records" />
+        <Tab text="Historical Stock Records">
+            <content>
+                <BorderPane prefHeight="980.0" prefWidth="1920.0">
+                    <center>
+                        <ScrollPane hbarPolicy="NEVER" prefHeight="980.0" prefWidth="1880.0"
+                                    BorderPane.alignment="CENTER">
+                            <content>
+                                <VBox prefHeight="1000.0" prefWidth="1905.0">
+                                    <children>
+                                        <LineChart fx:id="historicPriceChart" createSymbols="false" legendSide="TOP"
+                                                   maxWidth="1905.0" minWidth="1905.0" prefHeight="500.0"
+                                                   prefWidth="1905.0" title="Historic Close Prices">
+                                            <xAxis>
+                                                <NumberAxis side="BOTTOM"/>
+                                            </xAxis>
+                                            <yAxis>
+                                                <NumberAxis side="LEFT"/>
+                                            </yAxis>
+                                        </LineChart>
+                                        <AreaChart fx:id="historicVolumeChart" maxWidth="1905.0" minWidth="1905.0"
+                                                   prefHeight="200.0" prefWidth="1905.0" title="Historic Trade Volumes">
+                                            <xAxis>
+                                                <NumberAxis side="BOTTOM"/>
+                                            </xAxis>
+                                            <yAxis>
+                                                <NumberAxis side="LEFT"/>
+                                            </yAxis>
+                                        </AreaChart>
+                                    </children>
+                                </VBox>
+                            </content>
+                        </ScrollPane>
+                    </center>
+                    <bottom>
+                        <TitledPane prefHeight="150.0" prefWidth="1920.0" text="Options" BorderPane.alignment="CENTER">
+                            <content>
+                                <HBox prefHeight="100.0" prefWidth="200.0">
+                                    <children>
+                                        <VBox prefHeight="104.0" prefWidth="220.0">
+                                            <children>
+                                                <HBox>
+                                                    <children>
+                                                        <Label prefHeight="25.0" prefWidth="45.0" text="Stock: "/>
+                                                        <ComboBox fx:id="historicStockDropdown" prefHeight="25.0"
+                                                                  prefWidth="165.0"/>
+                                                    </children>
+                                                </HBox>
+                                                <Separator prefHeight="10.0" prefWidth="220.0"/>
+                                                <Label alignment="CENTER" prefHeight="17.0" prefWidth="220.0"
+                                                       text="Date Range" textAlignment="CENTER"/>
+                                                <Label fx:id="historicDateRange" alignment="CENTER" prefHeight="17.0"
+                                                       prefWidth="220.0" textAlignment="CENTER"/>
+                                                <Separator prefHeight="10.0" prefWidth="220.0"/>
+                                                <Button fx:id="displayHistoricDataButton" mnemonicParsing="false"
+                                                        onAction="#displayHistoricData" prefHeight="25.0"
+                                                        prefWidth="220.0" text="Display Data"/>
+                                            </children>
+                                        </VBox>
+                                        <Separator orientation="VERTICAL" prefHeight="104.0" prefWidth="15.0"
+                                                   visible="false"/>
+                                        <ScrollPane hbarPolicy="NEVER" prefHeight="80.0" prefWidth="500.0">
+                                            <content>
+                                                <VBox prefHeight="85.0" prefWidth="500.0">
+                                                    <children>
+                                                        <CheckBox fx:id="showSMA10" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="485.0"
+                                                                  text="Simple Moving Average (10-Day) [SMA10]"/>
+                                                        <CheckBox fx:id="showEMA10" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="485.0"
+                                                                  text="Exponential Moving Average (10-Day) [EMA10]"/>
+                                                        <CheckBox fx:id="showMACD" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="485.0"
+                                                                  text="Moving Average Convergence Divergence [MACD]"/>
+                                                        <CheckBox fx:id="showMACDSig" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="485.0"
+                                                                  text="Moving Average Convergence Divergence Signal [MACDSig]"/>
+                                                        <CheckBox fx:id="showMACDHist" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="485.0"
+                                                                  text="Moving Average Convergence Divergence Histogram [MACDHist]"/>
+                                                        <CheckBox fx:id="showRSI10" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="485.0"
+                                                                  text="Relative Strength Indicator (10-Day) [RSI10]"/>
+                                                        <CheckBox fx:id="showADX10" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="500.0"
+                                                                  text="Average Directional Index (10-Day) [ADX10]"/>
+                                                        <CheckBox fx:id="showCCI10" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="500.0"
+                                                                  text="Commodity Channel Index (10-Day) [CCI10]"/>
+                                                        <CheckBox fx:id="showAD" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="500.0"
+                                                                  text="Accumulation Distribution [AD]"/>
+                                                        <CheckBox fx:id="showOBV" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="500.0"
+                                                                  text="On-Balance  Volume [OBV]"/>
+                                                        <CheckBox fx:id="showStoOscSlowK" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="500.0"
+                                                                  text="Stochastic Oscillator (Slow K) [StoOscSlowK]"/>
+                                                        <CheckBox fx:id="showStoOscSlowD" mnemonicParsing="false"
+                                                                  prefHeight="17.0" prefWidth="500.0"
+                                                                  text="Stochastic Oscillator (Slow D) [StoOscSlowD]"/>
+                                                    </children>
+                                                </VBox>
+                                            </content>
+                                        </ScrollPane>
+                                    </children>
+                                </HBox>
+                            </content>
+                        </TitledPane>
+                    </bottom>
+                </BorderPane>
+            </content>
+        </Tab>
       </TabPane>
 </AnchorPane>

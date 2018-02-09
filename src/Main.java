@@ -9,6 +9,7 @@ import java.io.IOException;
 public class Main extends Application {
 
     public static void main(String[] args) {
+        System.setProperty("hadoop.home.dir", "C:/hadoop");
         launch(args);
     }
 

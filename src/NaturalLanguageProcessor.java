@@ -166,13 +166,18 @@ public class NaturalLanguageProcessor {
         //TODO: Remove useless Ngrams
     }
 
-    static public double getPriceChangeOnDate(String symbol, String date) {
+    static public double getPriceChangeOnDate(String symbol, String date) throws SQLException {
         String truncDate = date.split(" ")[0];
         double priceOnDate = 0, priceOnPrev = 0;
 
+        ArrayList<String> result1 = dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol = '" + symbol + "' AND TradeDate >= '" + truncDate + "' ORDER BY TradeDate ASC LIMIT 1;");
+        ArrayList<String> result2 = dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate < '" + truncDate + "' ORDER BY TradeDate DESC LIMIT 1;");
+
         try {
-            priceOnDate = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol = '" + symbol + "' AND TradeDate >= '" + truncDate + "' ORDER BY TradeDate ASC LIMIT 1;").get(0));
-            priceOnPrev = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate < '" + truncDate + "' ORDER BY TradeDate DESC LIMIT 1;").get(0)); //TODO: Refactor this to not use as many queries
+            if (!result1.isEmpty())
+                priceOnDate = Double.parseDouble(result1.get(0));
+            if (!result2.isEmpty())
+                priceOnPrev = Double.parseDouble(result2.get(0));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -181,7 +186,7 @@ public class NaturalLanguageProcessor {
     }
 
     static public void enumerateNGramsFromArticles(int n) throws SQLException {
-        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) < SUBDATE(CURDATE(), 1)"); //TODO: Price difference can't be calculated for the weekend or after hours before the next day
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) < CURDATE()"); //TODO: (Use join) Price difference can't be calculated for the weekend or after hours before the next day
         System.out.println("Enumerating n-grams for " + unprocessedIDs.size() + " documents...");
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);

@@ -111,6 +111,7 @@ public class DatabaseHandler {
             setAutoCommit(false);
             executeBatch();
             setAutoCommit(previousSetting);
+            uncommittedStatements = 0;
         }
     }
 

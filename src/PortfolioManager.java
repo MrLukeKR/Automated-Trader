@@ -125,7 +125,7 @@ public class PortfolioManager {
         int eRInt = (int) Math.round(expectedReturn * 10000);
 
         System.out.println("----------\r\nPORTFOLIO\r\n----------");
-        for (String stock : portfolio.keySet()) System.out.println(stock + " " + portfolio.get(stock) + "%");
+        for (String stock : portfolio.keySet()) System.out.println(stock + " " + portfolio.get(stock) * 100.0 + "%");
         System.out.println("Expected Return of Portfolio: " + expectedReturn + " (" + eRInt / 100.0 + "%)");
         System.out.println("Risk of Portfolio: " + EvaluationFunction.getVariance(best, covarianceMatrix));
         System.out.println("Expected Return to Risk Ratio: " + EvaluationFunction.getReturnToRiskRatio(best, expectedReturns, covarianceMatrix));

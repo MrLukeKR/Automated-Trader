@@ -14,8 +14,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class StockPredictor {
-    static SparkConf sparkConf = new SparkConf().setAppName("StockMarketRandomForestClassification");
+    static SparkConf sparkConf = new SparkConf().setAppName("StockMarketRandomForestClassification").setMaster("local");
     static JavaSparkContext jsc = new JavaSparkContext(sparkConf);
+    static RandomForestModel model;
+
+    static public void initialise() {
+
+    }
 
     static public ArrayList<String> convertCSVToLibSVM(ArrayList<String> dataPoints) {
         ArrayList<String> libSVMFormat = new ArrayList<>();
@@ -35,7 +40,11 @@ public class StockPredictor {
         return libSVMFormat;
     }
 
-    static public void trainRandomForest(String libSVMFilePath) {
+    static public void loadRandomForest(String modelFile) {
+        model = RandomForestModel.load(jsc.sc(), modelFile);
+    }
+
+    static public void trainRandomForest(String libSVMFilePath, int noOfStocks) {
         JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(jsc.sc(), libSVMFilePath).toJavaRDD();
 
         JavaRDD<LabeledPoint>[] trainingTestSplits = data.randomSplit(new double[]{0.7, 0.3});
@@ -44,18 +53,23 @@ public class StockPredictor {
 
         Integer classes = 2;
         HashMap<Integer, Integer> categoryInfo = new HashMap<>();
-        Integer trees = 10;
+
+        //categoryInfo.put(0, noOfStocks);
+        Integer trees = 100;
         String featureSubsetStrategy = "auto";
         String impurity = "gini";
         Integer maxDepth = 5;
-        Integer maxBins = 32;
+        Integer maxBins = noOfStocks;
         Integer seed = 12345;
 
-        final RandomForestModel model = RandomForest.trainClassifier(trainingData, classes, categoryInfo, trees, featureSubsetStrategy, impurity, maxDepth, maxBins, seed);
+        model = RandomForest.trainClassifier(trainingData, classes, categoryInfo, trees, featureSubsetStrategy, impurity, maxDepth, maxBins, seed);
 
         JavaPairRDD<Double, Double> predictionAndLabel = testData.mapToPair((PairFunction<LabeledPoint, Double, Double>) point -> new Tuple2<>(model.predict(point.features()), point.label()));
 
         Double testErr = 1.0 * predictionAndLabel.filter((Function<Tuple2<Double, Double>, Boolean>) predictionLabel -> !predictionLabel._1().equals(predictionLabel._2())).count() / testData.count();
         System.out.println("Random Forest Test Error: " + testErr);
+
+        model.save(jsc.sc(), "res/model/randomforestclassification.model");
+
     }
 }

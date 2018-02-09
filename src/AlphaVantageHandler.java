@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 public class AlphaVantageHandler {
     private String apiKey;
 
-    private static final int WAIT_PERIOD = 2; //This is used to prevent the server rejecting requests from excessive usage
+    private final int CALL_LIMIT = 1;
 
     public void init(String apiKey){
         this.apiKey = apiKey;
@@ -19,13 +19,15 @@ public class AlphaVantageHandler {
         ArrayList<String> temp = new ArrayList<>();
 
         do {
+            TimeUnit.SECONDS.sleep(CALL_LIMIT);
+
             URL url = new URL(request);
             BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
             //TODO: 503 Error handling
 
             String sTemp;
 
-            while ((sTemp = reader.readLine()) != null)
+            while ((sTemp = reader.readLine()) != null) //TODO: Premature EOF handling
                 if (sTemp.contains("Please consider optimizing your API call frequency.") || sTemp.contains("}") || sTemp.contains("{")) {
                     TimeUnit.SECONDS.sleep(exceeded++);
                 } else if (sTemp.contains("Invalid API call")) {
@@ -35,12 +37,12 @@ public class AlphaVantageHandler {
                     temp.add(sTemp);
                     if (exceeded != 1) exceeded = 1;
                 }
-        } while (exceeded > 1 && exceeded < 10);
+            reader.close();
+        } while (exceeded > 1 && exceeded < 5);
+
 
         if (temp.size() <= 2)
             System.err.println("Error with quote download");
-
-        //TimeUnit.SECONDS.sleep(WAIT_PERIOD);
 
         return temp;
     }

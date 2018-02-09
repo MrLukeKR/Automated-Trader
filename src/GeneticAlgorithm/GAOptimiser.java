@@ -157,7 +157,7 @@ public class GAOptimiser {
             ArrayList<double[]> parents2 = selection(population); //Selection of parent population 2
 
             population = crossover(parents1, parents2, 0.5);//Crossover
-            population = mutate(population, 0.1);//Mutation
+            population = mutate(population, 0.01);//Mutation
 
             currFitness = evaluate(i); //Evaluate
 

@@ -43,10 +43,18 @@ public class TechnicalAnalyser {
                 return "AD";
             case StoOsc:
                 return "StoOsc";
-            case SMA3:
-                return "SMA3";
+            case SMA20:
+                return "SMA20";
+            case SMA200:
+                return "SMA200";
                 case SMA5:
                     return "SMA5";
+            case EMA5:
+                return "EMA5";
+            case EMA20:
+                return "EMA20";
+            case EMA200:
+                return "EMA200";
             case WillR:
                 return "WillR";
             default:
@@ -58,19 +66,21 @@ public class TechnicalAnalyser {
     static private int technicalIndicatorToDays(TechnicalIndicator indicator) {
         switch (indicator) {
             case SMA10:
-                return 10;
-            case SMA5:
-                return 5;
-                case SMA3:
-                return 3;
             case EMA10:
-                return 10;
-            case RSI:
-                return 14;
             case ADX10:
                 return 10;
+            case SMA5:
+            case EMA5:
+                return 5;
+            case SMA20:
+            case EMA20:
+                return 20;
+            case SMA200:
+            case EMA200:
+                return 200;
+
+            case RSI:
             case CCI:
-                return 14;
             case WillR:
                 return 14;
         }
@@ -216,7 +226,10 @@ public class TechnicalAnalyser {
         HashMap<String, TreeMap<Date, Double>> results = new HashMap<>();
 
         switch (indicator) {
-            case SMA3: case SMA5: case SMA10: {
+            case SMA5:
+            case SMA10:
+            case SMA20:
+            case SMA200: {
                 double[] out = new double[closePrices.size()];
                 rc = ta.sma(0, cPrices.length - 1, cPrices, days, begin, length, out);
                 results.put(technicalIndicatorToString(indicator), priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
@@ -230,10 +243,13 @@ public class TechnicalAnalyser {
                 results.put("MACDHist", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, macdHist));
             }
                 break;
-            case EMA10: {
+            case EMA5:
+            case EMA10:
+            case EMA20:
+            case EMA200: {
                 double[] out = new double[closePrices.size()];
                 rc = ta.ema(0, cPrices.length - 1, cPrices, days, begin, length, out);
-                results.put("EMA10", priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+                results.put(technicalIndicatorToString(indicator), priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
             }
                 break;
             case RSI: {
@@ -287,5 +303,5 @@ public class TechnicalAnalyser {
             return null;
     }
 
-    public enum TechnicalIndicator {SMA10, MACD, EMA10, RSI, OBV, ADX10, CCI, AD, StoOsc, SMA3, SMA5, WillR}
+    public enum TechnicalIndicator {SMA5, SMA10, SMA20, SMA200, MACD, EMA5, EMA10, EMA20, EMA200, RSI, OBV, ADX10, CCI, AD, StoOsc, WillR}
 }

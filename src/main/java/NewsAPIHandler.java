@@ -7,10 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.safety.Whitelist;
 import org.jsoup.select.Elements;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -47,26 +44,14 @@ public class NewsAPIHandler {
         int values[] = getCSVMetaData(stock);
 
         int storedArticles = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM newsarticles WHERE Symbol='" + stock + "';").get(0));
-        ArrayList<String> unavailable = dh.executeQuery("SELECT duplicateNewsArticles FROM duplicatemanager WHERE Symbol='" + stock + "';");
 
-        int unavailableArticles = 0;
 
-        if (!unavailable.isEmpty())
-            unavailableArticles = Integer.parseInt(unavailable.get(0));
+        int missingArticles = values[ARTICLES] - storedArticles;
 
-        int missingArticles = values[ARTICLES] - storedArticles - unavailableArticles;
-
-        System.out.println("MISSING ARTICLES FOR '" + stock + "': " + missingArticles + "\tUNAVAILABLE ARTICLES: " + unavailableArticles);
+        System.out.println("MISSING ARTICLES FOR '" + stock + "': " + missingArticles);
 
         if (missingArticles == 0)
             return;
-
-        //int startPage = (int) Math.ceil((double) missingArticles / (double) PAGE_SIZE);
-
-        //int i = startPage;
-
-        int expected = missingArticles % PAGE_SIZE;
-        int before = missingArticles;
 
         if (missingArticles < 0) {
             System.err.println("NEGATIVE MISSING ARTICLE VALUE - May be due to API inaccessibility");
@@ -81,24 +66,6 @@ public class NewsAPIHandler {
 
         if (missingArticles > 0)
             System.err.println("DID NOT DOWNLOAD ALL ARTICLES");
-
-      /*
-        while (i >= 1 && !isOverLimit()) {
-            int downloaded = getCSVNews(stock, i--, missingArticles);
-            if(downloaded >=0)
-                missingArticles -= downloaded;
-            else {
-                System.err.println("News Article download error for '" + stock + "': Please try again later!");
-                break;
-            }
-
-            if (missingArticles != (before - expected))
-                dh.executeCommand("INSERT INTO duplicatemanager (Symbol, duplicateNewsArticles) VALUES('" + stock + "', " + Math.abs(missingArticles - (before - expected)) + ") ON DUPLICATE KEY UPDATE duplicateNewsArticles = duplicateNewsArticles + VALUES(duplicateNewsArticles);");
-            missingArticles = before - expected;
-            before = missingArticles;
-            expected = PAGE_SIZE;
-        }
-        */
     }
 
     static public void initialise(DatabaseHandler nddh, ProgressBar pb) {
@@ -212,9 +179,8 @@ public class NewsAPIHandler {
         br.close();
 
         System.out.println("Sorting '" + stock + "' PAGE " + page + " news file into chronological order...");
-        //Preprocess news data to remove corrupted entries
-        // Collections.reverse(newsArray); //Reverse to put in chronological order
 
+        //Preprocess news data to remove corrupted entries
         Set<String> newsSet = new LinkedHashSet(); //Linked hashset retains insertion order and removes duplicates
 
         System.out.println("Cleaning '" + stock + "' PAGE " + page + " news file...");
@@ -232,7 +198,7 @@ public class NewsAPIHandler {
                     headline += splitString[i++].replace(",", "");
                 }
 
-                if (i < splitString.length) { //TODO: may need fixing
+                if (i < splitString.length) {
                     date = splitString[i++];
                     link = splitString[i++];
                     news += headline + "," + date + "," + link + ",";
@@ -262,20 +228,9 @@ public class NewsAPIHandler {
         int downloaded = 0;
         int newsSize = newsSet.size();
 
-        //int startPoint;
-
-        //int remainder = missingArticles % PAGE_SIZE;
-
-        //if (remainder == 0)
-        //   startPoint = 0;
-        //else
-        //   startPoint = newsSize - remainder; //TODO: Missing articles can be negative - fix this
-
-        int processed = 0;
-
-//        System.out.println("'" + stock + "' PAGE " + page + " WITH " + newsSize + " ARTICLES START POINT: " + startPoint + " (Missing " + missingArticles + " articles)");
         System.out.println("'" + stock + "' PAGE " + page + " WITH " + newsSize + " (Missing " + missingArticles + " articles)");
 
+        dh.setAutoCommit(false);
 
         for (String news : newsSet) {
             String[] splitNews = news.split(",");
@@ -300,10 +255,9 @@ public class NewsAPIHandler {
                 command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL,Duplicate) VALUES (" + data + ", (SELECT COALESCE((SELECT * FROM (SELECT 1 FROM newsarticles WHERE Symbol='" + stock + "' AND (Headline='" + title + "' OR URL='" + link + "') LIMIT 1) as t),0)));";
 
                 try {
-                    dh.executeCommand(command);
+                    dh.addBatchCommand(command);
                 } catch (Exception e) {
                 }
-                //try { dh.addBatchCommand(command);  } catch (Exception e) { }
 
                 missingArticles--;
                 downloaded++;
@@ -312,7 +266,9 @@ public class NewsAPIHandler {
                     return downloaded;
             }
         }
-        //dh.executeBatch();
+        dh.executeBatch();
+        dh.setAutoCommit(true);
+
         return downloaded;
     }
 
@@ -336,10 +292,25 @@ public class NewsAPIHandler {
                 System.out.println("Downloading news article " + splitArticle[0] + ": " + splitArticle[1]);
 
                 String site = null;
+
+
+            while (site == null)
                 try {
                     site = NewsAPIHandler.downloadArticle(splitArticle[1]);
+                    break;
+                } catch (FileNotFoundException e) {
+                    System.err.println("Article is no longer available!");
+                    break;
+                } catch (MalformedURLException e) {
+                    System.err.println(e.getMessage());
+                    if (splitArticle[1].substring(0, 3) != "http")
+                        splitArticle[1] = "http://" + splitArticle[1];
+                } catch (ConnectException e) {
+                    System.err.println("Connection error (Timed Out)");
+                    break;
                 } catch (Exception e) {
                     e.printStackTrace();
+                    break;
                 }
 
                 try {

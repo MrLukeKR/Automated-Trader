@@ -1,15 +1,18 @@
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Pair;
 import org.apache.spark.mllib.linalg.DenseVector;
 
 import java.io.*;
@@ -24,7 +27,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Controller {
-    static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
     static DatabaseHandler dh = new DatabaseHandler();
     static DatabaseHandler sqdh = new DatabaseHandler();
     static DatabaseHandler nlpdh = new DatabaseHandler();
@@ -380,7 +382,7 @@ public class Controller {
             e.printStackTrace();
         }
 
-        int columnToPredict = 7; //Use column 7 for smoothed data
+        int columnToPredict = 8; //Use column 8 for smoothed data
         double[] currentPrices = new double[priceValues.size()];
         double[] sentiments = NaturalLanguageProcessor.getAverageSentiments(stock, priceValues.size());
 
@@ -536,9 +538,57 @@ public class Controller {
     }
 
     private void initialiseConnections() {
+
         System.out.println("Initialising Connections...");
+
+        //http://code.makery.ch/blog/javafx-dialogs-official/
+        Dialog<Pair<String, String>> dialogue = new Dialog<>();
+        dialogue.setTitle("SQL Server Login");
+
+        ButtonType loginButton = new ButtonType("Login", ButtonBar.ButtonData.OK_DONE);
+        dialogue.getDialogPane().getButtonTypes().addAll(loginButton, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setVgap(10);
+        grid.setHgap(10);
+
+        TextField user = new TextField();
+        user.setPromptText("SQL Server Admin Username");
+        PasswordField pass = new PasswordField();
+        pass.setPromptText("SQL Server Admin Password");
+
+        grid.add(new Label("Username:"), 0, 0);
+        grid.add(user, 1, 0);
+        grid.add(new Label("Password:"), 0, 1);
+        grid.add(pass, 1, 1);
+
+        Node login = dialogue.getDialogPane().lookupButton(loginButton);
+        login.setDisable(true);
+
+        user.textProperty().addListener((observable, oldValue, newValue) -> login.setDisable(newValue.trim().isEmpty()));
+        dialogue.getDialogPane().setContent(grid);
+
+        Platform.runLater(() -> user.requestFocus());
+
+        dialogue.setResultConverter(dialogButton -> {
+            if (dialogButton == loginButton) {
+                return new Pair<>(user.getText(), pass.getText());
+            }
+            return null;
+        });
+
+        Optional<Pair<String, String>> result = dialogue.showAndWait();
+
+        result.ifPresent(userPass -> {
+            try {
+                DatabaseHandler.initialiseDatabase(userPass.getKey(), userPass.getValue());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
         try {
-            dh.init("agent", "0Y5q0m28pSB9jj2O");
+            dh.init("Agent", "0Y5q0m28pSB9jj2O");
             nlpdh.init("NaturalLanguageProcessor", "p1pONM8zhI6GgCfy");
             tadh.init("TechnicalAnalyser", "n6qvdUkFOoFCxPq5");
             nddh.init("NewsDownloader", "wu0Ni6YF3yLTVp2A");
@@ -716,7 +766,7 @@ public class Controller {
     }
 
     private boolean predictStock(String stock, int numberOfDays) throws SQLException {
-        String results = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "' AND SmoothedClosePrice is not null AND SMA10 is not null AND EMA10 is not null AND MACD is not null AND MACDSig is not null AND MACDHist is not null AND RSI is not null AND ADX10 is not null AND CCI is not null AND AD is not null AND OBV is not null AND StoOscSlowK is not null AND StoOscSlowD is not null AND SMA3 is not null AND SMA5 is not null AND WillR is not null ORDER BY TradeDate DESC LIMIT 1").get(0);
+        String results = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "' AND SmoothedClosePrice is not null AND SMA10 is not null AND EMA10 is not null AND MACD is not null AND MACDSig is not null AND MACDHist is not null AND RSI is not null AND ADX10 is not null AND CCI is not null AND AD is not null AND OBV is not null AND StoOscSlowK is not null AND StoOscSlowD is not null AND SMA20 is not null AND SMA200 is not null AND EMA5 IS NOT NULL AND EMA20 IS NOT NULL AND EMA200 IS NOT NULL AND SMA5 is not null AND WillR is not null ORDER BY TradeDate DESC LIMIT 1").get(0);
         double newsSentiment = NaturalLanguageProcessor.getTodaysAverageSentiment(stock, 2);
 
         String[] splitString = results.split(",");
@@ -849,7 +899,7 @@ public class Controller {
         });
 
         initialiseConnections();
-        initialiseDatabase();
+
         initialiseListeners();
         alignCharts();
 
@@ -1113,31 +1163,6 @@ public class Controller {
         clocks.add(new StockClock("Bombay SE", LocalTime.of(9, 15), LocalTime.of(15, 30), ZoneId.of("Asia/Calcutta")));
 
         for (StockClock clock : clocks) timePane.getChildren().add(clock.getNode());
-    }
-
-    private void initialiseDatabase() {
-        System.out.println("Initialising Database...");
-        try {
-            dh.executeCommand("CREATE DATABASE IF NOT EXISTS automated_trader;"); //TODO: Allow login of root to create the initial agent user
-            //dh.executeCommand("GRANT ALL ON automated_trader.* TO 'agent'@'%';");
-            dh.executeCommand("USE automated_trader");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS indices (Symbol varchar(7) UNIQUE NOT NULL, Name text NOT NULL, StartedTrading date NOT NULL, CeasedTrading date, TwitterUsername varchar(15), PRIMARY KEY (Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS dailystockprices (Symbol varchar(7) NOT NULL, TradeDate date NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, SMA10 double, EMA10 double, MACD double, RSI double, ADX10 double, CCI double, PRIMARY KEY (Symbol,TradeDate), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS intradaystockprices (Symbol varchar(7) NOT NULL, TradeDateTime datetime NOT NULL, OpenPrice double NOT NULL, HighPrice double NOT NULL, LowPrice double NOT NULL, ClosePrice double NOT NULL, TradeVolume bigint(20) NOT NULL, PRIMARY KEY (Symbol,TradeDateTime), FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS apimanagement (Name varchar(20) NOT NULL, DailyLimit int default 0, Delay int default 0, PRIMARY KEY (Name));");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date date NOT NULL, Calls int default 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS ngrams (Hash varchar(32) NOT NULL PRIMARY KEY, Gram text NOT NULL, N int NOT NULL, Increase int DEFAULT 0, Decrease int DEFAULT 0, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0);");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS portfolio (Symbol varchar(7) NOT NULL PRIMARY KEY, Allocation double NOT NULL, Held int NOT NULL DEFAULT 0, Investment double NOT NULL DEFAULT 0, LastUpdated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS sentences (Hash varchar(32) NOT NULL PRIMARY KEY, Sentence text NOT NULL, Occurrences int DEFAULT 0 NOT NULL, Documents int DEFAULT 0 NOT NULL, Blacklisted BIT DEFAULT 0);");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS newsarticles (ID INT AUTO_INCREMENT NOT NULL PRIMARY KEY, Symbol varchar(7) NOT NULL, Headline text NOT NULL, Description text, Content longtext, Published datetime NOT NULL, URL varchar(1000), Blacklisted BIT DEFAULT 0 NOT NULL, Redirected BIT DEFAULT 0 NOT NULL, Duplicate BIT DEFAULT 0 NOT NULL, Enumerated BIT DEFAULT 0 NOT NULL, Tokenised BIT DEFAULT 0 NOT NULL, Processed BIT DEFAULT 0 NOT NULL, Mood double DEFAULT 0.5, FOREIGN KEY (Symbol) REFERENCES indices(Symbol))");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT AUTO_INCREMENT NOT NULL PRIMARY KEY, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(4), Symbol varchar(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL, FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
-            dh.executeCommand("CREATE TABLE IF NOT EXISTS banktransactions (ID INT AUTO_INCREMENT NOT NULL, TradeDateTime datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, Type varchar(10), Amount double SIGNED NOT NULL, PRIMARY KEY (ID));");
-
-            dh.executeCommand("INSERT INTO banktransactions(Amount, Type) SELECT 10000, 'DEPOSIT' WHERE NOT EXISTS (SELECT 1 FROM banktransactions WHERE Amount = 10000 AND Type='DEPOSIT');");
-            dh.executeCommand("INSERT INTO apimanagement VALUES ('INTRINIO',500,0),('AlphaVantage',0,1667),('BarChart', 2100,0) ON DUPLICATE KEY UPDATE DailyLimit=VALUES(DailyLimit), Delay=VALUES(Delay);");
-        } catch (SQLException e) {
-            System.err.println(e.getMessage());
-        }
     }
 
     private void checkServices() throws SQLException {
@@ -1442,7 +1467,7 @@ public class Controller {
 
             ArrayList<String> results = null;
             try {
-                results = nddh.executeQuery("SELECT DISTINCT Symbol, Headline FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
+                results = nddh.executeQuery("SELECT DISTINCT Symbol, Headline, Published FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
             } catch (SQLException e) {
                 e.printStackTrace();
             }

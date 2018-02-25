@@ -125,18 +125,13 @@ class DatabaseHandler {
     public void executeCommand(String command) throws SQLException {
         Statement statement = connection.createStatement();
 
-        boolean result;
-
         if (connection.getAutoCommit() && !WRITE_TO_FILE) {
-            result = statement.execute(command);
+            statement.execute(command);
             statement.close();
-        } else if (!connection.getAutoCommit() && !WRITE_TO_FILE) {
+        } else if (!connection.getAutoCommit() && !WRITE_TO_FILE)
             addBatchCommand(command);
-            result = true;
-        } else {
-            result = true;
+         else
             diskSQL.println(command);
-        }
 
         if (!connection.getAutoCommit() && !WRITE_TO_FILE) {
             uncommittedStatements++;

@@ -3,13 +3,13 @@ package GeneticAlgorithm;
 import java.util.*;
 
 public class GAOptimiser {
-    ArrayList<double[]> population;
-    double[] returns;
-    Map<Integer, Double> fitnesses = new HashMap<>();
-    int generations;
-    double[][] riskCovarianceMatrix;
-    double[] bestWeights;
-    Random rng = new Random();
+    private ArrayList<double[]> population;
+    private double[] returns;
+    private final Map<Integer, Double> fitnesses = new HashMap<>();
+    private int generations;
+    private double[][] riskCovarianceMatrix;
+    private double[] bestWeights;
+    private final Random rng = new Random();
 
     private double[] getRandomWeights(int amount) {
         double[] weights = new double[amount];
@@ -18,13 +18,6 @@ public class GAOptimiser {
             weights[i] = Math.random();
 
         return weights;
-    }
-
-    public double[] banNegativeStocks(double[] weights, double[] returns) {
-        for (int i = 0; i < weights.length; i++)
-            if (returns[i] <= 0) weights[i] = 0;
-
-        return scaleWeights(weights);
     }
 
     public void initialise(int amountOfWeights, int numberOfGenerations, int populationSize, double[] returns, double[][] riskCovarianceMatrix) {
@@ -38,10 +31,10 @@ public class GAOptimiser {
             population.add(getRandomWeights(amountOfWeights));
     }
 
-    public ArrayList<double[]> selection(ArrayList<double[]> population) {
+    private ArrayList<double[]> selection(ArrayList<double[]> population) {
         ArrayList<double[]> selectedPopulation = new ArrayList<>();
         ArrayList<Map.Entry<Integer, Double>> orderedIndividuals = new ArrayList<>(fitnesses.entrySet());
-        Collections.sort(orderedIndividuals, Comparator.comparing(Map.Entry::getValue));
+        orderedIndividuals.sort(Comparator.comparing(Map.Entry::getValue));
         Collections.reverse(orderedIndividuals);
 
         double totalFitness = 0;
@@ -62,23 +55,20 @@ public class GAOptimiser {
         return selectedPopulation;
     }
 
-    public ArrayList<double[]> crossover(ArrayList<double[]> parents1, ArrayList<double[]> parents2, double rate) {
+    private ArrayList<double[]> crossover(ArrayList<double[]> parents1, ArrayList<double[]> parents2, double rate) {
         ArrayList<double[]> newPopulation = new ArrayList<>();
 
         for (int i = 0; i < parents1.size(); i++) {
             ArrayList<double[]> children = crossover(parents1.get(i), parents2.get(i), rate);
 
-            for (double[] child : children)
-                newPopulation.add(child);
+            newPopulation.addAll(children);
         }
 
         return newPopulation;
     }
 
-    public ArrayList<double[]> crossover(double[] parent1, double[] parent2, double rate) {
-        double[] child1 = new double[parent1.length];
-        double[] child2 = new double[parent2.length];
-
+    private ArrayList<double[]> crossover(double[] parent1, double[] parent2, double rate) {
+        double[] child1 = new double[parent1.length], child2 = new double[parent2.length];
         ArrayList<double[]> children = new ArrayList<>();
 
         for (int i = 0; i < child1.length; i++)
@@ -96,7 +86,7 @@ public class GAOptimiser {
         return children;
     }
 
-    public ArrayList<double[]> mutate(ArrayList<double[]> population, double rate) {
+    private ArrayList<double[]> mutate(ArrayList<double[]> population, double rate) {
         ArrayList<double[]> mutatedPopulation = new ArrayList<>();
         for (double[] individual : population)
             mutatedPopulation.add(mutate(individual, rate));
@@ -104,7 +94,7 @@ public class GAOptimiser {
         return mutatedPopulation;
     }
 
-    public double[] mutate(double[] weights, double rate) {
+    private double[] mutate(double[] weights, double rate) {
         for (int i = 0; i < weights.length; i++) {
             if (Math.random() < rate)
                 weights[i] += rng.nextGaussian();
@@ -115,24 +105,19 @@ public class GAOptimiser {
     }
 
     private double[] scaleWeights(double[] originalWeights) {
-        double sum = 0;
-
-        for (int i = 0; i < originalWeights.length; i++)
-            sum += originalWeights[i];
-
-        for (int i = 0; i < originalWeights.length; i++)
-            originalWeights[i] /= sum;
+        double sum = Arrays.stream(originalWeights).sum();
+        originalWeights = Arrays.stream(originalWeights).map(v -> v /= sum).toArray();
 
         return originalWeights;
     }
 
-    public double evaluate(int generation) {
+    private double evaluate(int generation) {
         double sum = 0;
         double best = Double.MIN_VALUE;
 
         for (int i = 0; i < population.size(); i++) {
             double currFitness = EvaluationFunction.getReturnToRiskRatio(population.get(i), returns, riskCovarianceMatrix);
-            //    double currFitness = EvaluationFunction.getReturn(population.get(i), returns);
+
             sum += currFitness;
             fitnesses.put(i, currFitness);
             if (currFitness > best) best = currFitness;

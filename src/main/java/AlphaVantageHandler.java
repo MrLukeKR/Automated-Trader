@@ -12,13 +12,11 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 
-public class AlphaVantageHandler {
-    Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9150));
-    private final boolean USE_PROXY = false;
+class AlphaVantageHandler {
+    private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9150));
 
     private String apiKey;
     private boolean useProxy = false;
-    private final int CALL_LIMIT = 2;
     private boolean allPaused = false;
     private int failedDownloads = 0;
     private int pausedDownloads = 0;
@@ -27,7 +25,7 @@ public class AlphaVantageHandler {
     private final int REDUCED_CONCURRENT_DOWNLOADS = 5;
     private int downloadsSinceToggle = 0;
     private int successfulDownloads = 0;
-    private Semaphore availableThreads = new Semaphore(MAX_CONCURRENT_DOWNLOADS, false);
+    private final Semaphore availableThreads = new Semaphore(MAX_CONCURRENT_DOWNLOADS, false);
 
     public void init(String apiKey){
         this.apiKey = apiKey;
@@ -39,7 +37,8 @@ public class AlphaVantageHandler {
     private synchronized void incrementDownloadsSinceToggle(){downloadsSinceToggle++;}
     private synchronized void resetDownloadsSinceToggle(){downloadsSinceToggle = 0;}
     private synchronized boolean getUseProxy() {return useProxy;}
-    private synchronized void toggleProxy() {useProxy = !useProxy;};
+    private synchronized void toggleProxy() {useProxy = !useProxy;}
+
     private synchronized void decrementPause(){ pausedDownloads--; System.out.println("> DECREMENTING PAUSE");}
     private synchronized void incrementPause(){ pausedDownloads++; System.out.println("> INCREMENTING PAUSE");}
     private synchronized int getPausedDownloads() {return pausedDownloads;}
@@ -73,12 +72,13 @@ public class AlphaVantageHandler {
             URL url;
             InputStream is = null;
 
-            if(USE_PROXY && getDownloadsSinceToggle() >= 30) {
+            if(getDownloadsSinceToggle() >= 30) {
                 System.out.println("!---SWITCHING PROXY---!");
                 toggleProxy();
                 resetDownloadsSinceToggle();
             }
 
+            int CALL_LIMIT = 2;
             while (paused) {
                 if(getAllPaused()){
                     decrementPause();
@@ -120,7 +120,7 @@ public class AlphaVantageHandler {
 
                 final char[] buf = new char[10240];
                 int read;
-                final StringBuffer sb = new StringBuffer();
+                final StringBuilder sb = new StringBuilder();
                 while ((read = reader.read(buf,0,buf.length)) > 0)
                     sb.append(buf, 0, read);
 

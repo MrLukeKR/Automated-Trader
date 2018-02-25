@@ -82,21 +82,24 @@
                                                  <Label fx:id="profitTargetPercentageLabel" prefHeight="17.0" prefWidth="50.0" text="0.0%" />
                                                  <Button fx:id="setProfitTargetButton" disable="true" mnemonicParsing="false" onAction="#setProfitCutoff" prefHeight="27.0" prefWidth="125.0" text="Set Profit Target" />
                                                  <Separator prefHeight="10.0" prefWidth="400.0" />
-                                 <HBox prefHeight="32.0" prefWidth="401.0">
-                                    <children>
-                                       <ComboBox fx:id="optimisationMethodDropdown" prefHeight="28.0" prefWidth="220.0" promptText="Select Optimisation Method">
-                                           <items>
-                                            <FXCollections fx:factory="observableArrayList">
-                                               <String fx:value="Genetic Algorithm" />
-                                               <String fx:value="Simulated Annealing" />
-                                            </FXCollections>
-                                           </items>
-                                       </ComboBox>
+                                                 <HBox prefHeight="32.0" prefWidth="401.0">
+                                                     <ComboBox fx:id="optimisationMethodDropdown" prefHeight="28.0"
+                                                               prefWidth="220.0"
+                                                               promptText="Select Optimisation Method">
+                                                         <items>
+                                                             <FXCollections fx:factory="observableArrayList">
+                                                                 <String fx:value="Genetic Algorithm"/>
+                                                                 <String fx:value="Simulated Annealing"/>
+                                                             </FXCollections>
+                                                         </items>
+                                                     </ComboBox>
 
-                                       <Separator orientation="VERTICAL" prefHeight="0.0" prefWidth="5.0" visible="false" />
-                                                       <Button fx:id="rebalanceButton" mnemonicParsing="false" onAction="#manuallyRebalancePortfolio" prefHeight="28.0" prefWidth="175.0" text="Rebalance Portfolio" />
-                                    </children>
-                                 </HBox>
+                                                     <Separator orientation="VERTICAL" prefHeight="0.0" prefWidth="5.0"
+                                                                visible="false"/>
+                                                     <Button fx:id="rebalanceButton" mnemonicParsing="false"
+                                                             onAction="#manuallyRebalancePortfolio" prefHeight="28.0"
+                                                             prefWidth="175.0" text="Rebalance Portfolio"/>
+                                                 </HBox>
                                              </FlowPane>
                                          </FlowPane>
                                      </top>

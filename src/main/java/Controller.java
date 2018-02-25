@@ -1,4 +1,5 @@
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.chart.AreaChart;
@@ -27,150 +28,100 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Controller {
-    static DatabaseHandler dh = new DatabaseHandler();
-    static DatabaseHandler sqdh = new DatabaseHandler();
-    static DatabaseHandler nlpdh = new DatabaseHandler();
-    static DatabaseHandler tadh = new DatabaseHandler();
-    static DatabaseHandler nddh = new DatabaseHandler();
-    static DatabaseHandler pmdh = new DatabaseHandler();
-    static DatabaseHandler spdh = new DatabaseHandler();
-    static BarChartHandler bch = new BarChartHandler();
+    static private DatabaseHandler dh = new DatabaseHandler();
+    static private DatabaseHandler sqdh = new DatabaseHandler();
+    static private DatabaseHandler nlpdh = new DatabaseHandler();
+    static private DatabaseHandler tadh = new DatabaseHandler();
+    static private DatabaseHandler nddh = new DatabaseHandler();
+    static private DatabaseHandler pmdh = new DatabaseHandler();
+    static private DatabaseHandler spdh = new DatabaseHandler();
+    static private BarChartHandler bch = new BarChartHandler();
+    static private AlphaVantageHandler avh = new AlphaVantageHandler();
     static private double lossCutoff, profitCutoff;
-
-    static AlphaVantageHandler avh = new AlphaVantageHandler();
-    private final STOCK_API useAPI = STOCK_API.AlphaVantage;
-    static boolean quit = false;
-    final int downloadInterval = 1;
-    ArrayList<String> stocks = new ArrayList<>();
-    ArrayList<LiveStockRecord> records = new ArrayList<>();
-    ArrayList<PredictionBox> predictions = new ArrayList<>();
-    ArrayList<StockClock> clocks = new ArrayList<>();
-
+    static private final STOCK_API useAPI = STOCK_API.AlphaVantage;
     static private Thread mainThread;
-    @FXML
-    CheckBox showRSI;
+    static private boolean quit = false;
+    static private int dayArray[] = new int[]{1};
+
+    static private ArrayList<String> stocks = new ArrayList<>();
+    static private ArrayList<LiveStockRecord> records = new ArrayList<>();
+    static private ArrayList<PredictionBox> predictions = new ArrayList<>();
+    static private ArrayList<StockClock> clocks = new ArrayList<>();
+
+    @FXML CheckBox showRSI;
 
     //Historic Stock FXML Items
-    @FXML
-    ComboBox<String> historicStockDropdown;
-    @FXML
-    Label historicDateRange;
-    @FXML
-    CheckBox showSMA10;
-    @FXML
-    CheckBox showEMA10;
-    @FXML
-    CheckBox showMACD;
-    @FXML
-    CheckBox showMACDSig;
-    @FXML
-    CheckBox showMACDHist;
-    @FXML
-    CheckBox showCCI;
-    @FXML
-    CheckBox showADX10;
-    @FXML
-    LineChart<Number, Double> macdChart;
-    @FXML
-    CheckBox showAD;
-    @FXML
-    CheckBox showOBV;
-    @FXML
-    CheckBox showStoOscSlowK;
-    @FXML
-    CheckBox showStoOscSlowD;
-    @FXML
-    LineChart<Number, Double> historicPriceChart;
-    @FXML
-    VBox historicOptions;
-    @FXML
-    AreaChart<Number, Number> historicVolumeChart;
-    @FXML
-    Button displayHistoricDataButton;
+    @FXML ComboBox<String> historicStockDropdown;
+    @FXML Label historicDateRange;
+    @FXML CheckBox showSMA5;
+    @FXML CheckBox showSMA10;
+    @FXML CheckBox showSMA20;
+    @FXML CheckBox showSMA200;
+    @FXML CheckBox showEMA5;
+    @FXML CheckBox showEMA10;
+    @FXML CheckBox showEMA20;
+    @FXML CheckBox showEMA200;
+    @FXML CheckBox showMACD;
+    @FXML CheckBox showMACDSig;
+    @FXML CheckBox showMACDHist;
+    @FXML CheckBox showCCI;
+    @FXML CheckBox showADX10;
+    @FXML LineChart<Number, Number> macdChart;
+    @FXML CheckBox showAD;
+    @FXML CheckBox showOBV;
+    @FXML CheckBox showStoOscSlowK;
+    @FXML CheckBox showStoOscSlowD;
+    @FXML CheckBox showWillR;
+    @FXML LineChart<Number, Number> historicPriceChart;
+    @FXML VBox historicOptions;
+    @FXML AreaChart<Number, Number> historicVolumeChart;
+    @FXML Button displayHistoricDataButton;
     //-------------------------
 
-    @FXML
-    ComboBox<String> stockDropdown;
-    @FXML
-    FlowPane stockList;
-    @FXML
-    ProgressBar stockFeedProgress;
-    @FXML
-    FlowPane timePane;
-    @FXML
-    TextArea infoBox;
-    @FXML
-    VBox newsBox;
-    @FXML
-    Label stockValueLabel;
-    @FXML
-    Label currentBalanceLabel;
-    @FXML
-    Label totalBalanceLabel;
-    @FXML
-    Label cutoffLabel;
-    @FXML
-    Label targetLabel;
-    @FXML
-    Label profitLossLabel;
-    @FXML
-    PieChart allocationChart;
-    @FXML
-    PieChart componentChart;
-    @FXML
-    Circle nlpAvailability;
-    @FXML
-    Circle newsFeedAvailability;
-    @FXML
-    ProgressBar newsFeedProgress;
-    @FXML
-    ProgressBar nlpProgress;
-    @FXML
-    ComboBox autonomyLevelDropdown;
-    @FXML
-    FlowPane autonomousToolbox;
-    @FXML
-    FlowPane manualToolbox;
-    @FXML
-    Label lossCutoffPercentageLabel;
-    @FXML
-    Label profitTargetPercentageLabel;
-    @FXML
-    TextField lossCutoffField;
-    @FXML
-    TextField profitTargetField;
-    @FXML
-    LineChart<Integer, Double> portfolioChart;
-    @FXML
-    ProgressBar technicalAnalyserProgress;
-    @FXML
-    ProgressBar stockForecastProgress;
-    @FXML
-    Circle technicalAnalyserAvailability;
-    @FXML
-    TextField stockAmountField;
-    @FXML
-    Button sellButton;
-    @FXML
-    Button buyButton;
-    @FXML
-    Button exportToMLFileButton;
-    @FXML
-    Button rebalanceButton;
-    @FXML
-    Button setLossCutoffButton;
-    @FXML
-    Button setProfitTargetButton;
-    @FXML
-    FlowPane controlPanel;
-    @FXML
-    VBox stockBox;
+    @FXML ComboBox<String> stockDropdown;
+    @FXML FlowPane stockList;
+    @FXML ProgressBar stockFeedProgress;
+    @FXML FlowPane timePane;
+    @FXML TextArea infoBox;
+    @FXML VBox newsBox;
+    @FXML Label stockValueLabel;
+    @FXML Label currentBalanceLabel;
+    @FXML Label totalBalanceLabel;
+    @FXML Label cutoffLabel;
+    @FXML Label targetLabel;
+    @FXML Label profitLossLabel;
+    @FXML PieChart allocationChart;
+    @FXML PieChart componentChart;
+    @FXML Circle nlpAvailability;
+    @FXML Circle newsFeedAvailability;
+    @FXML ProgressBar newsFeedProgress;
+    @FXML ProgressBar nlpProgress;
+    @FXML ComboBox autonomyLevelDropdown;
+    @FXML FlowPane autonomousToolbox;
+    @FXML FlowPane manualToolbox;
+    @FXML Label lossCutoffPercentageLabel;
+    @FXML Label profitTargetPercentageLabel;
+    @FXML TextField lossCutoffField;
+    @FXML TextField profitTargetField;
+    @FXML LineChart<Integer, Double> portfolioChart;
+    @FXML ProgressBar technicalAnalyserProgress;
+    @FXML ProgressBar stockForecastProgress;
+    @FXML Circle technicalAnalyserAvailability;
+    @FXML TextField stockAmountField;
+    @FXML Button sellButton;
+    @FXML Button buyButton;
+    @FXML Button exportToMLFileButton;
+    @FXML Button rebalanceButton;
+    @FXML Button setLossCutoffButton;
+    @FXML Button setProfitTargetButton;
+    @FXML FlowPane controlPanel;
+    @FXML VBox stockBox;
     @FXML VBox stockPredictionsBox;
     @FXML TextArea predictionModelInformationBox;
-    boolean automated = false;
 
-    boolean priceUpdating = false;
-    boolean newsUpdating = false;
+    private boolean automated = false;
+    private boolean priceUpdating = false;
+    private boolean newsUpdating = false;
 
     public static void shutdown() throws SQLException {
         quit = true;
@@ -198,222 +149,159 @@ public class Controller {
 
     @FXML
     private void displayHistoricData() {
-        displayHistoricDataButton.setDisable(true);
-        historicOptions.setDisable(true);
+        Platform.runLater(()->displayHistoricDataButton.setDisable(true));
+        Platform.runLater(()->historicOptions.setDisable(true));
 
-        if (!historicPriceChart.getData().isEmpty()) historicPriceChart.getData().clear();
-        if (!historicVolumeChart.getData().isEmpty()) historicVolumeChart.getData().clear();
-        if (!macdChart.getData().isEmpty()) macdChart.getData().clear();
+        if (!historicPriceChart.getData().isEmpty()) Platform.runLater(()->historicPriceChart.getData().clear());
+        if (!historicVolumeChart.getData().isEmpty()) Platform.runLater(()->historicVolumeChart.getData().clear());
+        if (!macdChart.getData().isEmpty()) Platform.runLater(()->macdChart.getData().clear());
 
         new Thread(() -> {
             String stock = historicStockDropdown.getValue();
+            ArrayList<String> dbSchema = null;
             ArrayList<String> dbData = null;
 
             try {
+                dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
                 dbData = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC;");
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-            XYChart.Series<Number, Double> openPrices = new XYChart.Series<>();
-            XYChart.Series<Number, Double> highPrices = new XYChart.Series<>();
-            XYChart.Series<Number, Double> lowPrices = new XYChart.Series<>();
-            XYChart.Series<Number, Double> closePrices = new XYChart.Series<>();
-            AreaChart.Series<Number, Number> volumes = new AreaChart.Series<>();
-            XYChart.Series<Number, Double> smoothedClosePrices = new XYChart.Series<>();
-            XYChart.Series<Number, Double> sma10 = new XYChart.Series<>();
-            XYChart.Series<Number, Double> ema10 = new XYChart.Series<>();
-            XYChart.Series<Number, Double> macd = new XYChart.Series<>();
-            XYChart.Series<Number, Double> macdSig = new XYChart.Series<>();
-            XYChart.Series<Number, Double> macdHist = new XYChart.Series<>();
-            XYChart.Series<Number, Double> rsi = new XYChart.Series<>();
-            XYChart.Series<Number, Double> adx10 = new XYChart.Series<>();
-            XYChart.Series<Number, Double> cci10 = new XYChart.Series<>();
-            XYChart.Series<Number, Double> ad = new XYChart.Series<>();
-            XYChart.Series<Number, Double> obv = new XYChart.Series<>();
-            XYChart.Series<Number, Double> stoOscSlowK = new XYChart.Series<>();
-            XYChart.Series<Number, Double> stoOscSlowD = new XYChart.Series<>();
-
-            openPrices.setName("Open Prices");
-            highPrices.setName("High Prices");
-            lowPrices.setName("Low Prices");
-            closePrices.setName("Close Prices");
-            smoothedClosePrices.setName("Smoothed Close Prices");
-            volumes.setName("Trade Volume");
-            sma10.setName("Simple Moving Average (10-Day)");
-            ema10.setName("Exponential Moving Average (10-Day)");
-            macd.setName("Moving Average Convergence/Divergence");
-            macdSig.setName("Moving Average Convergence/Divergence Signal Line");
-            macdHist.setName("Moving Average Convergence/Divergence Histogram");
-            rsi.setName("Relative Strength Indicator");
-            adx10.setName("");
-            cci10.setName("");
-            ad.setName("");
-            obv.setName("");
-            stoOscSlowK.setName("");
-            stoOscSlowD.setName("");
+            } catch (SQLException e) {e.printStackTrace();}
 
             int count = 0;
 
+            HashMap<String, ArrayDeque<XYChart.Data<Number, Number>>> values = new HashMap<>();
+
+            for(String column : dbSchema) values.put(column, new ArrayDeque<>());
+
             for (String record : dbData) {
+                int idx, rIdx = 0;
+
                 String[] splitRecord = record.split(",");
 
-                XYChart.Data<Number, Double> openData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[2]));
-                XYChart.Data<Number, Double> highData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[3]));
-                XYChart.Data<Number, Double> lowData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[4]));
-                XYChart.Data<Number, Double> closeData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[5]));
-                XYChart.Data<Number, Number> volumeData = new XYChart.Data<>(count, Integer.parseInt(splitRecord[6]));
-                XYChart.Data<Number, Double> smoothedCloseData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[7]));
+                values.get("OpenPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("OpenPrice")])));
+                values.get("HighPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("HighPrice")])));
+                values.get("LowPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("LowPrice")])));
+                values.get("ClosePrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("ClosePrice")])));
+                values.get("TradeVolume").add(new XYChart.Data<>(count, Integer.parseInt(splitRecord[dbSchema.indexOf("TradeVolume")])));
+                values.get("SmoothedClosePrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("SmoothedClosePrice")])));
 
-                Rectangle[] rects = new Rectangle[18];
+                Rectangle[] rects = new Rectangle[dbSchema.size()];
 
                 for (int i = 0; i < rects.length; i++) {
                     rects[i] = new Rectangle(0, 0);
                     rects[i].setVisible(false);
                 }
 
-                volumeData.setNode(rects[0]);
-                openData.setNode(rects[1]);
-                highData.setNode(rects[2]);
-                lowData.setNode(rects[3]);
-                closeData.setNode(rects[4]);
-                smoothedCloseData.setNode(rects[5]);
+                if (showSMA5.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA5")].equals("null"))
+                    values.get("SMA5").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                volumes.getData().add(volumeData);
-                openPrices.getData().add(openData);
-                highPrices.getData().add(highData);
-                lowPrices.getData().add(lowData);
-                closePrices.getData().add(closeData);
-                smoothedClosePrices.getData().add(smoothedCloseData);
+                if (showSMA10.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA10")].equals("null"))
+                    values.get("SMA10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showSMA10.isSelected() && !splitRecord[8].equals("null")) {
-                    XYChart.Data<Number, Double> sma10Data = new XYChart.Data<>(count, Double.parseDouble(splitRecord[7]));
-                    sma10.getData().add(sma10Data);
-                    sma10Data.setNode(rects[6]);
-                }
+                if (showSMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA20")].equals("null"))
+                    values.get("SMA20").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showEMA10.isSelected() && !splitRecord[9].equals("null")) {
-                    XYChart.Data<Number, Double> ema10Data = new XYChart.Data<>(count, Double.parseDouble(splitRecord[8]));
-                    ema10.getData().add(ema10Data);
-                    ema10Data.setNode(rects[7]);
-                }
+                if (showSMA200.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA200")].equals("null"))
+                    values.get("SMA200").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showMACD.isSelected() && !splitRecord[10].equals("null")) {
-                    XYChart.Data<Number, Double> macdData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[9]));
-                    macd.getData().add(macdData);
-                    macdData.setNode(rects[8]);
-                }
+                if (showEMA5.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA5")].equals("null"))
+                    values.get("EMA5").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showMACDSig.isSelected() && !splitRecord[11].equals("null")) {
-                    XYChart.Data<Number, Double> macdSigData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[10]));
-                    macdSig.getData().add(macdSigData);
-                    macdSigData.setNode(rects[9]);
-                }
+                if (showEMA10.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA10")].equals("null"))
+                    values.get("EMA10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showMACDHist.isSelected() && !splitRecord[12].equals("null")) {
-                    XYChart.Data<Number, Double> macdHistData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[11]));
-                    macdHist.getData().add(macdHistData);
-                    macdHistData.setNode(rects[10]);
-                }
+                if (showEMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA20")].equals("null"))
+                    values.get("EMA20").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showRSI.isSelected() && !splitRecord[13].equals("null")) {
-                    XYChart.Data<Number, Double> rsiData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[12]));
-                    //macdHist.getData().add();
-                    rsiData.setNode(rects[11]);
-                }
+                if (showEMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA200")].equals("null"))
+                    values.get("EMA200").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showADX10.isSelected() && !splitRecord[14].equals("null")) {
-                    XYChart.Data<Number, Double> adx10Data = new XYChart.Data<>(count, Double.parseDouble(splitRecord[13]));
-                    //macdHist.getData().add();
-                    adx10Data.setNode(rects[12]);
-                }
+                if (showMACD.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACD")].equals("null"))
+                    values.get("MACD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showCCI.isSelected() && !splitRecord[15].equals("null")) {
-                    XYChart.Data<Number, Double> cci10Data = new XYChart.Data<>(count, Double.parseDouble(splitRecord[14]));
-                    //macdHist.getData().add();
-                    cci10Data.setNode(rects[13]);
-                }
+                if (showMACDSig.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACDSig")].equals("null"))
+                    values.get("MACDSig").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showAD.isSelected() && !splitRecord[16].equals("null")) {
-                    XYChart.Data<Number, Double> adData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[15]));
-                    //macdHist.getData().add();
-                    adData.setNode(rects[14]);
-                }
+                if (showMACDHist.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACDHist")].equals("null"))
+                    values.get("MACDHist").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
 
-                if (showOBV.isSelected() && !splitRecord[17].equals("null")) {
-                    XYChart.Data<Number, Double> obvData = new XYChart.Data<>(count, Double.parseDouble(splitRecord[16]));
-                    //macdHist.getData().add();
-                    obvData.setNode(rects[15]);
-                }
+                if (showRSI.isSelected() && !splitRecord[idx = dbSchema.indexOf("RSI")].equals("null"))
+                    values.get("RSI").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                if (showADX10.isSelected() && !splitRecord[idx = dbSchema.indexOf("ADX10")].equals("null"))
+                    values.get("ADX10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                if (showCCI.isSelected() && !splitRecord[idx = dbSchema.indexOf("CCI")].equals("null"))
+                    values.get("CCI").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                if (showAD.isSelected() && !splitRecord[idx = dbSchema.indexOf("AD")].equals("null"))
+                    values.get("AD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                if (showOBV.isSelected() && !splitRecord[idx = dbSchema.indexOf("OBV")].equals("null"))
+                    values.get("OBV").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                if (showStoOscSlowD.isSelected() && !splitRecord[idx = dbSchema.indexOf("StoOscSlowD")].equals("null"))
+                    values.get("StoOscSlowD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                if (showStoOscSlowK.isSelected() && !splitRecord[idx = dbSchema.indexOf("StoOscSlowK")].equals("null"))
+                    values.get("StoOscSlowK").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                if (showWillR.isSelected() && !splitRecord[idx = dbSchema.indexOf("WillR")].equals("null"))
+                    values.get("WillR").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                for(String column:dbSchema)
+                    if(!values.get(column).isEmpty())
+                        values.get(column).getLast().setNode(rects[rIdx++]);
 
                 count++;
             }
 
-            Platform.runLater(() -> {
-                historicPriceChart.getData().addAll(openPrices, highPrices, lowPrices, closePrices, smoothedClosePrices, sma10, ema10);
-                historicVolumeChart.getData().add(volumes);
-                macdChart.getData().addAll(macd, macdSig, macdHist);
+            XYChart.Series<Number, Number> openPrices = new XYChart.Series<>("Open Prices", FXCollections.observableArrayList(values.get("OpenPrice")));
+            XYChart.Series<Number, Number> highPrices = new XYChart.Series<>("High Prices", FXCollections.observableArrayList(values.get("HighPrice")));
+            XYChart.Series<Number, Number> lowPrices = new XYChart.Series<>("Low Prices", FXCollections.observableArrayList(values.get("LowPrice")));
+            XYChart.Series<Number, Number> closePrices = new XYChart.Series<>("Close Prices", FXCollections.observableArrayList(values.get("ClosePrice")));
+            AreaChart.Series<Number, Number> volumes = new AreaChart.Series<>("Trade Volume", FXCollections.observableArrayList(values.get("TradeVolume")));
+            XYChart.Series<Number, Number> smoothedClosePrices = new XYChart.Series<>("Smoothed Close Prices", FXCollections.observableArrayList(values.get("SmoothedClosePrice")));
+            XYChart.Series<Number, Number> sma5 = new XYChart.Series<>("Simple Moving Average (5-Day)", FXCollections.observableArrayList(values.get("SMA5")));
+            XYChart.Series<Number, Number> sma10 = new XYChart.Series<>("Simple Moving Average (10-Day)", FXCollections.observableArrayList(values.get("SMA10")));
+            XYChart.Series<Number, Number> sma20 = new XYChart.Series<>("Simple Moving Average (20-Day)", FXCollections.observableArrayList(values.get("SMA20")));
+            XYChart.Series<Number, Number> sma200 = new XYChart.Series<>("Simple Moving Average (200-Day)", FXCollections.observableArrayList(values.get("SMA200")));
+            XYChart.Series<Number, Number> ema5 = new XYChart.Series<>("Exponential Moving Average (5-Day)", FXCollections.observableArrayList(values.get("EMA5")));
+            XYChart.Series<Number, Number> ema10 = new XYChart.Series<>("Exponential Moving Average (10-Day)", FXCollections.observableArrayList(values.get("EMA10")));
+            XYChart.Series<Number, Number> ema20 = new XYChart.Series<>("Exponential Moving Average (20-Day)", FXCollections.observableArrayList(values.get("EMA20")));
+            XYChart.Series<Number, Number> ema200 = new XYChart.Series<>("Exponential Moving Average (200-Day)", FXCollections.observableArrayList(values.get("EMA200")));
+            XYChart.Series<Number, Number> macd = new XYChart.Series<>("Moving Average Convergence/Divergence", FXCollections.observableArrayList(values.get("MACD")));
+            XYChart.Series<Number, Number> macdSig = new XYChart.Series<>("Moving Average Convergence/Divergence Signal Line", FXCollections.observableArrayList(values.get("MACDSig")));
+            XYChart.Series<Number, Number> macdHist = new XYChart.Series<>("Moving Average Convergence/Divergence Histogram", FXCollections.observableArrayList(values.get("MACDHist")));
+            XYChart.Series<Number, Number> rsi = new XYChart.Series<>("Relative Strength Indicator", FXCollections.observableArrayList(values.get("RSI")));
+            XYChart.Series<Number, Number> adx10 = new XYChart.Series<>("Average Directional Index (10-Day)", FXCollections.observableArrayList(values.get("ADX10")));
+            XYChart.Series<Number, Number> cci = new XYChart.Series<>("Commodity Channel Index", FXCollections.observableArrayList(values.get("CCI")));
+            XYChart.Series<Number, Number> ad = new XYChart.Series<>("Advance-Decline Line", FXCollections.observableArrayList(values.get("AD")));
+            XYChart.Series<Number, Number> obv = new XYChart.Series<>("On-Balance Volume", FXCollections.observableArrayList(values.get("OBV")));
+            XYChart.Series<Number, Number> stoOscSlowK = new XYChart.Series<>("Stochastic Oscillator Slow %K", FXCollections.observableArrayList(values.get("StoOscSlowK")));
+            XYChart.Series<Number, Number> stoOscSlowD = new XYChart.Series<>("Stochastic Oscillator Slow %D", FXCollections.observableArrayList(values.get("StoOscSlowD")));
+            XYChart.Series<Number, Number> willR = new XYChart.Series<>("Williams %R", FXCollections.observableArrayList(values.get("WillR")));
 
+            Platform.runLater(()->
+                historicPriceChart.getData().addAll(openPrices, highPrices, lowPrices, closePrices, smoothedClosePrices,
+                        sma5, sma10, sma20, sma200,
+                        ema5, ema10, ema20, ema200));
+
+            Platform.runLater(()->historicVolumeChart.getData().add(volumes));
+            Platform.runLater(()->macdChart.getData().addAll(macd, macdSig, macdHist));
+
+            Platform.runLater(()->{
                 volumes.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                openPrices.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                highPrices.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                lowPrices.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                closePrices.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                smoothedClosePrices.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                sma10.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                ema10.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                macd.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                macdSig.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-                macdHist.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
 
-                displayHistoricDataButton.setDisable(false);
-                historicOptions.setDisable(false);
+                for(XYChart.Series<Number, Number> series : historicPriceChart.getData())
+                    series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+
+                for(XYChart.Series<Number, Number> series : macdChart.getData())
+                    series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
             });
+
+            Platform.runLater(()->displayHistoricDataButton.setDisable(false));
+            Platform.runLater(()->historicOptions.setDisable(false));
         }).start();
-    }
-
-    private ArrayList<String> convertToClassificationTrainingArray(String stock, int index, int[] amountOfDaysArray) throws SQLException {
-        ArrayList<String> dataPoints = new ArrayList<>();
-
-        ArrayList<String> priceValues = null;
-        try {
-            priceValues = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol = '" + stock + "' AND SmoothedClosePrice is not null AND SMA10 is not null AND EMA10 is not null AND MACD is not null AND MACDSig is not null AND MACDHist is not null AND RSI is not null AND ADX10 is not null AND CCI is not null AND AD is not null AND OBV is not null AND StoOscSlowK is not null AND StoOscSlowD is not null AND SMA3 is not null AND SMA5 is not null AND WillR is not null ORDER BY TradeDate ASC ");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        int columnToPredict = 8; //Use column 8 for smoothed data
-        double[] currentPrices = new double[priceValues.size()];
-        double[] sentiments = NaturalLanguageProcessor.getAverageSentiments(stock, priceValues.size());
-
-        for (int amountOfDays : amountOfDaysArray) {
-            double[] futurePrices = new double[priceValues.size() - amountOfDays];
-
-            for (int i = 0; i < priceValues.size() - amountOfDays; i++) {
-                String[] splitString = priceValues.get(i).split(",");
-                currentPrices[i] = Double.parseDouble(splitString[columnToPredict]);
-            }
-
-            for (int i = amountOfDays; i < priceValues.size(); i++) {
-                String[] splitString = priceValues.get(i).split(",");
-                futurePrices[i - amountOfDays] = Double.parseDouble(splitString[columnToPredict]);
-            }
-
-            for (int i = 0; i < futurePrices.length; i++) {
-                String dataPoint = String.valueOf(index) + "," + String.valueOf(amountOfDays);
-                String[] splitString = priceValues.get(i).split(",");
-
-                for (int j = 2; j < splitString.length; j++)
-                    dataPoint += "," + splitString[j];
-
-                dataPoint += "," + sentiments[i] + "," + String.valueOf((futurePrices[i] - currentPrices[i]) >= 0 ? 1 : 0);
-                dataPoints.add(dataPoint);
-            }
-        }
-
-        System.out.println("Converted data to Classification Training Array for '" + stock + "'");
-
-        return dataPoints;
     }
 
     @FXML
@@ -427,64 +315,26 @@ public class Controller {
         pw.close();
     }
 
-    private void exportClassificationCSV(String path) {
-        final int t = stocks.size() - 1;
-        int c = 0;
-
-        try {
-            File file = new File(path);
-            PrintWriter pw = new PrintWriter(file);
-
-            for (String stock : stocks) {
-                for (String value : convertToClassificationTrainingArray(stock, c, new int[]{1, 5, 20, 200}))
-                    pw.println(value);
-
-                updateProgress(++c, t, stockForecastProgress);
-            }
-            pw.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void exportLibSVMFile(String csvPath, String libSVMPath) throws IOException {
-        FileReader fr = new FileReader(csvPath);
-        BufferedReader br = new BufferedReader(fr);
-
-        File writeFile = new File(libSVMPath);
-        PrintWriter pw = new PrintWriter(writeFile);
-
-        String line;
-
-        while ((line = br.readLine()) != null)
-            pw.println(StockPredictor.convertToLibSVM(line));
-
-        fr.close();
-        pw.close();
-    }
-
     @FXML
-        private void exportToMLFile() {
+    private void exportToMLFile() {
+        System.out.println("");
         new Thread(() -> {
             Platform.runLater(() -> exportToMLFileButton.setDisable(true));
 
-            System.out.println("Exporting to ML File...");
-
-            updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
-
-            //exportClassificationCSV("res/TrainingFiles/SmoothedNASDAQTraining.csv");
-
-            updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
-
-            //try {
-            //    exportLibSVMFile("res/TrainingFiles/SmoothedNASDAQTraining.csv", "res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt");
-            //} catch (IOException e) {
-            //    e.printStackTrace();
-            //}
-
             try {
+                System.out.println("Exporting to ML File...");
+                StockPredictor.exportSeparateClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining", dayArray, stockForecastProgress);
+                StockPredictor.trainLSTM(29);
+                updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
+
+                StockPredictor.exportClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress);
+
+                updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
+
+                StockPredictor.exportLibSVMFile("res/TrainingFiles/SmoothedNASDAQTraining.csv", "res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt");
+
                 StockPredictor.trainRandomForest("res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt", stocks.size());
-            } catch (SQLException e) { e.printStackTrace(); }
+            }catch (Exception e){e.printStackTrace();}
 
             updateProgress(0, stockForecastProgress);
             Platform.runLater(() -> exportToMLFileButton.setDisable(false));
@@ -492,35 +342,34 @@ public class Controller {
     }
 
     static public void updateProgress(double current, double total, ProgressBar pb) {
-        final double val = current / total;
-        if (current == 0 || current == total)
-            Platform.runLater(() -> pb.setVisible(false));
-        else if (!pb.isVisible())
-            Platform.runLater(() -> pb.setVisible(true));
-
-        Platform.runLater(() -> pb.setProgress(val));
+        Platform.runLater(() -> pb.setVisible(current != 0));
+        Platform.runLater(() -> pb.setProgress(current / total));
     }
 
     @FXML
-    private void setLossCutoff() {
+    private void setLossCutoff() throws SQLException {
         setLossCutoff(Double.valueOf(lossCutoffField.getText()));
+        lossCutoffField.clear();
     }
 
     @FXML
-    private void setProfitCutoff() {
+    private void setProfitCutoff() throws SQLException {
         setProfitCutoff(Double.valueOf(profitTargetField.getText()));
+        profitTargetField.clear();
     }
 
-    private void setLossCutoff(double amount) {
-        int lossCuttoffInt = (int) (amount * 100);
-        lossCutoff = lossCuttoffInt / 100.0;
-        Platform.runLater(() -> targetLabel.setText(String.valueOf(profitCutoff)));
-    }
-
-    private void setProfitCutoff(double amount) {
-        int profitCutoffInt = (int) (amount * 100);
-        profitCutoff = profitCutoffInt / 100.0;
+    private void setLossCutoff(double amount) throws SQLException {
+        lossCutoff = (int) (amount * 100) / 100.0;
         Platform.runLater(() -> cutoffLabel.setText(String.valueOf(lossCutoff)));
+        lossCutoffPercentageLabel.setText("0.0%");
+        dh.executeCommand("INSERT INTO settings VALUES ('LCUTOFF', '" + lossCutoff + "') ON DUPLICATE KEY UPDATE Value = VALUES(Value);");
+    }
+
+    private void setProfitCutoff(double amount) throws SQLException {
+        profitCutoff = (int) (amount * 100) / 100.0;
+        Platform.runLater(() -> targetLabel.setText(String.valueOf(profitCutoff)));
+        profitTargetPercentageLabel.setText("0.0%");
+        dh.executeCommand("INSERT INTO settings VALUES ('PCUTOFF', '" + profitCutoff + "') ON DUPLICATE KEY UPDATE Value = VALUES(Value);");
     }
 
     private void calculateLossCutoff(double percentage) throws SQLException {
@@ -537,8 +386,7 @@ public class Controller {
         setProfitCutoff(profitCutoff);
     }
 
-    private void initialiseConnections() {
-
+    private void initialiseConnections() throws IOException, SQLException {
         System.out.println("Initialising Connections...");
 
         //http://code.makery.ch/blog/javafx-dialogs-official/
@@ -558,8 +406,8 @@ public class Controller {
         pass.setPromptText("SQL Server Admin Password");
 
         grid.add(new Label("Username:"), 0, 0);
-        grid.add(user, 1, 0);
         grid.add(new Label("Password:"), 0, 1);
+        grid.add(user, 1, 0);
         grid.add(pass, 1, 1);
 
         Node login = dialogue.getDialogPane().lookupButton(loginButton);
@@ -568,7 +416,7 @@ public class Controller {
         user.textProperty().addListener((observable, oldValue, newValue) -> login.setDisable(newValue.trim().isEmpty()));
         dialogue.getDialogPane().setContent(grid);
 
-        Platform.runLater(() -> user.requestFocus());
+        Platform.runLater(user::requestFocus);
 
         dialogue.setResultConverter(dialogButton -> {
             if (dialogButton == loginButton) {
@@ -587,7 +435,6 @@ public class Controller {
             }
         });
 
-        try {
             dh.init("Agent", "0Y5q0m28pSB9jj2O");
             nlpdh.init("NaturalLanguageProcessor", "p1pONM8zhI6GgCfy");
             tadh.init("TechnicalAnalyser", "n6qvdUkFOoFCxPq5");
@@ -595,10 +442,7 @@ public class Controller {
             sqdh.init("StockQuoteDownloader", "j2wbvx19Gg1Be22J");
             pmdh.init("PortfolioManager", "mAjwa22NdsrRihi4");
             spdh.init("StockPredictor", "wfN1XLoW810diEhR");
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
+
 
         avh.init("UFKUIPVK2VFA83U0"); //PBATJ7L9N8SNK835
         bch.init("07467da3de1195c974b66c46b8523e23", sqdh, stockFeedProgress);
@@ -608,8 +452,8 @@ public class Controller {
     @FXML
     public void setAutonomyLevel() {
         String level = autonomyLevelDropdown.getValue().toString();
-        boolean fullyAutonomous = level == "Full-Autonomy",
-                semiAutonomous = level == "Semi-Autonomy";
+        boolean fullyAutonomous = level.equals("Full-Autonomy"),
+                semiAutonomous = level.equals("Semi-Autonomy");
 
         autonomousToolbox.setDisable(fullyAutonomous);
         manualToolbox.setDisable(fullyAutonomous || semiAutonomous);
@@ -648,7 +492,7 @@ public class Controller {
         double currProfitLoss = 0;
 
         for (Long time : timeAndPrice.keySet()) {
-            XYChart.Data<Integer, Double> point = new XYChart.Data(i, timeAndPrice.get(time));
+            XYChart.Data<Integer, Double> point = new XYChart.Data<>(i, timeAndPrice.get(time));
             Rectangle rect = new Rectangle(0, 0);
             rect.setVisible(false);
             point.setNode(rect);
@@ -685,32 +529,35 @@ public class Controller {
                 Platform.runLater(() -> rebalanceButton.setDisable(true));
                 try {
                     rebalancePortfolio(false);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (Exception e) { e.printStackTrace(); }
                 Platform.runLater(() -> rebalanceButton.setDisable(false));
             }).start();
     }
 
-    public void sellAllStock(boolean automated) throws SQLException {
-        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol, Held FROM Portfolio WHERE Held > 0");
+    public void sellAllStock(boolean automated) throws SQLException, ParseException {
+        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol, Held FROM portfolio WHERE Held > 0");
 
         for (String stock : stocks) {
             String[] splitStock = stock.split(",");
             sellStock(splitStock[0], Integer.parseInt(splitStock[1]), automated);
         }
 
-        dh.executeCommand("DELETE FROM Portfolio;");
-
+        dh.executeCommand("DELETE FROM portfolio;");
         updateGUI();
     }
 
-    public void rebalancePortfolio(boolean automated) throws SQLException {
+    public void rebalancePortfolio(boolean automated) throws SQLException, ParseException {
         sellAllStock(automated);
 
         Map<String, Double> portfolio = PortfolioManager.optimisePortfolio();
+        double cutoff = portfolio.get("RETURN");
 
-        String command = "INSERT INTO Portfolio (Symbol, Allocation, Held, LastUpdated) VALUES \r\n";
+        calculateLossCutoff(cutoff);
+        calculateTargetCutoff(cutoff);
+
+        portfolio.remove("RETURN");
+
+        StringBuilder command = new StringBuilder("INSERT INTO portfolio (Symbol, Allocation, Held, LastUpdated) VALUES \r\n");
 
         int count = 1;
         double availableFunds = Double.parseDouble(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions;").get(0));
@@ -720,15 +567,14 @@ public class Controller {
 
             String lastUpdated = dh.executeQuery("SELECT MAX(TradeDateTime) FROM intradaystockprices WHERE Symbol='" + stock + "';").get(0);
 
-            command += "('" + stock + "', " + allocation + ", 0, '" + lastUpdated + "')";
+            command.append("('").append(stock).append("', ").append(allocation).append(", 0, '").append(lastUpdated).append("')");
             if (count++ < portfolio.size())
-                command += ", \r\n";
+                command.append(", \r\n");
             else
-                command += ";";
+                command.append(";");
         }
 
-        dh.executeCommand(command);
-
+        dh.executeCommand(command.toString());
         updateGUI();
     }
 
@@ -736,13 +582,28 @@ public class Controller {
         lossCutoffField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.matches("\\d*\\.?\\d*"))
                 lossCutoffField.setText(newValue.replaceAll("[^\\d\\.]", ""));
-
+            setLossCutoffButton.setDisable(newValue.isEmpty());
+            if(!newValue.isEmpty()){
+                try {
+                    double worth = getTotalWorth();
+                    setLossCutoffButton.setDisable(Double.parseDouble(lossCutoffField.getText()) >= worth);
+                    lossCutoffPercentageLabel.setText(String.valueOf(Double.parseDouble(lossCutoffField.getText()) / worth * 100) + "%");
+                } catch (SQLException e) { e.printStackTrace();}
+            }
         });
 
         profitTargetField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.matches("\\d*\\.?\\d*"))
                 profitTargetField.setText(newValue.replaceAll("[^\\d\\.]", ""));
 
+            setProfitTargetButton.setDisable(newValue.isEmpty());
+            if(!newValue.isEmpty()){
+                try {
+                    double worth = getTotalWorth();
+                    setProfitTargetButton.setDisable(Double.parseDouble(profitTargetField.getText()) <= worth);
+                    profitTargetPercentageLabel.setText(String.valueOf(Double.parseDouble(profitTargetField.getText()) / worth * 100) + "%");
+                } catch (SQLException e) { e.printStackTrace();}
+            }
         });
 
         stockAmountField.textProperty().addListener(((observable, oldValue, newValue) -> {
@@ -757,23 +618,17 @@ public class Controller {
                 try {
                     buyButton.setDisable(disable || !canBuyStock(stock, Integer.parseInt(newValue)));
                     sellButton.setDisable(disable || !canSellStock(stock, Integer.parseInt(newValue)));
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {e.printStackTrace();}
             });
-
         }));
     }
 
     private boolean predictStock(String stock, int numberOfDays) throws SQLException {
         String results = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "' AND SmoothedClosePrice is not null AND SMA10 is not null AND EMA10 is not null AND MACD is not null AND MACDSig is not null AND MACDHist is not null AND RSI is not null AND ADX10 is not null AND CCI is not null AND AD is not null AND OBV is not null AND StoOscSlowK is not null AND StoOscSlowD is not null AND SMA20 is not null AND SMA200 is not null AND EMA5 IS NOT NULL AND EMA20 IS NOT NULL AND EMA200 IS NOT NULL AND SMA5 is not null AND WillR is not null ORDER BY TradeDate DESC LIMIT 1").get(0);
-        double newsSentiment = NaturalLanguageProcessor.getTodaysAverageSentiment(stock, 2);
-
         String[] splitString = results.split(",");
-
+        double newsSentiment = NaturalLanguageProcessor.getTodaysAverageSentiment(stock, 2);
         double features[] = new double[splitString.length + 1];
 
-        //int stockBytes = Utils.stringToNumber(stock);
         features[0] = stocks.indexOf(stock);
         features[1] = numberOfDays;
 
@@ -786,15 +641,12 @@ public class Controller {
     }
 
     private boolean[] predictStocks() throws SQLException {
-        int dayArray[] = new int[]{1, 5, 20, 200};
         boolean predictions[] = new boolean[stocks.size() * dayArray.length];
 
         int i = 0;
 
-
         System.out.println("Predicting Stock Performance...");
         updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
-
 
         for (int numberOfDays : dayArray)
             for (String stock : stocks) {
@@ -808,13 +660,12 @@ public class Controller {
             }
 
         updateProgress(0, stockForecastProgress);
-
         System.out.println("Predicted Stock Performance!");
 
         return predictions;
     }
 
-    private void autoTrade() throws SQLException {
+    private void autoTrade() throws SQLException, ParseException {
         System.out.println("Auto-Trading...");
         ArrayList<String> portfolio = dh.executeQuery("SELECT * FROM Portfolio ORDER BY Allocation DESC;");
 
@@ -847,61 +698,62 @@ public class Controller {
         updateGUI();
     }
 
-    private void updatePredictions(double[] days, boolean[] predictions){
+    private void updatePredictions(int[] days, boolean[] predictions){
         //TODO: Update prediction GUI
     }
 
     @FXML
-    public void initialize() throws SQLException {
+    public void initialize() throws SQLException, IOException {
         mainThread = new Thread(() -> {
             while (!quit) {
                 int s = LocalTime.now().getSecond();
                 int m = LocalTime.now().getMinute();
                 int h = LocalTime.now().getHour();
-                int cycle = m % downloadInterval;
 
                 //DOWNLOAD INTRADAY DATA FOR VISUALISATION PURPOSES
                 if (s == 0 && h < 21 && h >= 14) {
                     try {
+
                         //updateBatchStockData();
                         if (!priceUpdating)
                             updateIntradayStockData();
                         if (!priceUpdating)
                             updateDailyStockData();
-                    checkServices();
-                    updateGUI();
+                        if(getTotalWorth() <= lossCutoff || getTotalWorth() >= profitCutoff)
+                            sellAllStock(false);
+
+                        checkServices();
+                        updateGUI();
                     } catch (Exception e) { e.printStackTrace(); }
                 }
-                    if ( s==0 && h == 0 && m == 0) {
-                        try {
-                            updateNews();
-                            checkServices();
-                            updateGUI();
-                        } catch (Exception e) {e.printStackTrace();}
-                    }
 
+                if ( s==0 && h == 0 && m == 0) {
+                    try {
+                        updateNews();
+                        checkServices();
+                        updateGUI();
+                    } catch (Exception e) {e.printStackTrace();}
+                }
 
-                    if (m % 10 == 0 && s == 0) {
-                        try {
-                            //StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
-                            SmoothingUtils.smoothStocks(stocks);
-                            TechnicalAnalyser.calculateTechnicalIndicators(stocks);
-                            updatePredictions(new double[]{1,5,20,200}, predictStocks());
-                            if (automated)
-                                autoTrade();
-                            checkServices();
-                            updateGUI();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                if (m % 30 == 0 && s == 0) {
+                    try {
+                        StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
+                        SmoothingUtils.smoothStocks(stocks);
+                        TechnicalAnalyser.calculateTechnicalIndicators(stocks);
+                        updatePredictions(dayArray, predictStocks());
+                        if (automated)
+                            autoTrade();
+                        checkServices();
+                        updateGUI();
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
+                }
             }
         });
 
         initialiseConnections();
-
         initialiseListeners();
-        alignCharts();
 
         StockQuoteDownloader.initialise(sqdh, avh, stockFeedProgress);
         StockRecordParser.initialise(sqdh);
@@ -913,25 +765,15 @@ public class Controller {
         StockPredictor.initialise(spdh);
         StockPredictor.loadLatestRandomForest();
 
-        Platform.runLater(()-> predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
-
-        autonomyLevelDropdown.getItems().addAll("Manual", "Semi-Autonomy", "Full-Autonomy");
-        autonomyLevelDropdown.getSelectionModel().selectFirst();
-
-        portfolioChart.getXAxis().setVisible(false);
-        portfolioChart.getXAxis().setTickLabelsVisible(false);
-        portfolioChart.getXAxis().setOpacity(0);
-
-        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol FROM indices ORDER BY Symbol ASC");
-        stockDropdown.getItems().addAll(stocks);
-        historicStockDropdown.getItems().addAll(stocks);
-
-        portfolioChart.setAnimated(false);
-
         initialiseStocks();
         initialiseClocks();
         initialiseDisplay();
         startClocks();
+
+        Platform.runLater(()->stockDropdown.getItems().addAll(stocks));
+        Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
+        Platform.runLater(()->autonomyLevelDropdown.getSelectionModel().selectFirst());
+        Platform.runLater(()->historicStockDropdown.getItems().addAll(stocks));
 
         new Thread(() -> {
             try {
@@ -942,60 +784,39 @@ public class Controller {
         }).start();
     }
 
-    private void alignCharts() {
-        historicPriceChart.getYAxis().setMaxWidth(50.); //TODO: Make this variable
-        historicVolumeChart.getYAxis().setMaxWidth(50.);
-        historicPriceChart.getYAxis().setPrefWidth(50.);
-        historicVolumeChart.getYAxis().setPrefWidth(50.);
-        historicPriceChart.getYAxis().setMinWidth(50.);
-        historicVolumeChart.getYAxis().setMinWidth(50.);
-
-        macdChart.getYAxis().setMaxWidth(50.);
-        macdChart.getYAxis().setPrefWidth(50.);
-        macdChart.getYAxis().setMinWidth(50.);
-    }
-
-    private void updateStockValues() {
+    private void updateStockValues() throws SQLException {
         float worth = 0;
-        try {
-            ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM Portfolio WHERE Held > 0;");
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM portfolio WHERE Held > 0;");
 
-            for (String stock : heldStocks) {
-                int volume = getHeldStocks(stock);
-                float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-                worth += volume * currPrice;
-
-
-            }
-            float finalWorth = worth;
-            Platform.runLater(() -> stockValueLabel.setText(String.valueOf(finalWorth)));
-        } catch (SQLException e) {
-            e.printStackTrace();
+        for (String stock : heldStocks) {
+            int volume = getHeldStocks(stock);
+            float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+            worth += volume * currPrice;
         }
+
+        float finalWorth = worth;
+        Platform.runLater(() -> stockValueLabel.setText(String.valueOf(finalWorth)));
     }
 
     private void startClocks() {
         System.out.println("Starting Clocks");
         new Thread(() -> {
-            while (true) {
-                try {
-                    TimeUnit.MILLISECONDS.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            while (!quit) {
+                try {TimeUnit.MILLISECONDS.sleep(1000);} catch (InterruptedException e) {e.printStackTrace();}
                 updateClocks();
             }
         }).start();
     }
 
-    private void updateBankBalance() {
-        try {
-            double balance = Math.floor(100 * Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0))) / 100;
+    private double getBalance() throws SQLException {
+        return Math.floor(100 * Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0))) / 100;
+    }
 
-            Platform.runLater(() -> currentBalanceLabel.setText(String.valueOf(balance)));
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    private void updateBankBalance(){
+            Platform.runLater(() -> {
+                try { currentBalanceLabel.setText(String.valueOf(getBalance())); }
+                catch (SQLException e) { e.printStackTrace(); }
+            });
     }
 
     public void printToInfoBox(String string) {
@@ -1013,25 +834,17 @@ public class Controller {
             stockNames.put(values[0], values[1]);
         }
 
-        for (String curr : stocks) {
-            LiveStockRecord currRec = new LiveStockRecord(curr, stockNames.get(curr), dh);
-            records.add(currRec);
-        }
+        for (String curr : stocks)
+            records.add(new LiveStockRecord(curr, stockNames.get(curr), dh));
 
         for (LiveStockRecord rec : records)
             Platform.runLater(() -> stockList.getChildren().add(rec.getNode()));
     }
 
-    private void updateSystem() throws SQLException, InterruptedException {
+    private void updateSystem() throws SQLException, InterruptedException, ParseException {
         Thread stockThread = new Thread(() -> {
             try {
                 processYahooHistories();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-            try {
-                //        databaseHandler.executeCommand("DELETE FROM dailystockprices WHERE Temporary = 1;");
                 dh.executeCommand("DELETE FROM intradaystockprices WHERE Temporary = 1;");
 
                 StockQuoteDownloader.downloadStockHistory(stocks, true, false, false);
@@ -1047,9 +860,7 @@ public class Controller {
                         break;
                 }
                 */
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { e.printStackTrace(); }
 
         });
 
@@ -1058,55 +869,38 @@ public class Controller {
                 SmoothingUtils.smoothStocks(stocks);
                 TechnicalAnalyser.calculatePercentChanges(stocks);
                 TechnicalAnalyser.calculateTechnicalIndicators(stocks);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { e.printStackTrace(); }
         });
 
         Thread newsThread = new Thread(() -> {
-            nddh.setWriteToFile(true);
             try {
+                nddh.setWriteToFile(true);
                 updateNews();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            nddh.setWriteToFile(false);
-            try {
+                nddh.setWriteToFile(false);
                 nddh.sendSQLFileToDatabase(false);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
 
-            try {
                 NewsAPIHandler.downloadArticles(); //Has to be done individually to check for duplicate values
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
 
-            try {
                 NaturalLanguageProcessor.enumerateSentencesFromArticles();
                 NaturalLanguageProcessor.determineUselessSentences();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+
+            } catch (Exception e) { e.printStackTrace(); }
         });
 
         Thread nlpThread = new Thread(() -> {
             try {
                 NaturalLanguageProcessor.enumerateNGramsFromArticles(2);
-                //NaturalLanguageProcessor.determineUselessNGrams();
                 NaturalLanguageProcessor.processArticlesForSentiment(2);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            } catch (SQLException e) { e.printStackTrace(); }
         });
 
         updateGUI();
         //////////////////////////////////////////////////////////
 
-        calculateLossCutoff(0.1); //TODO: Make this calculation based, based on risk/variance of portfolio
-        calculateTargetCutoff(0.1);
+        double pcutoff = Double.parseDouble(dh.executeQuery("SELECT Value FROM settings WHERE ID = 'PCUTOFF';").get(0));
+        double lcutoff = Double.parseDouble(dh.executeQuery("SELECT Value FROM settings WHERE ID = 'LCUTOFF';").get(0));
+        setProfitCutoff(pcutoff);
+        setLossCutoff(lcutoff);
         checkServices();
 
         newsThread.start();
@@ -1129,16 +923,14 @@ public class Controller {
 
         new Thread(()->{
             boolean[] predictionArray = new boolean[0];
-            double[] predictionDays = new double[]{1,5,20,200};
             try { predictionArray = predictStocks(); } catch (SQLException e) { e.printStackTrace(); }
 
             for(int i = 0; i < stocks.size(); i++) {
-                boolean[] currentPredictions = new boolean[predictionDays.length];
-                for(int j = 0; j < predictionDays.length; j++)
+                boolean[] currentPredictions = new boolean[dayArray.length];
+                for(int j = 0; j < dayArray.length; j++)
                     currentPredictions[j] = predictionArray[i + j * stocks.size()];
 
-                int finalI = i;
-                predictions.add(new PredictionBox(stocks.get(finalI), predictionDays, currentPredictions));
+                predictions.add(new PredictionBox(stocks.get(i), dayArray, currentPredictions));
             }
 
             for(PredictionBox pb : predictions)
@@ -1195,7 +987,7 @@ public class Controller {
         }
     }
 
-    private void processYahooHistories() throws SQLException {
+    private void processYahooHistories() throws SQLException, IOException {
 
         double curr = 0;
         final double t = stocks.size();
@@ -1209,14 +1001,10 @@ public class Controller {
 
                 File file = new File("res/historicstocks/" + symbol + ".csv");
 
-                if (file.exists())
-                    try {
-                        StockRecordParser.importDailyYahooMarketData(file, symbol);
-                        System.out.println("Successfully committed complete Yahoo! records of " + symbol + " to the database!");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                else
+                if (file.exists()) {
+                    StockRecordParser.importDailyYahooMarketData(file, symbol);
+                    System.out.println("Successfully committed complete Yahoo! records of " + symbol + " to the database!");
+                }else
                     System.err.println("No Yahoo history available for " + symbol);
             }
 
@@ -1225,13 +1013,9 @@ public class Controller {
     }
 
     @FXML
-    public void initialiseStocks() {
+    public void initialiseStocks() throws SQLException {
         System.out.println("Initialising stocks");
-        try {
-            stocks = dh.executeQuery("SELECT Symbol FROM indices");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        stocks = dh.executeQuery("SELECT Symbol FROM indices");
     }
 
     private void buyStock(String stock, int amount, boolean automated) throws SQLException {
@@ -1257,31 +1041,26 @@ public class Controller {
         }
     }
 
-    private void updateGUI() {
-            try {
-                updateStocksOwned();
-                updateComponentChart();
-                updateAllocationChart();
-                updateProfitLoss();
-                updateProfitLossChart();
-                updateBankBalance();
-                updateStockValues();
-                updateTotalWorth();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+    private void updateGUI() throws SQLException, ParseException {
+            updateStocksOwned();
+            updateComponentChart();
+            updateAllocationChart();
+            updateProfitLoss();
+            updateProfitLossChart();
+            updateBankBalance();
+            updateStockValues();
+            updateTotalWorth();
     }
 
     private void updateStocksOwned() throws SQLException {
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT Held, Symbol FROM Portfolio");
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Held, Symbol FROM portfolio");
 
         Platform.runLater(() -> stockBox.getChildren().clear());
 
-            for (String stock : heldStocks) {
-                String[] splitStock = stock.split(",");
-                Platform.runLater(() -> stockBox.getChildren().add(new Label(splitStock[0] + '\t' + splitStock[1])));
-            }
+        for (String stock : heldStocks) {
+            String[] splitStock = stock.split(",");
+            Platform.runLater(() -> stockBox.getChildren().add(new Label(splitStock[0] + '\t' + splitStock[1])));
+        }
     }
 
     private void updateClocks() {
@@ -1290,7 +1069,7 @@ public class Controller {
 
     private float getStockWorth() throws SQLException {
         float potentialTotal = 0;
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, Held FROM Portfolio WHERE Held > 0");
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, Held FROM portfolio WHERE Held > 0");
 
         for (String stock : heldStocks) {
             String[] splitStock = stock.split(",");
@@ -1300,14 +1079,13 @@ public class Controller {
         return potentialTotal;
     }
 
-    private float updateProfitLoss() throws SQLException {
-        float investmentCost = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(Investment),0) FROM Portfolio").get(0));
+    private void updateProfitLoss() throws SQLException {
+        float investmentCost = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(Investment),0) FROM portfolio").get(0));
         float potentialTotal = getStockWorth();
-
         float total = potentialTotal - investmentCost;
 
-
         Platform.runLater(() -> profitLossLabel.setText(String.valueOf(Math.round(total * 100.0) / 100.0)));
+
         if (total > 0)
             Platform.runLater(() -> profitLossLabel.setTextFill(Color.GREEN));
         else if (total == 0)
@@ -1315,25 +1093,26 @@ public class Controller {
         else
             Platform.runLater(() -> profitLossLabel.setTextFill(Color.RED));
 
-        return total;
+    }
+
+    private double getTotalWorth() throws SQLException {
+        float bankBalance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
+        float stockWorth = 0;
+
+        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM portfolio WHERE Held > 0;");
+
+        for (String stock : heldStocks) {
+            int volume = getHeldStocks(stock);
+            float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+            stockWorth += volume * currPrice;
+        }
+
+        return stockWorth + bankBalance;
     }
 
     private void updateTotalWorth() throws SQLException {
-            float bankBalance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
-            float stockWorth = 0;
-
-        try {
-            ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM Portfolio WHERE Held > 0;");
-
-            for (String stock : heldStocks) {
-                int volume = getHeldStocks(stock);
-                float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-                stockWorth += volume * currPrice;
-            }
-        }catch(Exception e){}
-
-        float finalStockWorth = stockWorth;
-        Platform.runLater(() -> totalBalanceLabel.setText(String.valueOf(Math.round((bankBalance + finalStockWorth) * 100.0) / 100.0)));
+        double value = getTotalWorth();
+        Platform.runLater(() -> totalBalanceLabel.setText(String.valueOf(Math.round((value) * 100.0) / 100.0)));
     }
 
     public boolean canBuyStock(String stock, int amount) throws SQLException {
@@ -1346,14 +1125,8 @@ public class Controller {
         return (stockCost * amount) <= availableFunds;
     }
 
-    private int getHeldStocks(String stock) {
-        try {
+    private int getHeldStocks(String stock) throws SQLException {
             return Integer.parseInt(dh.executeQuery("SELECT COALESCE(Held,0) FROM Portfolio WHERE Symbol='" + stock + "';").get(0));
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return 0;
     }
 
     private void updateComponentChart() throws SQLException {
@@ -1390,7 +1163,7 @@ public class Controller {
     }
 
     @FXML
-    private void buyStock() throws SQLException {
+    private void buyStock() throws SQLException, ParseException {
         String stock = stockDropdown.getValue();
         int amount = Integer.parseInt(stockAmountField.getText());
 
@@ -1415,7 +1188,7 @@ public class Controller {
     }
 
     @FXML
-    private void sellStock() throws SQLException {
+    private void sellStock() throws SQLException, ParseException {
         String stock = stockDropdown.getValue();
         int amount = Integer.parseInt(stockAmountField.getText());
 
@@ -1428,11 +1201,8 @@ public class Controller {
 
     private void sellStock(String stock, int amount, boolean automated) throws SQLException {
         float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-
         float totalCost = cost * amount;
-
         int available = getHeldStocks(stock);
-
         int auto = 0;
 
         if (automated)
@@ -1453,30 +1223,22 @@ public class Controller {
         }
     }
 
-    private void updateNews() throws SQLException, InterruptedException {
+    private void updateNews() throws SQLException, InterruptedException, IOException {
         if (newsUpdating) return;
         newsUpdating = true;
 
-        try {
-            NewsAPIHandler.getHistoricNews(stocks);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        NewsAPIHandler.getHistoricNews(stocks);
 
         Platform.runLater(() -> newsBox.getChildren().clear());
 
-            ArrayList<String> results = null;
-            try {
-                results = nddh.executeQuery("SELECT DISTINCT Symbol, Headline, Published FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        ArrayList<String> results = null;
+            results = nddh.executeQuery("SELECT DISTINCT Symbol, Headline, Published FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
 
-            for (String result : results) {
-                String[] splitString = result.split(",");
-                NewsRecord temp = new NewsRecord(splitString[0], splitString[1]);
-                Platform.runLater(() -> newsBox.getChildren().add(temp.getNode()));
-            }
+        for (String result : results) {
+            String[] splitString = result.split(",");
+            NewsRecord temp = new NewsRecord(splitString[0], splitString[1]);
+            Platform.runLater(() -> newsBox.getChildren().add(temp.getNode()));
+        }
 
         newsUpdating = false;
     }
@@ -1486,7 +1248,6 @@ public class Controller {
         priceUpdating = true;
         ArrayList<Thread> threads = new ArrayList<>();
         for (LiveStockRecord curr : records) {
-            //try { TimeUnit.SECONDS.sleep(1); } catch (Exception e) { e.printStackTrace(); }
             Thread downloadThread = new Thread(() -> {
                 curr.setUpdating(true);
                 ArrayList<String> temp = null;
@@ -1507,6 +1268,8 @@ public class Controller {
                 }
                 curr.setUpdating(false);
             });
+
+            threads.add(downloadThread);
             downloadThread.start();
         }
 
@@ -1551,6 +1314,8 @@ public class Controller {
                 }
                 curr.setUpdating(false);
             });
+
+            threads.add(downloadThread);
             downloadThread.start();
         }
 
@@ -1568,9 +1333,8 @@ public class Controller {
         priceUpdating = false;
     }
 
-    private void updateBatchStockData() throws SQLException {
+    private void updateBatchStockData() throws SQLException, ParseException, IOException {
         ArrayList<String> temp = null;
-        try {
             switch (useAPI) {
                 case AlphaVantage:
                     temp = StockQuoteDownloader.downloadBatchStockData(stocks);
@@ -1579,14 +1343,10 @@ public class Controller {
                     temp = bch.downloadQuotes(stocks);
                     break;
             }
-        } catch (Exception e) {
-        }
-
 
         int i = 0;
 
         for (LiveStockRecord curr : records) {
-            //if(Integer.parseInt(dh.executeQuery("SELECT Max(TradeDate) = CURRENT_DATE FROM dailystockprices WHERE Symbol='" + curr.symbol + "';").get(0)) == 1) {
             String record = temp.get(i++);
             String[] splitString = record.split(",");
             record = record.replace(splitString[0] + ",", "");
@@ -1603,8 +1363,8 @@ public class Controller {
                 } else
                     System.err.println("Batch download mismatch");
             }
-//           }
         }
+
         updateGUI();
     }
 

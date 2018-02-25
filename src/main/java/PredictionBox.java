@@ -5,23 +5,20 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
-public class PredictionBox {
-    String symbol;
-    Label predictionSymbol = new Label();
-    HBox predictions = new HBox();
-    Label[] predictionLabels;
+class PredictionBox {
+    private final HBox predictions = new HBox();
 
-    PredictionBox(String stock, double[] days, boolean[] predictionValues){
-        symbol = stock;
+    PredictionBox(String stock, int[] days, boolean[] predictionValues){
         predictions.setMinSize(610,20);
         predictions.setPrefSize(610,20);
         predictions.setMaxSize(610,20);
 
+        Label predictionSymbol = new Label();
         predictionSymbol.setFont(Font.font(null, FontWeight.BOLD, 14));
         predictionSymbol.setMinSize(80,20);
 
-        predictionSymbol.setText(symbol);
-        predictionLabels = new Label[days.length];
+        predictionSymbol.setText(stock);
+        Label[] predictionLabels = new Label[days.length];
 
         for(int i = 0; i < days.length; i++){
             predictionLabels[i] = new Label();

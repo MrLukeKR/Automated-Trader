@@ -18,27 +18,25 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 
-public class LiveStockRecord {
-    String name;
-    String symbol;
-    String date;
+class LiveStockRecord {
+    final String symbol;
+    private String date;
 
-    VBox newStock = new VBox();
-    HBox hStock = new HBox();
-    Label stockSymbol = new Label();
-    Label stockPrice = new Label();
-    Label stockChange = new Label();
-    Label prevClosePrice = new Label();
-    XYChart.Series<Number, Number> stockData = new XYChart.Series<>();
-    NumberAxis xAxis = new NumberAxis(0,0,1), yAxis = new NumberAxis();
-    LineChart stockChart = new LineChart(xAxis, yAxis);
-    ProgressIndicator progress = new ProgressIndicator();
+    private final HBox hStock = new HBox();
+    private final Label stockPrice = new Label();
+    private final Label stockChange = new Label();
+    private final Label prevClosePrice = new Label();
+    private final XYChart.Series<Number, Number> stockData = new XYChart.Series<>();
+    private final NumberAxis xAxis = new NumberAxis(0,0,1);
+    private final NumberAxis yAxis = new NumberAxis();
+    private final LineChart stockChart = new LineChart<>(xAxis, yAxis);
+    private final ProgressIndicator progress = new ProgressIndicator();
 
     public LiveStockRecord(String symbol, String stockName, DatabaseHandler dh) {
-        name = stockName;
         this.symbol = symbol;
         Label stockNameLabel = new Label(stockName);
         VBox newStockStats = new VBox();
+        Label stockSymbol = new Label();
         stockSymbol.setText(symbol);
 
         stockChart.setVisible(false);
@@ -60,6 +58,7 @@ public class LiveStockRecord {
         progress.setMaxSize(75,75);
         progress.setVisible(false);
 
+        VBox newStock = new VBox();
         newStock.setMinSize(125,50);
         newStock.setPrefSize(125,50);
         newStock.setMaxSize(125,50);
@@ -187,7 +186,7 @@ public class LiveStockRecord {
 
             for(int time = 0; time < statistics.size(); time++){
                 float price = Float.parseFloat(statistics.get(time));
-                XYChart.Data<Number, Number> point = new XYChart.Data(time-statistics.size()+1, price);
+                XYChart.Data<Number, Number> point = new XYChart.Data<>(time-statistics.size()+1, price);
                 Rectangle rect = new Rectangle(0,0);
                 rect.setVisible(false);
                 point.setNode(rect);

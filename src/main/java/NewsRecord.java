@@ -7,15 +7,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
-public class NewsRecord {
-    String symbol;
-    HBox newsArticle = new HBox();
-    Label stockSymbol;
-    Text newsHeadline = new Text();
+class NewsRecord {
+    private final HBox newsArticle = new HBox();
 
     public NewsRecord(String symbol, String headline){ //TODO: Add date to the info box
-        this.symbol = symbol;
-        stockSymbol = new Label(symbol);
+        Label stockSymbol = new Label(symbol);
+        Text newsHeadline = new Text();
         newsHeadline.setText(headline);
         newsHeadline.maxWidth(325);
         newsHeadline.setWrappingWidth(325);

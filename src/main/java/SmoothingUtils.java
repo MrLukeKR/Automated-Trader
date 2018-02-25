@@ -3,12 +3,13 @@ import javafx.scene.control.ProgressBar;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.TreeMap;
 
-public class SmoothingUtils {
-    static DatabaseHandler dh;
-    static ProgressBar pb;
-    static final double ALPHA = 0.1;
+class SmoothingUtils {
+    private static DatabaseHandler dh;
+    private static ProgressBar pb;
+    private static final double ALPHA = 0.1;
 
     static public void initialise(DatabaseHandler sudh, ProgressBar supb){
         dh = sudh;
@@ -24,11 +25,10 @@ public class SmoothingUtils {
         return error / closePrices.size();
     }
 
-    static public TreeMap<Date, Double> exponentialSmooth(TreeMap<Date, Double> closePrices, double alpha){
+    private static TreeMap<Date, Double> exponentialSmooth(TreeMap<Date, Double> closePrices, double alpha){
         TreeMap<Date, Double> smoothedPrices = new TreeMap<>();
         double[] forecasts = new double[closePrices.size()];
-        ArrayList<Date> dates = new ArrayList<>();
-        dates.addAll(closePrices.keySet());
+        ArrayList<Date> dates = new ArrayList<>(closePrices.keySet());
 
         forecasts[0] = 0;
         forecasts[1] = closePrices.get(dates.get(0));
@@ -80,7 +80,7 @@ public class SmoothingUtils {
             dateFrom = Date.valueOf(result.get(0));
 
         for (Date key : records.keySet())
-            if (result.isEmpty() || key.after(dateFrom) || key.equals(dateFrom))
+            if (result.isEmpty() || key.after(Objects.requireNonNull(dateFrom)) || key.equals(dateFrom))
                 dh.addBatchCommand("UPDATE dailystockprices SET SmoothedClosePrice =" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "' AND (SmoothedClosePrice is null OR SmoothedClosePrice !='" + records.get(key) + "');");
     }
 

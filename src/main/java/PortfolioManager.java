@@ -1,5 +1,6 @@
-import GeneticAlgorithm.EvaluationFunction;
-import GeneticAlgorithm.GAOptimiser;
+import AIOptimisation.EvaluationFunction;
+import AIOptimisation.GAOptimiser;
+import AIOptimisation.SAOptimiser;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -77,7 +78,7 @@ class PortfolioManager {
         return covarianceMatrix;
     }
 
-    static public Map<String, Double> optimisePortfolio() throws SQLException {
+    static public Map<String, Double> optimisePortfolio(OptimisationMethod method) throws SQLException {
         int timeFrame = 5; //The last n days to consider (A shorter value can be susceptible to noise, but longer values are susceptible to long-term trend bias)
         int holdPeriod = 1; //Amount of days you want to hold this portfolio
 
@@ -94,13 +95,21 @@ class PortfolioManager {
         }
 
         double[][] covarianceMatrix = calculateCovarianceMatrix(returns);
+        double[] best = null;
 
-        GAOptimiser ga = new GAOptimiser();
+        switch(method) {
+            case GENETIC_ALGORITHM:
+            GAOptimiser ga = new GAOptimiser();
 
-        ga.initialise(stocks.size(), 1000, 200, expectedReturns, covarianceMatrix);
-        ga.run();
+            ga.initialise(stocks.size(), 1000, 200, expectedReturns, covarianceMatrix);
+            ga.run();
 
-        double[] best = ga.getBest();
+            best = ga.getBest();
+            break;
+            case SIMULATED_ANNEALING:
+            best = SAOptimiser.optimise(stocks.size(), 1, 0.0001, 0.99, 1000, expectedReturns, covarianceMatrix);
+            break;
+        }
 
         Map<String, Double> portfolio = new HashMap<>();
 
@@ -129,4 +138,6 @@ class PortfolioManager {
 
         return portfolio;
     }
+
+    public enum OptimisationMethod {SIMULATED_ANNEALING, GENETIC_ALGORITHM}
 }

@@ -4,34 +4,33 @@ import java.sql.SQLException;
 import java.text.BreakIterator;
 import java.util.*;
 
-public class NaturalLanguageProcessor {
+class NaturalLanguageProcessor {
 
-    static DatabaseHandler dh;
-    static ProgressBar pb;
+    private static DatabaseHandler dh;
+    private static ProgressBar pb;
 
-    static private Set<String> STOP_WORDS = new HashSet<>();
-    static private Set<String> USELESS_SENTENCES = new HashSet<>();
+    static private final Set<String> STOP_WORDS = new HashSet<>();
+    static private final Set<String> USELESS_SENTENCES = new HashSet<>();
 
-    static public void initialise(DatabaseHandler dbh, ProgressBar nlpProgress) {
+    static public void initialise(DatabaseHandler dbh, ProgressBar nlpProgress) throws SQLException {
         dh = dbh;
         pb = nlpProgress;
 
-        /*
-        ArrayList<String> stopWords = dh.executeQuery("SELECT Gram FROM ngrams WHERE Blacklisted = 1");
+
         ArrayList<String> stopWords = dh.executeQuery("SELECT Gram FROM ngrams WHERE Blacklisted = 1");
 
         if (STOP_WORDS.isEmpty())
             for (String word : stopWords)
                 if (!word.isEmpty())
                     STOP_WORDS.add(word);
-         */
+
 
         System.out.println("Initialised Natural Language Processor");
     }
 
-    static public ArrayList<String> splitToSentences(String document, Locale languageLocale) {
+    private static ArrayList<String> splitToSentences(String document) {
         //https://stackoverflow.com/questions/2687012/split-string-into-sentences
-        BreakIterator it = BreakIterator.getSentenceInstance(languageLocale);
+        BreakIterator it = BreakIterator.getSentenceInstance(Locale.US);
         it.setText(document);
 
         int start = it.first();
@@ -44,44 +43,43 @@ public class NaturalLanguageProcessor {
         return sentenceList;
     }
 
-    static public String removeStopWords(String sentence) {
+    private static String removeStopWords(String sentence) {
         ArrayList<String> words = new ArrayList<>(Arrays.asList(sentence.split(" ")));
 
-        String cleanSentence = "";
+        StringBuilder cleanSentence = new StringBuilder();
 
         int i = 1;
         for (String word : words) {
             if (!STOP_WORDS.contains(word)) {
-                cleanSentence += word;
-                if (i++ < words.size()) cleanSentence += " ";
+                cleanSentence.append(word);
+                if (i++ < words.size()) cleanSentence.append(" ");
             }
         }
 
-        return cleanSentence;
+        return cleanSentence.toString();
     }
 
-    static public String cleanDocument(String document) {
-        ArrayList<String> sentences = splitToSentences(document, Locale.US);
+    private static String cleanDocument(String document) {
+        ArrayList<String> sentences = splitToSentences(document);
 
-        String cleanDocument = "";
+        StringBuilder cleanDocument = new StringBuilder();
 
         int i = 1;
         for (String sentence : sentences) {
-            if (!USELESS_SENTENCES.contains(cleanSentence(sentence, false))) {
-                cleanDocument += sentence;
-                if (i++ < sentences.size()) cleanDocument += " ";
+            if (!USELESS_SENTENCES.contains(cleanSentence(sentence))) {
+                cleanDocument.append(sentence);
+                if (i++ < sentences.size()) cleanDocument.append(" ");
             }
         }
 
-        return cleanDocument;
+        return cleanDocument.toString();
     }
 
-    static public String cleanSentence(String sentence, boolean removeBlacklistedWords) {
+    private static String cleanSentence(String sentence) {
         sentence = sentence.toUpperCase();                                                          //Convert to Upper Case
         sentence = sentence.replaceAll("[^a-zA-Z\\s]", "");                       //Remove non-alphabetic characters
         sentence = sentence.replaceAll("NOT ", "!");                               //Perform logic conversions
-        if (removeBlacklistedWords)
-            sentence = removeStopWords(sentence);                                                   //Remove blacklisted terms
+        sentence = removeStopWords(sentence);                                                   //Remove blacklisted terms
         sentence = sentence.replaceAll("\\s\\s+", " ");                           //Trim multi-spaces
 
         if (sentence.isEmpty())
@@ -105,11 +103,11 @@ public class NaturalLanguageProcessor {
         for (String unprocessedID : unprocessedIDs) {
             String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
             if (unprocessed != null) {
-                ArrayList<String> sentences = splitToSentences(unprocessed, Locale.US);
+                ArrayList<String> sentences = splitToSentences(unprocessed);
                 ArrayList<String> cSentences = new ArrayList<>();
 
                 for (String sentence : sentences) {
-                    String cSentence = cleanSentence(sentence, false);
+                    String cSentence = cleanSentence(sentence);
                     if (cSentence != null)
                         cSentences.add(cSentence);
                 }
@@ -151,7 +149,7 @@ public class NaturalLanguageProcessor {
     }
 
     static public void determineUselessSentences() throws SQLException {
-        dh.executeCommand("UPDATE Sentences SET Blacklisted = 1 WHERE Occurrences > 5;");
+        dh.executeCommand("UPDATE sentences SET Blacklisted = 1 WHERE Occurrences > 5;");
 
         ArrayList<String> uselessSentences = dh.executeQuery("SELECT Sentence FROM sentences WHERE Blacklisted = 1");
 
@@ -167,7 +165,7 @@ public class NaturalLanguageProcessor {
         //TODO: Remove useless Ngrams
     }
 
-    static public double getPriceChangeOnDate(String symbol, String date) throws SQLException {
+    private static double getPriceChangeOnDate(String symbol, String date) throws SQLException {
         String truncDate = date.split(" ")[0];
         double priceOnDate = 0, priceOnPrev = 0;
 
@@ -198,15 +196,15 @@ public class NaturalLanguageProcessor {
         for (String unprocessedID : unprocessedIDs) {
             String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
             if (unprocessed != null) {
-                ArrayList<String> sentences = splitToSentences(cleanDocument(unprocessed), Locale.US);
+                ArrayList<String> sentences = splitToSentences(cleanDocument(unprocessed));
                 ArrayList<String> ngrams = new ArrayList<>();
 
                 for (String sentence : sentences) {
-                    String cSentence = cleanSentence(sentence, false);
+                    String cSentence = cleanSentence(sentence);
                     if (cSentence != null)
                         for (int i = 1; i <= n; i++)
                             if (cSentence.split(" ").length >= n)
-                                ngrams.addAll(splitToNGrams(cSentence, Locale.US, i));
+                                ngrams.addAll(Objects.requireNonNull(splitToNGrams(cSentence, Locale.US, i)));
                 }
 
                 sentences.clear();
@@ -276,28 +274,28 @@ public class NaturalLanguageProcessor {
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
 
-        String command = "INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES ";
+        StringBuilder command = new StringBuilder("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES ");
         for (String key : temporaryDatabase.keySet()) {
             if (i % INSERT_SIZE == INSERT_SIZE - 1) {
-                command += " ON DUPLICATE KEY UPDATE Documents = Documents + VALUES(Documents), Occurrences = Occurrences + VALUES(Occurrences), Increase = Increase + VALUES(Increase), Decrease = Decrease + VALUES(Decrease)";
-                dh.addBatchCommand(command);
+                command.append(" ON DUPLICATE KEY UPDATE Documents = Documents + VALUES(Documents), Occurrences = Occurrences + VALUES(Occurrences), Increase = Increase + VALUES(Increase), Decrease = Decrease + VALUES(Decrease)");
+                dh.addBatchCommand(command.toString());
                 i++;
-                command = "INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES ";
+                command = new StringBuilder("INSERT INTO ngrams(Hash, Gram, n, Documents, Occurrences, Increase, Decrease) VALUES ");
             }
 
             if (i % INSERT_SIZE != 0)
-                command += ",";
+                command.append(",");
 
             i++;
 
             Double[] values = temporaryDatabase.get(key);
 
-            command += "(MD5('" + key + "'), '" + key + "'," + key.split(" ").length + "," + values[0] + "," + values[1] + "," + values[2] + "," + values[3] + ")";
+            command.append("(MD5('").append(key).append("'), '").append(key).append("',").append(key.split(" ").length).append(",").append(values[0]).append(",").append(values[1]).append(",").append(values[2]).append(",").append(values[3]).append(")");
         }
 
-        command += " ON DUPLICATE KEY UPDATE Documents = Documents + VALUES(Documents), Occurrences = Occurrences + VALUES(Occurrences), Increase = Increase + VALUES(Increase), Decrease = Decrease + VALUES(Decrease)";
+        command.append(" ON DUPLICATE KEY UPDATE Documents = Documents + VALUES(Documents), Occurrences = Occurrences + VALUES(Occurrences), Increase = Increase + VALUES(Increase), Decrease = Decrease + VALUES(Decrease)");
 
-        dh.addBatchCommand(command);
+        dh.addBatchCommand(command.toString());
         dh.executeBatch();
         dh.setAutoCommit(true);
     }
@@ -305,30 +303,29 @@ public class NaturalLanguageProcessor {
     static public ArrayList<String> splitToNGrams(ArrayList<String> cleanedSentences, Locale languageLocale, int n) {
         ArrayList<String> ngrams = new ArrayList<>();
         for (String cleanedSentence : cleanedSentences)
-            ngrams.addAll(splitToNGrams(cleanedSentence, languageLocale, n));
+            ngrams.addAll(Objects.requireNonNull(splitToNGrams(cleanedSentence, languageLocale, n)));
 
         return ngrams;
     }
 
-    static public ArrayList<String> splitToNGrams(String cleanedSentence, Locale languageLocale, int n) {
+    private static ArrayList<String> splitToNGrams(String cleanedSentence, Locale languageLocale, int n) {
         ArrayList<String> wordList = splitToWords(cleanedSentence);
         ArrayList<String> ngrams = new ArrayList<>();
 
         if (wordList.size() < n) return null;
 
         for (int i = 0, j = n - 1; j < wordList.size(); i++, j++) {
-            String phrase = wordList.get(i);
+            StringBuilder phrase = new StringBuilder(wordList.get(i));
             for (int x = i + 1; x <= j; x++)
-                phrase += " " + wordList.get(x);
+                phrase.append(" ").append(wordList.get(x));
 
-            phrase.replaceAll("[^a-zA-Z\\s]", "");
-            ngrams.add(phrase);
+            ngrams.add(phrase.toString().replaceAll("[^a-zA-Z\\s]", ""));
         }
 
         return ngrams;
     }
 
-    static public ArrayList<String> splitToWords(String document) {
+    private static ArrayList<String> splitToWords(String document) {
         return new ArrayList<>(Arrays.asList(document.split(" ")));
     }
 
@@ -419,21 +416,21 @@ public class NaturalLanguageProcessor {
             return Double.parseDouble(result.get(0));
     }
 
-    static public double evaluateArticleSentiment(int articleID, int ngramSize) throws SQLException {
+    private static double evaluateArticleSentiment(int articleID, int ngramSize) throws SQLException {
         String article = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + articleID + ";").get(0);
 
         double sentiment = 0.5;
 
         if (article != null) {
-            ArrayList<String> sentences = splitToSentences(cleanDocument(article), Locale.US);
+            ArrayList<String> sentences = splitToSentences(cleanDocument(article));
             ArrayList<String> ngrams = new ArrayList<>();
 
             for (String sentence : sentences) {
-                String cSentence = cleanSentence(sentence, false);
+                String cSentence = cleanSentence(sentence);
                 if (cSentence != null)
                     for (int i = 1; i <= ngramSize; i++)
                         if (cSentence.split(" ").length >= ngramSize)
-                            ngrams.addAll(splitToNGrams(cSentence, Locale.US, i));
+                            ngrams.addAll(Objects.requireNonNull(splitToNGrams(cSentence, Locale.US, i)));
             }
 
             sentences.clear();
@@ -446,7 +443,7 @@ public class NaturalLanguageProcessor {
         return sentiment;
     }
 
-    static public double calculateSentiment(ArrayList<String> wordList) throws SQLException {
+    private static double calculateSentiment(ArrayList<String> wordList) throws SQLException {
         double totalSentiment = 0;
 
         if (wordList.isEmpty())

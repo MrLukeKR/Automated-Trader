@@ -10,15 +10,12 @@ import org.jsoup.select.Elements;
 import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-public class NewsAPIHandler {
-    static final String INTRINIO_API_CALL = "https://api.intrinio.com/news?ticker=";
-    static final String INTRINIO_CSV_CALL = "https://api.intrinio.com/news.csv?page_size=10000&ticker=";
+class NewsAPIHandler {
+    private static final String INTRINIO_API_CALL = "https://api.intrinio.com/news?ticker=";
+    private static final String INTRINIO_CSV_CALL = "https://api.intrinio.com/news.csv?page_size=10000&ticker=";
     static private String INTRINIO_USERNAME;
     static private String INTRINIO_PASSWORD;
     static private final int PAGES = 0, ARTICLES = 1, PAGE_SIZE = 10000; //Indices for accessing JSON metadata
@@ -38,8 +35,8 @@ public class NewsAPIHandler {
         });
     }
 
-    static public void getHistoricNews(String stock) throws IOException, SQLException, InterruptedException {
-        if (isOverLimit()) return;
+    private static void getHistoricNews(String stock) throws IOException, SQLException, InterruptedException {
+        if (isOverLimit(0)) return;
 
         int values[] = getCSVMetaData(stock);
 
@@ -75,28 +72,22 @@ public class NewsAPIHandler {
         System.out.println("Initialised News API Handler");
     }
 
-    static public int getCurrentCalls() throws SQLException {
+    private static int getCurrentCalls() throws SQLException {
         ArrayList<String> sCalls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Date = CURDATE() AND Name='INTRINIO';");
 
-        int calls = 0;
-
         if(!sCalls.isEmpty())
-            calls = Integer.parseInt(sCalls.get(0));
+            return Integer.parseInt(sCalls.get(0));
 
-        return calls;
+        return 0;
     }
 
-    static public boolean isOverLimit(int callsToPerform) throws SQLException {
+    private static boolean isOverLimit(int callsToPerform) throws SQLException {
         int limit = Integer.parseInt(dh.executeQuery("SELECT DailyLimit FROM apimanagement WHERE Name='INTRINIO';").get(0));
 
-        return (callsToPerform + getCurrentCalls()) == limit;
+        return (callsToPerform + getCurrentCalls()) > limit;
     }
 
-    static public boolean isOverLimit() throws SQLException {
-        return isOverLimit(0);
-    }
-
-    static public int[] getCSVMetaData(String stock) throws IOException, SQLException, InterruptedException {
+    private static int[] getCSVMetaData(String stock) throws IOException, SQLException, InterruptedException {
         URL url = new URL(INTRINIO_CSV_CALL + stock);
 
         TimeUnit.MILLISECONDS.sleep(1000); // To prevent blocking
@@ -132,12 +123,10 @@ public class NewsAPIHandler {
         int pages = Integer.parseInt(splitString[3].split(":")[1].trim());
         int articles = Integer.parseInt(splitString[0].split(":")[1].trim());
 
-        int[] values = {pages,articles};
-
-        return values;
+        return new int[]{pages,articles};
     }
 
-    static public int getCSVNews(String stock, int page, int missingArticles) throws IOException, SQLException, InterruptedException {
+    private static int getCSVNews(String stock, int page, int missingArticles) throws IOException, SQLException, InterruptedException {
         System.out.println("Getting headlines for " + stock + " (Page " + page + ")");
         URL url = new URL(INTRINIO_CSV_CALL + stock + "&page_number=" + page);
 
@@ -165,8 +154,7 @@ public class NewsAPIHandler {
         BufferedReader br = new BufferedReader(isr);
         String curr;
 
-        ArrayList<String> newsArray = new ArrayList<String>();
-        ArrayList<String> corrupted = new ArrayList<>();
+        ArrayList<String> newsArray = new ArrayList<>();
 
         System.out.println("Downloading & Reading '" + stock + "' PAGE " + page + " news file...");
 
@@ -181,7 +169,7 @@ public class NewsAPIHandler {
         System.out.println("Sorting '" + stock + "' PAGE " + page + " news file into chronological order...");
 
         //Preprocess news data to remove corrupted entries
-        Set<String> newsSet = new LinkedHashSet(); //Linked hashset retains insertion order and removes duplicates
+        Set<String> newsSet = new LinkedHashSet<>(); //Linked hashset retains insertion order and removes duplicates
 
         System.out.println("Cleaning '" + stock + "' PAGE " + page + " news file...");
 
@@ -192,10 +180,12 @@ public class NewsAPIHandler {
                 news = splitString[0].replace(",", "") + "," + splitString[1].replace(",", "") + "," + splitString[2] + ",";
                 ///////////////// START CLEANING:
                 int i = 3;
-                String headline = "", date, link;
+                StringBuilder headline = new StringBuilder();
+                String date;
+                String link;
 
                 while (i < splitString.length && !(splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}\\s.\\d{4}") || splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}"))) {
-                    headline += splitString[i++].replace(",", "");
+                    headline.append(splitString[i++].replace(",", ""));
                 }
 
                 if (i < splitString.length) {
@@ -203,8 +193,10 @@ public class NewsAPIHandler {
                     link = splitString[i++];
                     news += headline + "," + date + "," + link + ",";
 
+                    StringBuilder newsBuilder = new StringBuilder(news);
                     for (; i < splitString.length; i++)
-                        news += splitString[i];
+                        newsBuilder.append(splitString[i]);
+                    news = newsBuilder.toString();
                 }
 
                 ///////////END CLEANING
@@ -219,8 +211,7 @@ public class NewsAPIHandler {
                 if (!(news.split(",")[4].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}\\s.\\d{4}") || news.split(",")[4].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}")))
                     System.err.println("NO DATE FOUND IN: " + news);
                 newsSet.add(news);
-            } else
-                corrupted.add(news);
+            }
         }
 
         newsArray.clear();
@@ -254,10 +245,8 @@ public class NewsAPIHandler {
 
                 command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL,Duplicate) VALUES (" + data + ", (SELECT COALESCE((SELECT * FROM (SELECT 1 FROM newsarticles WHERE Symbol='" + stock + "' AND (Headline='" + title + "' OR URL='" + link + "') LIMIT 1) as t),0)));";
 
-                try {
-                    dh.addBatchCommand(command);
-                } catch (Exception e) {
-                }
+
+                dh.addBatchCommand(command);
 
                 missingArticles--;
                 downloaded++;
@@ -297,13 +286,12 @@ public class NewsAPIHandler {
             while (site == null)
                 try {
                     site = NewsAPIHandler.downloadArticle(splitArticle[1]);
-                    break;
                 } catch (FileNotFoundException e) {
                     System.err.println("Article is no longer available!");
                     break;
                 } catch (MalformedURLException e) {
                     System.err.println(e.getMessage());
-                    if (splitArticle[1].substring(0, 3) != "http")
+                    if (!Objects.equals(splitArticle[1].substring(0, 3), "http"))
                         splitArticle[1] = "http://" + splitArticle[1];
                 } catch (ConnectException e) {
                     System.err.println("Connection error (Timed Out)");
@@ -315,7 +303,7 @@ public class NewsAPIHandler {
 
                 try {
                     if (site != null)
-                        if (site == "redirect")
+                        if (Objects.equals(site, "redirect"))
                             dh.executeCommand("UPDATE newsarticles SET Redirected = 1 WHERE ID = " + id + ";");
                         else
                             dh.executeCommand("UPDATE newsarticles SET Content='" + site + "' WHERE ID = " + id + ";");
@@ -335,7 +323,7 @@ public class NewsAPIHandler {
         Controller.updateProgress(0, pb);
     }
 
-    static public String downloadArticle(String url) throws IOException {
+    private static String downloadArticle(String url) throws IOException {
         URL site = new URL(url);
         HttpURLConnection.setFollowRedirects(true);
         HttpURLConnection conn = (HttpURLConnection) site.openConnection(); //Written by https://stackoverflow.com/questions/15057329/how-to-get-redirected-url-and-content-using-httpurlconnection
@@ -355,7 +343,7 @@ public class NewsAPIHandler {
         conn.disconnect();
         br.close();
 
-        String strippedHTML = "";
+        StringBuilder strippedHTML = new StringBuilder();
 
         try {
             Document doc = Jsoup.parse(html.toString());
@@ -364,17 +352,17 @@ public class NewsAPIHandler {
 
             int i = 0;
             for (Element el : p) {
-                strippedHTML += el.text();
-                if (i++ < p.size()) strippedHTML += " ";
+                strippedHTML.append(el.text());
+                if (i++ < p.size()) strippedHTML.append(" ");
             }
 
-            if (html.toString().toLowerCase() == "redirect")
+            if (Objects.equals(html.toString().toLowerCase(), "redirect"))
                 return "redirect";
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        String cleanHTML = Jsoup.clean(strippedHTML, Whitelist.basic()).replaceAll("'", "").trim();
+        String cleanHTML = Jsoup.clean(strippedHTML.toString(), Whitelist.basic()).replaceAll("'", "").trim();
 
         if (cleanHTML.isEmpty())
             return null;

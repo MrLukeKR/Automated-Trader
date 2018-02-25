@@ -23,22 +23,21 @@ public class StockQuoteDownloader {
 
         ArrayList<String> results = new ArrayList<>();
 
-        String url = "https://www.alphavantage.co/query?function=BATCH_STOCK_QUOTES",
-                symbol = "&symbols=",
-                apiKey = "&apikey=" + alphaVantageHandler.getApiKey(),
-                time = "";
+        String url = "https://www.alphavantage.co/query?function=BATCH_STOCK_QUOTES";StringBuilder symbol = new StringBuilder("&symbols=");
+        String apiKey = "&apikey=" + alphaVantageHandler.getApiKey();
+        String time = "";
 
         int amount = 0;
 
         for(int i = 0; i < stocks.size(); i++){
-            symbol+= stocks.get(i);
+            symbol.append(stocks.get(i));
             if(amount++ == 99) {
                 results.addAll(alphaVantageHandler.submitRequest(url + symbol + time + apiKey + "&datatype=csv"));
-                symbol = "&symbols=";
+                symbol = new StringBuilder("&symbols=");
                 amount = 0;
             }
             else if(i < stocks.size() - 1)
-                symbol+=",";
+                symbol.append(",");
         }
 
         results.addAll(alphaVantageHandler.submitRequest(url + symbol + time + apiKey + "&datatype=csv"));
@@ -52,7 +51,7 @@ public class StockQuoteDownloader {
         return cleanedResults;
     }
 
-    static public ArrayList<String> downloadStockData(String stock, Interval interval, OutputSize outputSize) throws IOException, InterruptedException, SQLException {
+    static public ArrayList<String> downloadStockData(String stock, Interval interval, OutputSize outputSize) throws IOException {
         if (databaseHandler == null || alphaVantageHandler == null) return null;
 
         String url = "https://www.alphavantage.co/query?",
@@ -84,7 +83,7 @@ public class StockQuoteDownloader {
         return alphaVantageHandler.submitRequest(url + dataType + symbol + time + size  + apiKey + "&datatype=csv");
     }
 
-    static public boolean isOutOfDate(String stock, Interval interval) throws SQLException {
+    private static boolean isOutOfDate(String stock, Interval interval) throws SQLException {
         switch (interval) {
             case DAILY:
                 return Integer.parseInt(databaseHandler.executeQuery("SELECT COUNT(*) FROM dailystockprices WHERE Symbol = '" + stock + "' AND TradeDate >= SUBDATE(CURDATE(), 100)").get(0)) == 0;
@@ -94,7 +93,7 @@ public class StockQuoteDownloader {
         return true;
     }
 
-    static public void downloadStockHistory(ArrayList<String> stocks, Boolean downloadDaily, Boolean downloadIntraday, Boolean forceCompact) throws SQLException, InterruptedException {
+    static public void downloadStockHistory(ArrayList<String> stocks, Boolean downloadDaily, Boolean downloadIntraday, Boolean forceCompact) throws InterruptedException {
         int t = stocks.size() - 1;
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockProgressBar);
 

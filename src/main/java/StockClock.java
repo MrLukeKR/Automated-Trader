@@ -13,15 +13,14 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 
-public class StockClock {
-    VBox node = new VBox();
-    Label clockName = new Label();
-    Label clockTime = new Label();
-    Label status = new Label();
-    LocalTime tradeStart;
-    LocalTime tradeEnd;
-    LocalTime currTime;
-    ZoneId zone;
+class StockClock {
+    private final VBox node = new VBox();
+    private final Label clockTime = new Label();
+    private final Label status = new Label();
+    private final LocalTime tradeStart;
+    private final LocalTime tradeEnd;
+    private LocalTime currTime;
+    private final ZoneId zone;
 
     public StockClock(String name, LocalTime marketStart, LocalTime marketEnd, ZoneId zone){
         node.setAlignment(Pos.CENTER);
@@ -32,6 +31,7 @@ public class StockClock {
         tradeStart = marketStart;
         tradeEnd = marketEnd;
 
+        Label clockName = new Label();
         clockName.setText(name);
         clockName.setFont(Font.font(null, FontWeight.BOLD, 16));
 
@@ -45,7 +45,7 @@ public class StockClock {
 
         updateTime();
 
-        node.getChildren().add(this.clockName);
+        node.getChildren().add(clockName);
         node.getChildren().add(clockTime);
         node.getChildren().add(status);
     }

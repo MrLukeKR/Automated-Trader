@@ -10,18 +10,33 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class BarChartHandler {
+class BarChartHandler {
     private String apiKey;
 
     private final int CALL_LIMIT = 1;
-    DatabaseHandler dh;
-    ProgressBar pb;
-    static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
+    private DatabaseHandler dh;
+    private ProgressBar pb;
+    private static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
 
     public void init(String apiKey, DatabaseHandler bcdh, ProgressBar bcpb){
         this.apiKey = apiKey;
         dh = bcdh;
         pb = bcpb;
+    }
+
+    private int getCurrentCalls() throws SQLException {
+        ArrayList<String> sCalls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Date = CURDATE() AND Name='INTRINIO';");
+
+        if(!sCalls.isEmpty())
+            return Integer.parseInt(sCalls.get(0));
+
+        return 0;
+    }
+
+    private boolean isOverLimit(int callsToPerform) throws SQLException {
+        int limit = Integer.parseInt(dh.executeQuery("SELECT DailyLimit FROM apimanagement WHERE Name='BarChart';").get(0));
+
+        return (callsToPerform + getCurrentCalls()) > limit;
     }
 
     private void sendToDatabase(ArrayList<String> values, String stock) throws SQLException {
@@ -48,6 +63,7 @@ public class BarChartHandler {
 
     public void downloadIntradayHistory(ArrayList<String> stocks) throws IOException, SQLException {
         double t = stocks.size() - 1, c = 0;
+        if (isOverLimit(0)) return;
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         for(String stock:stocks) {
@@ -58,24 +74,24 @@ public class BarChartHandler {
         Controller.updateProgress(0, pb);
     }
 
-    public ArrayList<String> downloadQuotes(ArrayList<String> stocks) throws IOException {
+    public ArrayList<String> downloadQuotes(ArrayList<String> stocks) throws IOException, SQLException {
         ArrayList<String> results = new ArrayList<>();
         int amount = 0;
 
-        String symbols="";
+        StringBuilder symbols= new StringBuilder();
 
         String url = "https://marketdata.websol.barchart.com/getQuote.csv?apikey=" + apiKey + "&symbols=";
 
         for(int i = 0; i < stocks.size(); i++){
-            symbols+=stocks.get(i);
+            symbols.append(stocks.get(i));
             if(amount++ == 99) {
                 results.addAll(submitRequest(url + symbols + "&mode=R"));
-                symbols = "&symbols=";
+                symbols = new StringBuilder("&symbols=");
                 amount = 0;
             }
 
             else if(i < stocks.size() - 1)
-                symbols+=",";
+                symbols.append(",");
         }
 
         results.addAll(submitRequest(url + symbols + "&mode=R"));
@@ -106,7 +122,7 @@ public class BarChartHandler {
         return submitRequest(url);
     }
 
-    public ArrayList<String> submitRequest(String request) throws IOException {
+    private ArrayList<String> submitRequest(String request) throws IOException, SQLException {
         int exceeded = 1;
         ArrayList<String> temp = new ArrayList<>();
 
@@ -126,7 +142,7 @@ public class BarChartHandler {
 
                 final char[] buf = new char[10240];
                 int read;
-                final StringBuffer sb = new StringBuffer();
+                final StringBuilder sb = new StringBuilder();
                 while ((read = reader.read(buf,0,buf.length)) > 0)
                     sb.append(buf, 0, read);
 
@@ -140,6 +156,9 @@ public class BarChartHandler {
                 if(connection != null) connection.disconnect();
                 if(reader != null) reader.close();
             }
+
+            dh.executeCommand("INSERT INTO apicalls VALUES('BarChart', CURDATE(), 1) ON DUPLICATE KEY UPDATE Calls = Calls +1;");
+            //dh.executeCommand("INSERT INTO apicalls VALUES ('BarChart', CURDATE(), 500) ON DUPLICATE KEY UPDATE Calls = 500;"); //Incase another system uses this program, this database value doesn't get updated, in which case if an error occurs, mark the api as "limit reached"
         } while (exceeded > 1 && exceeded < 10);
 
         if (temp.size() <= 1)

@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 class AlphaVantageHandler {
     private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9150));
 
+    private final boolean USE_PROXY = false;
+
     private String apiKey;
     private boolean useProxy = false;
     private boolean allPaused = false;
@@ -72,7 +74,7 @@ class AlphaVantageHandler {
             URL url;
             InputStream is = null;
 
-            if(getDownloadsSinceToggle() >= 30) {
+            if(USE_PROXY && getDownloadsSinceToggle() >= 30) {
                 System.out.println("!---SWITCHING PROXY---!");
                 toggleProxy();
                 resetDownloadsSinceToggle();

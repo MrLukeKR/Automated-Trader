@@ -6,13 +6,10 @@ import javafx.scene.control.ProgressBar;
 
 import java.sql.Date;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 public class TechnicalAnalyser {
-    static private Core ta = new Core();
+    static private final Core ta = new Core();
     static private DatabaseHandler dh;
     static private ProgressBar pb;
 
@@ -78,7 +75,6 @@ public class TechnicalAnalyser {
             case SMA200:
             case EMA200:
                 return 200;
-
             case RSI:
             case CCI:
             case WillR:
@@ -96,7 +92,7 @@ public class TechnicalAnalyser {
             dateFrom = Date.valueOf(result.get(0));
 
         for (Date key : records.keySet())
-            if (result.isEmpty() || key.after(dateFrom) || key.equals(dateFrom))
+            if (result.isEmpty() || key.after(Objects.requireNonNull(dateFrom)) || key.equals(dateFrom))
                 dh.addBatchCommand("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "' AND (" + indicator + " is null OR " + indicator + "!='" + records.get(key) + "');");
     }
 
@@ -118,10 +114,9 @@ public class TechnicalAnalyser {
         Controller.updateProgress(0, t, pb);
     }
 
-    static public void calculatePercentChanges(String stock, TreeMap<Date, Double> records) throws SQLException {
+    private static void calculatePercentChanges(String stock, TreeMap<Date, Double> records) throws SQLException {
         TreeMap<Date, Double> percentChanges = new TreeMap<>();
-        ArrayList<Date> dates = new ArrayList<>();
-        dates.addAll(records.keySet());
+        ArrayList<Date> dates = new ArrayList<>(records.keySet());
 
 
         double[] percentChangeArray = new double[records.size()];
@@ -161,7 +156,7 @@ public class TechnicalAnalyser {
 
             for (TechnicalIndicator ti : TechnicalIndicator.values()) {
                 HashMap<String, TreeMap<Date, Double>> indicators = calculateTechnicalIndicator(ti, stock, openPrices, highPrices, lowPrices, closePrices, volumes, technicalIndicatorToDays(ti));
-                for (String indicator : indicators.keySet())
+                for (String indicator : Objects.requireNonNull(indicators).keySet())
                     sendToDatabase(stock, indicator, indicators.get(indicator));
                 Controller.updateProgress(c++, t, pb);
             }
@@ -175,7 +170,7 @@ public class TechnicalAnalyser {
 
     static private TreeMap<Date, Double> getFromDatabase(String stock, String field) throws SQLException {
         ArrayList<String> temp = dh.executeQuery("SELECT TradeDate, " + field + " FROM dailystockprices WHERE Symbol='" + stock + "' ORDER BY TradeDate ASC");
-        TreeMap<Date, Double> records = new TreeMap();
+        TreeMap<Date, Double> records = new TreeMap<>();
 
         for (String record : temp) {
             String[] splitString = record.split(",");
@@ -187,7 +182,7 @@ public class TechnicalAnalyser {
     }
 
     static private TreeMap<Date, Double> priceArrayToRecordMap(Set<Date> dates, int startInd, int length, double[] values) {
-        TreeMap<Date, Double> outputValues = new TreeMap();
+        TreeMap<Date, Double> outputValues = new TreeMap<>();
         int i = 0;
         int j = 0;
 
@@ -211,7 +206,7 @@ public class TechnicalAnalyser {
         return prices;
     }
 
-    static public HashMap<String, TreeMap<Date, Double>> calculateTechnicalIndicator(TechnicalIndicator indicator, String stock, TreeMap<Date, Double> openPrices, TreeMap<Date, Double> highPrices, TreeMap<Date, Double> lowPrices, TreeMap<Date, Double> closePrices, TreeMap<Date, Double> volumes, int days) {
+    private static HashMap<String, TreeMap<Date, Double>> calculateTechnicalIndicator(TechnicalIndicator indicator, String stock, TreeMap<Date, Double> openPrices, TreeMap<Date, Double> highPrices, TreeMap<Date, Double> lowPrices, TreeMap<Date, Double> closePrices, TreeMap<Date, Double> volumes, int days) {
         System.out.println("Calculating " + technicalIndicatorToString(indicator) + " for " + stock + "...");
 
         MInteger begin = new MInteger(), length = new MInteger();

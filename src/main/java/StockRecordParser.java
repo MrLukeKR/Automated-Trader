@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 
 
-public class StockRecordParser {
-    static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
-    static DatabaseHandler dh;
+class StockRecordParser {
+    private static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
+    private static DatabaseHandler dh;
 
 
     static public void initialise(DatabaseHandler sqdh) {
@@ -36,7 +36,7 @@ public class StockRecordParser {
     static public void importDailyMarketData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
-        importDailyData(csv, "(Symbol, TradeDate, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)", "dailystockprices", symbol, 6);
+        importDailyData(csv, symbol);
     }
 
     static public void importDailyYahooMarketData(File csvFile, String symbol) throws SQLException, IOException {
@@ -52,32 +52,32 @@ public class StockRecordParser {
         importDailyYahooMarketData(csvArray, symbol);
     }
 
-    static public void importDailyYahooMarketData(ArrayList<String> csv, String symbol) throws SQLException {
+    private static void importDailyYahooMarketData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
         ArrayList<String> newCsv = new ArrayList<>();
 
         for (String curr : csv) {
             String[] splitString = curr.split(",");
-            String newString = "";
+            StringBuilder newString = new StringBuilder();
 
             for (int i = 0; i < 7; i++)
                 if (i != 5) {
-                    newString += splitString[i];
+                    newString.append(splitString[i]);
                     if (i != 6)
-                        newString += ",";
+                        newString.append(",");
                 }
 
-            newCsv.add(newString);
+            newCsv.add(newString.toString());
         }
 
-        importDailyData(newCsv, "(Symbol, TradeDate, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)", "dailystockprices", symbol, 6);
+        importDailyData(newCsv, symbol);
     }
 
     static public void importIntradayMarketData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
-        importIntradayData(csv, "(Symbol, TradeDateTime, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)", "intradaystockprices", symbol, 6);
+        importIntradayData(csv, symbol);
     }
 
 
@@ -126,7 +126,7 @@ public class StockRecordParser {
         dh.executeCommand("INSERT INTO dailystockprices(Symbol, TradeDate, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume) VALUES('" + stock + "'," + csv + ") ON DUPLICATE KEY UPDATE OpenPrice=VALUES(OpenPrice), HighPrice=VALUES(HighPrice), LowPrice=VALUES(LowPrice), ClosePrice=VALUES(ClosePrice), TradeVolume=VALUES(TradeVolume);");
     }
 
-    static public void importIntradayData(ArrayList<String> csv, String columns, String table, String symbol, int columnCount) throws SQLException {
+    private static void importIntradayData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
         ArrayList<String> result = dh.executeQuery("SELECT TradeDateTime FROM intradaystockprices WHERE symbol='" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1;");
@@ -138,37 +138,33 @@ public class StockRecordParser {
 
         int newValues = 0;
         int count = 0;
-        String statement = "INSERT INTO " + table + columns + " VALUES ";
+        StringBuilder statement = new StringBuilder("INSERT INTO " + "intradaystockprices" + "(Symbol, TradeDateTime, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)" + " VALUES ");
 
-        TreeMap<Timestamp, String> newCSV = cleanCSVWithTimestamp(csv, columnCount, timeFrom);
+        TreeMap<Timestamp, String> newCSV = cleanCSVWithTimestamp(csv, 6, timeFrom);
 
         for (Timestamp curr : newCSV.keySet()) {
             count++;
             String data = newCSV.get(curr);
             String split[] = data.split(",");
 
-            statement += "('" + symbol + "','" + split[0] + "'" + data.replaceAll(split[0], "") + ")";
+            statement.append("('").append(symbol).append("','").append(split[0]).append("'").append(data.replaceAll(split[0], "")).append(")");
             if (count < newCSV.size() && curr != timeFrom)
-                statement += ",\r\n";
+                statement.append(",\r\n");
             newValues++;
         }
 
-        statement += " ON DUPLICATE KEY UPDATE " +
-                "OpenPrice = VALUES(OpenPrice)" +
-                ", HighPrice = VALUES(HighPrice)" +
-                ", LowPrice = VALUES(LowPrice)" +
-                ", ClosePrice = VALUES(ClosePrice)" +
-                ", TradeVolume = VALUES(TradeVolume);";
+        statement.append(" ON DUPLICATE KEY UPDATE " + "OpenPrice = VALUES(OpenPrice)" + ", HighPrice = VALUES(HighPrice)" + ", LowPrice = VALUES(LowPrice)" + ", ClosePrice = VALUES(ClosePrice)" + ", TradeVolume = VALUES(TradeVolume);");
 
         if (newValues > 0)
             try {
-                dh.executeCommand(statement);
+                dh.executeCommand(statement.toString());
             } catch (Exception e) {
-                System.err.println(e.getMessage() + " " + statement);
+                System.err.println(e.getMessage());
+                System.err.println(statement);
             }
     }
 
-    static public void importDailyData(ArrayList<String> csv, String columns, String table, String symbol, int columnCount) throws SQLException {
+    private static void importDailyData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
         ArrayList<String> result = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE symbol='" + symbol + "' ORDER BY TradeDate DESC LIMIT 1;");
@@ -180,31 +176,26 @@ public class StockRecordParser {
 
         int newValues = 0;
         int count = 0;
-        String statement = "INSERT INTO " + table + columns + " VALUES ";
+        StringBuilder statement = new StringBuilder("INSERT INTO " + "dailystockprices" + "(Symbol, TradeDate, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)" + " VALUES ");
 
-        TreeMap<Date, String> newCSV = cleanCSVWithDate(csv, columnCount, dateFrom);
+        TreeMap<Date, String> newCSV = cleanCSVWithDate(csv, 6, dateFrom);
 
          for (Date curr : newCSV.keySet()) {
             count++;
             String data = newCSV.get(curr);
             String split[] = data.split(",");
 
-            statement += "('" + symbol + "','" + split[0] + "'" + data.replaceAll(split[0], "") + ")";
+            statement.append("('").append(symbol).append("','").append(split[0]).append("'").append(data.replaceAll(split[0], "")).append(")");
             if (count < newCSV.size() && curr != dateFrom)
-                        statement += ",\r\n";
+                        statement.append(",\r\n");
             newValues++;
             }
 
-        statement += " ON DUPLICATE KEY UPDATE " +
-                "OpenPrice = VALUES(OpenPrice)" +
-                ", HighPrice = VALUES(HighPrice)" +
-                ", LowPrice = VALUES(LowPrice)" +
-                ", ClosePrice = VALUES(ClosePrice)" +
-                ", TradeVolume = VALUES(TradeVolume);";
+        statement.append(" ON DUPLICATE KEY UPDATE " + "OpenPrice = VALUES(OpenPrice)" + ", HighPrice = VALUES(HighPrice)" + ", LowPrice = VALUES(LowPrice)" + ", ClosePrice = VALUES(ClosePrice)" + ", TradeVolume = VALUES(TradeVolume);");
 
         if (newValues > 0)
             try {
-                dh.executeCommand(statement);
+                dh.executeCommand(statement.toString());
             } catch (Exception e) {
                 System.err.println(e.getMessage() + " " + statement);
             }

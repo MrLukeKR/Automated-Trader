@@ -2,7 +2,7 @@ import java.io.*;
 import java.sql.*;
 import java.util.ArrayList;
 
-public class DatabaseHandler {
+class DatabaseHandler {
     private String user = null;
     private Connection connection = null;
     private final int MAXIMUM_UNCOMMITTED_STATEMENTS = 100000;
@@ -49,7 +49,7 @@ public class DatabaseHandler {
             initialiseDiskSQL();
     }
 
-    public boolean init(String username, String password) throws SQLException, IOException {
+    public void init(String username, String password) throws SQLException, IOException {
         user = username;
 
         try {
@@ -73,7 +73,6 @@ public class DatabaseHandler {
             initialiseDiskSQL();
         }
 
-        return (connection != null);
     }
 
 
@@ -94,10 +93,10 @@ public class DatabaseHandler {
         System.out.println("COMMITTED!");
     }
 
-    public boolean setAutoCommit(boolean autoCommit) throws SQLException {
+    public void setAutoCommit(boolean autoCommit) throws SQLException {
         connection.setAutoCommit(autoCommit);
 
-        return connection.getAutoCommit() == autoCommit;
+        connection.getAutoCommit();
     }
 
     public void addBatchCommand(String command) throws SQLException {
@@ -123,7 +122,7 @@ public class DatabaseHandler {
         System.out.println("Batch command committed successfully!");
     }
 
-    public Boolean executeCommand(String command) throws SQLException {
+    public void executeCommand(String command) throws SQLException {
         Statement statement = connection.createStatement();
 
         boolean result;
@@ -145,24 +144,23 @@ public class DatabaseHandler {
                 executeBatch();
         }
 
-        return result;
     }
 
     public ArrayList<String> executeQuery(String command) throws SQLException{
         Statement query = connection.createStatement();
 
-        ArrayList<String> tempArr = new ArrayList();
+        ArrayList<String> tempArr = new ArrayList<>();
 
         ResultSet tempRs = query.executeQuery(command);
         ResultSetMetaData rsmd = tempRs.getMetaData();
 
         while(tempRs.next()){
-            String temp = tempRs.getString(1);
+            StringBuilder temp = new StringBuilder(tempRs.getString(1));
             for(int i = 2; i <= rsmd.getColumnCount(); i++) {
-                temp += "," + tempRs.getString(i);
+                temp.append(",").append(tempRs.getString(i));
             }
 
-            tempArr.add(temp);
+            tempArr.add(temp.toString());
         }
 
         query.close();
@@ -192,6 +190,7 @@ public class DatabaseHandler {
         statement.addBatch("CREATE TABLE IF NOT EXISTS indices (Symbol VARCHAR(7) UNIQUE NOT NULL PRIMARY KEY, Name TEXT NOT NULL, Collection VARCHAR(20));");
         statement.addBatch("CREATE TABLE IF NOT EXISTS ngrams (Hash VARCHAR(32) NOT NULL PRIMARY KEY, Gram TEXT NOT NULL, N INT UNSIGNED NOT NULL, Increase INT UNSIGNED DEFAULT 0, Decrease INT UNSIGNED DEFAULT 0, Occurrences INT UNSIGNED DEFAULT 0 NOT NULL, Documents INT UNSIGNED DEFAULT 1 NOT NULL, Blacklisted BIT DEFAULT 0);");
         statement.addBatch("CREATE TABLE IF NOT EXISTS banktransactions (ID INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY, TradeDateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, Type VARCHAR(10), Amount DOUBLE SIGNED NOT NULL);");
+        statement.addBatch("CREATE TABLE IF NOT EXISTS settings (ID VARCHAR(10) NOT NULL PRIMARY KEY, Value TEXT NOT NULL);");
 
         //Secondary tables (require foreign keys)
         statement.addBatch("CREATE TABLE IF NOT EXISTS apicalls (Name varchar(20) NOT NULL, Date DATE NOT NULL, Calls INT UNSIGNED DEFAULT 0, PRIMARY KEY (Name, Date), FOREIGN KEY (Name) REFERENCES apimanagement (Name));");
@@ -206,6 +205,7 @@ public class DatabaseHandler {
         //Insert initial values into relevant databases
         statement.addBatch("INSERT INTO banktransactions(Amount, Type) SELECT 10000, 'DEPOSIT' WHERE NOT EXISTS (SELECT 1 FROM banktransactions WHERE Amount = 10000 AND Type='DEPOSIT');");
         statement.addBatch("INSERT INTO apimanagement VALUES ('INTRINIO',500,0),('AlphaVantage',0,1667),('BarChart', 2100,0) ON DUPLICATE KEY UPDATE DailyLimit=VALUES(DailyLimit), Delay=VALUES(Delay);");
+        statement.addBatch("INSERT IGNORE INTO settings VALUES('PCUTOFF', '0.1'), ('LCUTOFF','0.1');");
 
         //Create users
         statement.addBatch("CREATE USER IF NOT EXISTS 'Agent'@'localhost' IDENTIFIED BY '0Y5q0m28pSB9jj2O';");

@@ -7,9 +7,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PortfolioManager {
+class PortfolioManager {
 
-    static DatabaseHandler dh;
+    private static DatabaseHandler dh;
 
     public static void initialise(DatabaseHandler pmdh) {
         dh = pmdh;
@@ -28,7 +28,7 @@ public class PortfolioManager {
         return prices;
     }
 
-    static public double calculateCovariance(ArrayList<Double> stock1Returns, ArrayList<Double> stock2Returns) {
+    private static double calculateCovariance(ArrayList<Double> stock1Returns, ArrayList<Double> stock2Returns) {
         if (stock1Returns.size() != stock2Returns.size())
             throw new Error(); //TODO: Customise this error
 
@@ -43,7 +43,7 @@ public class PortfolioManager {
         return total / (stock1Returns.size() - 1); // -1 because this is sample based, not population based
     }
 
-    static public double calculateVariance(ArrayList<Double> returns) {
+    private static double calculateVariance(ArrayList<Double> returns) {
         double total = 0;
         double average = calculateAverage(returns);
 
@@ -53,7 +53,7 @@ public class PortfolioManager {
         return total / (returns.size() - 1); // -1 because this is sample based, not population based
     }
 
-    static public ArrayList<Double> calculateReturns(ArrayList<Double> prices, int amountOfDays) {
+    private static ArrayList<Double> calculateReturns(ArrayList<Double> prices, int amountOfDays) {
         ArrayList<Double> returns = new ArrayList<>();
 
         for (int i = 0; i < prices.size() - amountOfDays; i++)
@@ -63,16 +63,11 @@ public class PortfolioManager {
         return returns;
     }
 
-    static public double calculateAverage(ArrayList<Double> values) {
-        double total = 0;
-
-        for (int i = 0; i < values.size(); i++)
-            total += values.get(i);
-
-        return total / values.size();
+    private static double calculateAverage(ArrayList<Double> values) {
+        return values.stream().mapToDouble(Double::doubleValue).sum() / values.size();
     }
 
-    static public double[][] calculateCovarianceMatrix(ArrayList<ArrayList<Double>> returns) {
+    private static double[][] calculateCovarianceMatrix(ArrayList<ArrayList<Double>> returns) {
         double[][] covarianceMatrix = new double[returns.size()][returns.size()];
 
         for (int i = 0; i < returns.size(); i++)
@@ -129,6 +124,8 @@ public class PortfolioManager {
         System.out.println("Expected Return of Portfolio: " + expectedReturn + " (" + eRInt / 100.0 + "%)");
         System.out.println("Risk of Portfolio: " + EvaluationFunction.getVariance(best, covarianceMatrix));
         System.out.println("Expected Return to Risk Ratio: " + EvaluationFunction.getReturnToRiskRatio(best, expectedReturns, covarianceMatrix));
+
+        portfolio.put("RETURN", expectedReturn);
 
         return portfolio;
     }

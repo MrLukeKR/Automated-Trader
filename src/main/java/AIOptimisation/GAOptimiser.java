@@ -1,6 +1,8 @@
-package GeneticAlgorithm;
+package AIOptimisation;
 
 import java.util.*;
+
+import static AIOptimisation.Utils.getRandomWeights;
 
 public class GAOptimiser {
     private ArrayList<double[]> population;
@@ -9,16 +11,6 @@ public class GAOptimiser {
     private int generations;
     private double[][] riskCovarianceMatrix;
     private double[] bestWeights;
-    private final Random rng = new Random();
-
-    private double[] getRandomWeights(int amount) {
-        double[] weights = new double[amount];
-
-        for (int i = 0; i < amount; i++)
-            weights[i] = Math.random();
-
-        return weights;
-    }
 
     public void initialise(int amountOfWeights, int numberOfGenerations, int populationSize, double[] returns, double[][] riskCovarianceMatrix) {
         population = new ArrayList<>();
@@ -89,26 +81,9 @@ public class GAOptimiser {
     private ArrayList<double[]> mutate(ArrayList<double[]> population, double rate) {
         ArrayList<double[]> mutatedPopulation = new ArrayList<>();
         for (double[] individual : population)
-            mutatedPopulation.add(mutate(individual, rate));
+            mutatedPopulation.add(Utils.mutate(individual, rate));
 
         return mutatedPopulation;
-    }
-
-    private double[] mutate(double[] weights, double rate) {
-        for (int i = 0; i < weights.length; i++) {
-            if (Math.random() < rate)
-                weights[i] += rng.nextGaussian();
-            if (weights[i] < 0) weights[i] = 0;
-        }
-
-        return scaleWeights(weights);
-    }
-
-    private double[] scaleWeights(double[] originalWeights) {
-        double sum = Arrays.stream(originalWeights).sum();
-        originalWeights = Arrays.stream(originalWeights).map(v -> v /= sum).toArray();
-
-        return originalWeights;
     }
 
     private double evaluate(int generation) {

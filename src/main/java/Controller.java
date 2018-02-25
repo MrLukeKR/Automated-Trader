@@ -15,7 +15,6 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Pair;
 import org.apache.spark.mllib.linalg.DenseVector;
-
 import java.io.*;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -52,6 +51,7 @@ public class Controller {
 
     //Historic Stock FXML Items
     @FXML ComboBox<String> historicStockDropdown;
+    @FXML ComboBox<String> optimisationMethodDropdown;
     @FXML Label historicDateRange;
     @FXML CheckBox showSMA5;
     @FXML CheckBox showSMA10;
@@ -75,9 +75,17 @@ public class Controller {
     @FXML LineChart<Number, Number> historicPriceChart;
     @FXML VBox historicOptions;
     @FXML AreaChart<Number, Number> historicVolumeChart;
+    @FXML LineChart<Number, Number> rsiChart;
+    @FXML LineChart<Number, Number> adxChart;
+    @FXML LineChart<Number, Number> cciChart;
+    @FXML LineChart<Number, Number> adChart;
+    @FXML LineChart<Number, Number> obvChart;
+    @FXML LineChart<Number, Number> willRChart;
+    @FXML LineChart<Number, Number> stoOscChart;
     @FXML Button displayHistoricDataButton;
     //-------------------------
 
+    @FXML Label currentTaskLabel;
     @FXML ComboBox<String> stockDropdown;
     @FXML FlowPane stockList;
     @FXML ProgressBar stockFeedProgress;
@@ -147,6 +155,16 @@ public class Controller {
         Platform.runLater(() -> pb.setProgress(val));
     }
 
+    public void updateCurrentTask(String task, boolean error, boolean printToInfoBox){
+        if(error)
+            System.err.println(task);
+        else
+            System.out.println(task);
+        Platform.runLater(()->currentTaskLabel.setText(task));
+        if(printToInfoBox)
+            printToInfoBox(task);
+    }
+
     @FXML
     private void displayHistoricData() {
         Platform.runLater(()->displayHistoricDataButton.setDisable(true));
@@ -158,21 +176,30 @@ public class Controller {
 
         new Thread(() -> {
             String stock = historicStockDropdown.getValue();
+            if(stock == null){
+                Platform.runLater(()->displayHistoricDataButton.setDisable(false));
+                Platform.runLater(()->historicOptions.setDisable(false));
+                return;
+            }
+
             ArrayList<String> dbSchema = null;
             ArrayList<String> dbData = null;
 
             try {
                 dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
                 dbData = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC;");
+                String startDate = dh.executeQuery("SELECT MIN(TradeDate) FROM dailystockprices WHERE Symbol='" + stock + "';").get(0);
+                String endDate = dh.executeQuery("SELECT MAX(TradeDate) FROM dailystockprices WHERE Symbol='" + stock + "';").get(0);
+                Platform.runLater(()->historicDateRange.setText(startDate + " to " + endDate));
             } catch (SQLException e) {e.printStackTrace();}
 
             int count = 0;
 
             HashMap<String, ArrayDeque<XYChart.Data<Number, Number>>> values = new HashMap<>();
 
-            for(String column : dbSchema) values.put(column, new ArrayDeque<>());
+            for(String column : Objects.requireNonNull(dbSchema)) values.put(column, new ArrayDeque<>());
 
-            for (String record : dbData) {
+            for (String record : Objects.requireNonNull(dbData)) {
                 int idx, rIdx = 0;
 
                 String[] splitRecord = record.split(",");
@@ -275,31 +302,68 @@ public class Controller {
             XYChart.Series<Number, Number> rsi = new XYChart.Series<>("Relative Strength Indicator", FXCollections.observableArrayList(values.get("RSI")));
             XYChart.Series<Number, Number> adx10 = new XYChart.Series<>("Average Directional Index (10-Day)", FXCollections.observableArrayList(values.get("ADX10")));
             XYChart.Series<Number, Number> cci = new XYChart.Series<>("Commodity Channel Index", FXCollections.observableArrayList(values.get("CCI")));
-            XYChart.Series<Number, Number> ad = new XYChart.Series<>("Advance-Decline Line", FXCollections.observableArrayList(values.get("AD")));
+            XYChart.Series<Number, Number> ad = new XYChart.Series<>("Accumulation Distribution", FXCollections.observableArrayList(values.get("AD")));
             XYChart.Series<Number, Number> obv = new XYChart.Series<>("On-Balance Volume", FXCollections.observableArrayList(values.get("OBV")));
             XYChart.Series<Number, Number> stoOscSlowK = new XYChart.Series<>("Stochastic Oscillator Slow %K", FXCollections.observableArrayList(values.get("StoOscSlowK")));
             XYChart.Series<Number, Number> stoOscSlowD = new XYChart.Series<>("Stochastic Oscillator Slow %D", FXCollections.observableArrayList(values.get("StoOscSlowD")));
             XYChart.Series<Number, Number> willR = new XYChart.Series<>("Williams %R", FXCollections.observableArrayList(values.get("WillR")));
 
-            Platform.runLater(()->
+            Platform.runLater(()-> {
                 historicPriceChart.getData().addAll(openPrices, highPrices, lowPrices, closePrices, smoothedClosePrices,
                         sma5, sma10, sma20, sma200,
-                        ema5, ema10, ema20, ema200));
-
-            Platform.runLater(()->historicVolumeChart.getData().add(volumes));
-            Platform.runLater(()->macdChart.getData().addAll(macd, macdSig, macdHist));
-
-            Platform.runLater(()->{
-                volumes.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-
+                        ema5, ema10, ema20, ema200);
                 for(XYChart.Series<Number, Number> series : historicPriceChart.getData())
                     series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
 
+            Platform.runLater(()->{
+                    historicVolumeChart.getData().add(volumes);
+                    volumes.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
+
+            Platform.runLater(()->{
+                macdChart.getData().addAll(macd, macdSig, macdHist);
                 for(XYChart.Series<Number, Number> series : macdChart.getData())
                     series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
             });
 
-            Platform.runLater(()->displayHistoricDataButton.setDisable(false));
+            Platform.runLater(()->{
+                rsiChart.getData().add(rsi);
+                rsi.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
+
+            Platform.runLater(()->{
+                adxChart.getData().add(adx10);
+                adx10.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
+
+            Platform.runLater(()->{
+                cciChart.getData().add(cci);
+                cci.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
+
+            Platform.runLater(()->{
+                adChart.getData().add(ad);
+                ad.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
+
+            Platform.runLater(()->{
+                obvChart.getData().add(obv);
+                obv.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
+
+            Platform.runLater(()->{
+                willRChart.getData().add(willR);
+                willR.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
+
+            Platform.runLater(()->{
+                stoOscChart.getData().addAll(stoOscSlowD,stoOscSlowK);
+                for(XYChart.Series<Number, Number> series : stoOscChart.getData())
+                    series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+            });
+
+                Platform.runLater(()->displayHistoricDataButton.setDisable(false));
             Platform.runLater(()->historicOptions.setDisable(false));
         }).start();
     }
@@ -317,12 +381,11 @@ public class Controller {
 
     @FXML
     private void exportToMLFile() {
-        System.out.println("");
         new Thread(() -> {
             Platform.runLater(() -> exportToMLFileButton.setDisable(true));
 
             try {
-                System.out.println("Exporting to ML File...");
+                updateCurrentTask("Exporting to ML File...", false, false);
                 StockPredictor.exportSeparateClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining", dayArray, stockForecastProgress);
                 StockPredictor.trainLSTM(29);
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
@@ -387,7 +450,7 @@ public class Controller {
     }
 
     private void initialiseConnections() throws IOException, SQLException {
-        System.out.println("Initialising Connections...");
+        updateCurrentTask("Initialising Connections...", false, false);
 
         //http://code.makery.ch/blog/javafx-dialogs-official/
         Dialog<Pair<String, String>> dialogue = new Dialog<>();
@@ -549,7 +612,18 @@ public class Controller {
     public void rebalancePortfolio(boolean automated) throws SQLException, ParseException {
         sellAllStock(automated);
 
-        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio();
+        PortfolioManager.OptimisationMethod om = null;
+
+        switch(optimisationMethodDropdown.getSelectionModel().getSelectedItem()){
+            case "Simulated Annealing":
+                om = PortfolioManager.OptimisationMethod.SIMULATED_ANNEALING;
+                break;
+            case "Genetic Algorithm":
+                om = PortfolioManager.OptimisationMethod.GENETIC_ALGORITHM;
+                break;
+        }
+
+        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(om);
         double cutoff = portfolio.get("RETURN");
 
         calculateLossCutoff(cutoff);
@@ -645,28 +719,28 @@ public class Controller {
 
         int i = 0;
 
-        System.out.println("Predicting Stock Performance...");
+        updateCurrentTask("Predicting Stock Performance...", false, false);
         updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
 
         for (int numberOfDays : dayArray)
             for (String stock : stocks) {
                 predictions[i] = predictStock(stock, numberOfDays);
                 if (predictions[i])
-                    System.out.println(numberOfDays + " Day Prediction for " + stock + ": RISE/MAINTAIN");
+                    updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": RISE/MAINTAIN", false, false);
                 else
-                    System.out.println(numberOfDays + " Day Prediction for " + stock + ": FALL");
+                    updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": FALL", false, false);
                 i++;
                 updateProgress(i, predictions.length  - 1, stockForecastProgress);
             }
 
         updateProgress(0, stockForecastProgress);
-        System.out.println("Predicted Stock Performance!");
+        updateCurrentTask("Predicted Stock Performance!", false, false);
 
         return predictions;
     }
 
     private void autoTrade() throws SQLException, ParseException {
-        System.out.println("Auto-Trading...");
+        updateCurrentTask("Auto-Trading...", false, true);
         ArrayList<String> portfolio = dh.executeQuery("SELECT * FROM Portfolio ORDER BY Allocation DESC;");
 
         for (String record : portfolio) {
@@ -681,14 +755,12 @@ public class Controller {
             if (priceWillRise) {
                 int buyAmount = (int) Math.floor(allocation / currentPrice);
                 if ((buyAmount > 0) && (buyAmount * currentPrice) <= balance) {
-                    printToInfoBox("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol);
-                    System.out.println("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol);
+                    updateCurrentTask("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol, false, true);
                     buyStock(symbol, buyAmount, true);
                 }
             } else {
                 if (held > 0) {
-                    printToInfoBox("> AUTOMATED TRADER: SELLING " + held + " " + symbol);
-                    System.out.println("> AUTOMATED TRADER: SELLING " + held + " " + symbol);
+                    updateCurrentTask("> AUTOMATED TRADER: SELLING " + held + " " + symbol, false, true);
                     sellStock(symbol, held, true);
                 }
             }
@@ -698,8 +770,15 @@ public class Controller {
         updateGUI();
     }
 
-    private void updatePredictions(int[] days, boolean[] predictions){
+    private void updatePredictions(boolean[] predictionValues){
         //TODO: Update prediction GUI
+        for(int i = 0; i < stocks.size(); i++) {
+            boolean[] currentPredictions = new boolean[dayArray.length];
+            for(int j = 0; j < dayArray.length; j++)
+                currentPredictions[j] = predictionValues[i + j * stocks.size()];
+            PredictionBox pb = predictions.get(i);
+            Platform.runLater(()->pb.updateValues(currentPredictions));
+        }
     }
 
     @FXML
@@ -740,7 +819,7 @@ public class Controller {
                         StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
                         SmoothingUtils.smoothStocks(stocks);
                         TechnicalAnalyser.calculateTechnicalIndicators(stocks);
-                        updatePredictions(dayArray, predictStocks());
+                        updatePredictions(predictStocks());
                         if (automated)
                             autoTrade();
                         checkServices();
@@ -773,6 +852,7 @@ public class Controller {
         Platform.runLater(()->stockDropdown.getItems().addAll(stocks));
         Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
         Platform.runLater(()->autonomyLevelDropdown.getSelectionModel().selectFirst());
+        Platform.runLater(()->optimisationMethodDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->historicStockDropdown.getItems().addAll(stocks));
 
         new Thread(() -> {
@@ -799,7 +879,7 @@ public class Controller {
     }
 
     private void startClocks() {
-        System.out.println("Starting Clocks");
+        updateCurrentTask("Starting Clocks", false, false);
         new Thread(() -> {
             while (!quit) {
                 try {TimeUnit.MILLISECONDS.sleep(1000);} catch (InterruptedException e) {e.printStackTrace();}
@@ -824,7 +904,7 @@ public class Controller {
     }
 
     private void initialiseDisplay() throws SQLException {
-        System.out.println("Initialising Display");
+        updateCurrentTask("Initialising Display", false, false);
         ArrayList<String> stockInfo = dh.executeQuery("SELECT Symbol, Name FROM indices;");
 
         Map<String, String> stockNames = new HashMap<>();
@@ -897,10 +977,8 @@ public class Controller {
         updateGUI();
         //////////////////////////////////////////////////////////
 
-        double pcutoff = Double.parseDouble(dh.executeQuery("SELECT Value FROM settings WHERE ID = 'PCUTOFF';").get(0));
-        double lcutoff = Double.parseDouble(dh.executeQuery("SELECT Value FROM settings WHERE ID = 'LCUTOFF';").get(0));
-        setProfitCutoff(pcutoff);
-        setLossCutoff(lcutoff);
+        setProfitCutoff(Double.parseDouble(dh.executeQuery("SELECT Value FROM settings WHERE ID = 'PCUTOFF';").get(0)));
+        setLossCutoff(Double.parseDouble(dh.executeQuery("SELECT Value FROM settings WHERE ID = 'LCUTOFF';").get(0)));
         checkServices();
 
         newsThread.start();
@@ -944,7 +1022,7 @@ public class Controller {
     }
 
     private void initialiseClocks() {
-        System.out.println("Initialising Clocks");
+        updateCurrentTask("Initialising Clocks", false, false);
         clocks.add(new StockClock("NASDAQ", LocalTime.of(9, 30), LocalTime.of(16, 0), ZoneId.of("America/New_York")));
         clocks.add(new StockClock("London SE", LocalTime.of(8, 0), LocalTime.of(16, 30), ZoneId.of("Europe/London")));
         clocks.add(new StockClock("Tokyo SE", LocalTime.of(9, 0), LocalTime.of(15, 0), ZoneId.of("Asia/Tokyo"))); //TODO: Allow multiple open/close periods
@@ -997,15 +1075,15 @@ public class Controller {
         for (String symbol : stocks) {
             ArrayList<String> results = sqdh.executeQuery("SELECT COUNT(*) FROM dailystockprices WHERE Symbol='" + symbol + "';");
             if (results.isEmpty() || Integer.parseInt(results.get(0)) == 0) {
-                System.out.println("Importing Yahoo! records for: " + symbol);
+                updateCurrentTask("Importing Yahoo! records for: " + symbol, false, false);
 
                 File file = new File("res/historicstocks/" + symbol + ".csv");
 
                 if (file.exists()) {
                     StockRecordParser.importDailyYahooMarketData(file, symbol);
-                    System.out.println("Successfully committed complete Yahoo! records of " + symbol + " to the database!");
+                    updateCurrentTask("Successfully committed complete Yahoo! records of " + symbol + " to the database!", false, false);
                 }else
-                    System.err.println("No Yahoo history available for " + symbol);
+                    updateCurrentTask("No Yahoo history available for " + symbol, true, true);
             }
 
             updateProgress(++curr, t, stockFeedProgress);
@@ -1014,7 +1092,7 @@ public class Controller {
 
     @FXML
     public void initialiseStocks() throws SQLException {
-        System.out.println("Initialising stocks");
+        updateCurrentTask("Initialising stocks", false, false);
         stocks = dh.executeQuery("SELECT Symbol FROM indices");
     }
 
@@ -1231,8 +1309,7 @@ public class Controller {
 
         Platform.runLater(() -> newsBox.getChildren().clear());
 
-        ArrayList<String> results = null;
-            results = nddh.executeQuery("SELECT DISTINCT Symbol, Headline, Published FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
+        ArrayList<String> results = nddh.executeQuery("SELECT DISTINCT Symbol, Headline, Published FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
 
         for (String result : results) {
             String[] splitString = result.split(",");
@@ -1264,7 +1341,7 @@ public class Controller {
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
-                    System.out.println("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1));
+                    updateCurrentTask("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1), false, false);
                 }
                 curr.setUpdating(false);
             });
@@ -1310,7 +1387,7 @@ public class Controller {
                     } catch (SQLException e) {
                         e.printStackTrace();
                     }
-                    System.out.println("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1));
+                    updateCurrentTask("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1), false, false);
                 }
                 curr.setUpdating(false);
             });
@@ -1347,22 +1424,20 @@ public class Controller {
         int i = 0;
 
         for (LiveStockRecord curr : records) {
-            String record = temp.get(i++);
+            String record = Objects.requireNonNull(temp).get(i++);
             String[] splitString = record.split(",");
             record = record.replace(splitString[0] + ",", "");
 
             ArrayList<String> tempRec = new ArrayList<>();
             tempRec.add(record);
 
-            if (tempRec != null) {
-                if (splitString[0].equals(curr.symbol)) {
-                    StockRecordParser.importCurrentQuote(tempRec.get(0), curr.getSymbol());
-                    System.out.println("Downloaded " + curr.getSymbol() + " current price:" + record);
-                    curr.updateRecord(dh);
-                    curr.updateChart(dh, false);
-                } else
-                    System.err.println("Batch download mismatch");
-            }
+            if (splitString[0].equals(curr.symbol)) {
+                StockRecordParser.importCurrentQuote(tempRec.get(0), curr.getSymbol());
+                updateCurrentTask("Downloaded " + curr.getSymbol() + " current price:" + record, false, false);
+                curr.updateRecord(dh);
+                curr.updateChart(dh, false);
+            } else
+                updateCurrentTask("Batch download mismatch", true, true);
         }
 
         updateGUI();

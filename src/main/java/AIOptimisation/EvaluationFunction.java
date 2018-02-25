@@ -1,4 +1,4 @@
-package GeneticAlgorithm;
+package AIOptimisation;
 
 public class EvaluationFunction {
     static public double getVariance(double[] weights, double[][] riskCovarianceMatrix) {

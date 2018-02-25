@@ -7,6 +7,7 @@ import javafx.scene.text.FontWeight;
 
 class PredictionBox {
     private final HBox predictions = new HBox();
+    Label[] predictionLabels;
 
     PredictionBox(String stock, int[] days, boolean[] predictionValues){
         predictions.setMinSize(610,20);
@@ -18,25 +19,31 @@ class PredictionBox {
         predictionSymbol.setMinSize(80,20);
 
         predictionSymbol.setText(stock);
-        Label[] predictionLabels = new Label[days.length];
 
-        for(int i = 0; i < days.length; i++){
+        predictionLabels = new Label[days.length];
+
+        for(int i = 0; i < predictionValues.length; i++) {
             predictionLabels[i] = new Label();
             predictionLabels[i].setFont(Font.font(null, 14));
-            predictionLabels[i].setMinSize(120,20);
+            predictionLabels[i].setMinSize(120, 20);
+        }
 
-            if(predictionValues[i]) {
+        updateValues(predictionValues);
+
+        predictions.getChildren().add(predictionSymbol);
+        predictions.getChildren().addAll(predictionLabels);
+    }
+
+    public void updateValues(boolean[] predictionValues){
+        for(int i = 0; i < predictionValues.length; i++) {
+            if (predictionValues[i]) {
                 predictionLabels[i].setTextFill(Color.GREEN);
                 predictionLabels[i].setText("RISE/MAINTAIN");
-            }
-            else{
+            } else {
                 predictionLabels[i].setTextFill(Color.RED);
                 predictionLabels[i].setText("FALL");
             }
         }
-
-        predictions.getChildren().add(predictionSymbol);
-        predictions.getChildren().addAll(predictionLabels);
     }
 
     public Node getNode() {

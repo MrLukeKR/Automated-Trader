@@ -44,7 +44,7 @@
                                      <top>
                                          <FlowPane fx:id="controlPanel" disable="true" prefHeight="210.0" prefWidth="401.0" BorderPane.alignment="CENTER">
                                              <Label prefHeight="17.0" prefWidth="110.0" text="Autonomy Level: " />
-                                             <ComboBox fx:id="autonomyLevelDropdown" onAction="#setAutonomyLevel" prefHeight="27.0" prefWidth="290.0">
+                                             <ComboBox fx:id="autonomyLevelDropdown" onAction="#setAutonomyLevel" prefHeight="27.0" prefWidth="290.0" promptText="Select Autonomy Level">
                                                  <effect>
                                                      <SepiaTone level="0.25" />
                                                  </effect>
@@ -81,13 +81,27 @@
                                                  <Separator orientation="VERTICAL" prefHeight="25.0" prefWidth="14.0" visible="false" />
                                                  <Label fx:id="profitTargetPercentageLabel" prefHeight="17.0" prefWidth="50.0" text="0.0%" />
                                                  <Button fx:id="setProfitTargetButton" disable="true" mnemonicParsing="false" onAction="#setProfitCutoff" prefHeight="27.0" prefWidth="125.0" text="Set Profit Target" />
-                                                 <Separator prefHeight="10.0" prefWidth="400.0" visible="false" />
-                                                 <Button fx:id="rebalanceButton" mnemonicParsing="false" onAction="#manuallyRebalancePortfolio" prefHeight="25.0" prefWidth="400.0" text="Rebalance Portfolio" />
+                                                 <Separator prefHeight="10.0" prefWidth="400.0" />
+                                 <HBox prefHeight="32.0" prefWidth="401.0">
+                                    <children>
+                                       <ComboBox fx:id="optimisationMethodDropdown" prefHeight="28.0" prefWidth="220.0" promptText="Select Optimisation Method">
+                                           <items>
+                                            <FXCollections fx:factory="observableArrayList">
+                                               <String fx:value="Genetic Algorithm" />
+                                               <String fx:value="Simulated Annealing" />
+                                            </FXCollections>
+                                           </items>
+                                       </ComboBox>
+
+                                       <Separator orientation="VERTICAL" prefHeight="0.0" prefWidth="5.0" visible="false" />
+                                                       <Button fx:id="rebalanceButton" mnemonicParsing="false" onAction="#manuallyRebalancePortfolio" prefHeight="28.0" prefWidth="175.0" text="Rebalance Portfolio" />
+                                    </children>
+                                 </HBox>
                                              </FlowPane>
                                          </FlowPane>
                                      </top>
                                      <center>
-                                         <Separator prefHeight="10.0" prefWidth="401.0" BorderPane.alignment="CENTER" />
+                                         <Separator prefHeight="18.0" prefWidth="401.0" BorderPane.alignment="CENTER" />
                                      </center>
                                      <bottom>
                                          <BorderPane prefHeight="95.0" prefWidth="401.0" BorderPane.alignment="CENTER">
@@ -262,7 +276,7 @@
                   <center>
                       <ScrollPane hbarPolicy="NEVER" prefHeight="980.0" prefWidth="1880.0" BorderPane.alignment="CENTER">
                           <VBox prefHeight="1000.0" prefWidth="1905.0">
-                              <LineChart fx:id="historicPriceChart" animated="false" createSymbols="false" legendSide="TOP" maxWidth="1905.0" minWidth="1905.0" prefHeight="500.0" prefWidth="1905.0" title="Historic Close Prices">
+                              <LineChart fx:id="historicPriceChart" animated="false" createSymbols="false" legendSide="TOP" maxWidth="1905.0" minHeight="500.0" minWidth="1905.0" prefHeight="500.0" prefWidth="1905.0" title="Historic Close Prices">
                                   <xAxis>
                                       <NumberAxis side="BOTTOM" />
                                   </xAxis>
@@ -279,6 +293,62 @@
                                   </yAxis>
                               </AreaChart>
                               <LineChart fx:id="macdChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="Moving Average Convergence/Divergence">
+                                  <xAxis>
+                                      <NumberAxis side="BOTTOM" />
+                                  </xAxis>
+                                  <yAxis>
+                                      <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
+                                  </yAxis>
+                              </LineChart>
+                              <LineChart fx:id="rsiChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="Relative Strength Index">
+                                  <xAxis>
+                                      <NumberAxis side="BOTTOM" />
+                                  </xAxis>
+                                  <yAxis>
+                                      <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
+                                  </yAxis>
+                              </LineChart>
+                              <LineChart fx:id="adxChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="Average Directional Index">
+                                  <xAxis>
+                                      <NumberAxis side="BOTTOM" />
+                                  </xAxis>
+                                  <yAxis>
+                                      <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
+                                  </yAxis>
+                              </LineChart>
+                              <LineChart fx:id="cciChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="Commodity Channel Index">
+                                  <xAxis>
+                                      <NumberAxis side="BOTTOM" />
+                                  </xAxis>
+                                  <yAxis>
+                                      <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
+                                  </yAxis>
+                              </LineChart>
+                              <LineChart fx:id="adChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="Accumulation Distribution">
+                                  <xAxis>
+                                      <NumberAxis side="BOTTOM" />
+                                  </xAxis>
+                                  <yAxis>
+                                      <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
+                                  </yAxis>
+                              </LineChart>
+                              <LineChart fx:id="obvChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="On-Balance Volume">
+                                  <xAxis>
+                                      <NumberAxis side="BOTTOM" />
+                                  </xAxis>
+                                  <yAxis>
+                                      <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
+                                  </yAxis>
+                              </LineChart>
+                              <LineChart fx:id="stoOscChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="Stochastic Oscillator">
+                                  <xAxis>
+                                      <NumberAxis side="BOTTOM" />
+                                  </xAxis>
+                                  <yAxis>
+                                      <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
+                                  </yAxis>
+                              </LineChart>
+                              <LineChart fx:id="willRChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="William's %R">
                                   <xAxis>
                                       <NumberAxis side="BOTTOM" />
                                   </xAxis>

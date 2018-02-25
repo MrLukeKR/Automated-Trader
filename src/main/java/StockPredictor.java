@@ -11,6 +11,8 @@ import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.tree.RandomForest;
 import org.apache.spark.mllib.tree.model.RandomForestModel;
 import org.apache.spark.mllib.util.MLUtils;
+import scala.Tuple2;
+/*
 import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.SequenceRecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
@@ -37,7 +39,7 @@ import org.nd4j.linalg.dataset.SplitTestAndTrain;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.io.ClassPathResource;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
-import scala.Tuple2;
+*/
 
 import java.io.*;
 import java.sql.SQLException;
@@ -80,10 +82,10 @@ class StockPredictor {
 
         ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
 
-        String command = "SELECT * FROM dailystockprices WHERE Symbol='"+ stock +"'";
+        StringBuilder command = new StringBuilder("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "'");
 
         for(String column:dbSchema)
-            command += " AND " + column + " IS NOT NULL";
+            command.append(" AND ").append(column).append(" IS NOT NULL");
 
         ArrayList<String> priceValues = dh.executeQuery(command + " ORDER BY TradeDate ASC;");
 
@@ -194,9 +196,9 @@ class StockPredictor {
         for (String stock : stocks) {
             for (String value : convertToClassificationTrainingArray(stock, c, days)) {
                 String[] splitString = value.split(",");
-                String feature = splitString[0];
+                StringBuilder feature = new StringBuilder(splitString[0]);
                 for(int i = 1; i < splitString.length-1; i++)
-                    feature += "," + splitString[i];
+                    feature.append(",").append(splitString[i]);
                 fpw.println(feature);
                 lpw.println(splitString[splitString.length-1]);
             }
@@ -208,11 +210,11 @@ class StockPredictor {
         lpw.close();
     }
 
-    static public void trainLSTM(int inputColumns) throws IOException, InterruptedException {
+    static public void trainLSTM(int inputColumns) {
         int layer1Size = 200;
         int layer2Size = 400;
         int layer3Size = 300;
-
+/*
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).iterations(1)
                 .learningRate(0.1)
@@ -258,6 +260,7 @@ class StockPredictor {
 
         eval.eval(test.getLabels(),output);
         System.out.println(eval.stats());
+        */
             }
 
     static public void trainRandomForest(String libSVMFilePath, int noOfStocks) throws SQLException {

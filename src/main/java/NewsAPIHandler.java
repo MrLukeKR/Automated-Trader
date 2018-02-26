@@ -11,6 +11,7 @@ import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 class NewsAPIHandler {
@@ -271,10 +272,14 @@ class NewsAPIHandler {
             return;
         }
 
+        Semaphore availableThreads = new Semaphore(10, false);
+
         double t = undownloadedArticles.size() - 1;
         progress = 0;
 
         for (String article : undownloadedArticles) {
+            availableThreads.acquireUninterruptibly();
+            new Thread(() -> {
                 String[] splitArticle = article.split(",");
                 int id = Integer.parseInt(splitArticle[0]);
 
@@ -283,23 +288,23 @@ class NewsAPIHandler {
                 String site = null;
 
 
-            while (site == null)
-                try {
-                    site = NewsAPIHandler.downloadArticle(splitArticle[1]);
-                } catch (FileNotFoundException e) {
-                    System.err.println("Article is no longer available!");
-                    break;
-                } catch (MalformedURLException e) {
-                    System.err.println(e.getMessage());
-                    if (!Objects.equals(splitArticle[1].substring(0, 3), "http"))
-                        splitArticle[1] = "http://" + splitArticle[1];
-                } catch (ConnectException e) {
-                    System.err.println("Connection error (Timed Out)");
-                    break;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    break;
-                }
+                while (site == null)
+                    try {
+                        site = NewsAPIHandler.downloadArticle(splitArticle[1]);
+                        break;
+                    } catch (FileNotFoundException e) {
+                        System.err.println("Article is no longer available!");
+                        break;
+                    } catch (MalformedURLException e) {
+                        System.err.println(e.getMessage());
+                        if (!Objects.equals(splitArticle[1].substring(0, 3), "http"))
+                            splitArticle[1] = "http://" + splitArticle[1];
+                    } catch (ConnectException e) {
+                        System.err.println("Connection error (Timed Out)");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        break;
+                    }
 
                 try {
                     if (site != null)
@@ -313,12 +318,15 @@ class NewsAPIHandler {
                     e.printStackTrace();
                     try {
                         dh.executeCommand("UPDATE newsarticles SET Blacklisted = 1 WHERE ID = " + id + ";"); //Blacklist if the Content causes SQL error (i.e. truncation)
-                    } catch (SQLException e1) { e1.printStackTrace(); }
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                 }
 
                 Controller.updateProgress(++progress, t, pb);
+                availableThreads.release();
+            }).start();
         }
-
 
         Controller.updateProgress(0, pb);
     }

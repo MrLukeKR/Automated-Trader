@@ -200,7 +200,7 @@ class DatabaseHandler {
         //Insert initial values into relevant databases
         statement.addBatch("INSERT INTO banktransactions(Amount, Type) SELECT 10000, 'DEPOSIT' WHERE NOT EXISTS (SELECT 1 FROM banktransactions WHERE Amount = 10000 AND Type='DEPOSIT');");
         statement.addBatch("INSERT INTO apimanagement VALUES ('INTRINIO',500,0),('AlphaVantage',0,1667),('BarChart', 2100,0) ON DUPLICATE KEY UPDATE DailyLimit=VALUES(DailyLimit), Delay=VALUES(Delay);");
-        statement.addBatch("INSERT IGNORE INTO settings VALUES('PCUTOFF', '0.1'), ('LCUTOFF','0.1');");
+        statement.addBatch("INSERT IGNORE INTO settings VALUES('PCUTOFF', '11000'), ('LCUTOFF','9000');");
 
         //Create users
         statement.addBatch("CREATE USER IF NOT EXISTS 'Agent'@'localhost' IDENTIFIED BY '0Y5q0m28pSB9jj2O';");

@@ -26,7 +26,7 @@ class DatabaseHandler {
         if (!file.exists())
             return;
 
-        System.out.println("Flushing '" + user + "' SQL file to database...");
+        Main.getController().updateCurrentTask("Flushing '" + user + "' SQL file to database...", false, false);
 
         setAutoCommit(false);
 
@@ -65,10 +65,10 @@ class DatabaseHandler {
             System.exit(-1);
         }
 
-        if(connection == null)  System.err.println("Failed to initialise database connection!");
+        if(connection == null)  Main.getController().updateCurrentTask("Failed to initialise database connection!", true, true);
         else {
             executeCommand("USE automated_trader");
-            System.out.println("Initialised database connection for '" + username + "'");
+            Main.getController().updateCurrentTask("Initialised database connection for '" + username + "'", false, false);
             sendSQLFileToDatabase(true);
             initialiseDiskSQL();
         }
@@ -164,14 +164,14 @@ class DatabaseHandler {
 
     public void close() throws SQLException {
         connection.close();
-        System.out.println("Closed database connection for '" + user + "'");
+        Main.getController().updateCurrentTask("Closed database connection for '" + user + "'", false, false);
     }
 
     public static void initialiseDatabase(String adminUser, String adminPass) throws SQLException {
         if (initialised) return;
         Connection conn = DriverManager.getConnection("jdbc:mysql://localhost", adminUser, adminPass);
 
-        System.out.println("Initialising Database...");
+        Main.getController().updateCurrentTask("Initialising Database...",false,false);
 
         Statement statement = conn.createStatement();
         conn.setAutoCommit(false);

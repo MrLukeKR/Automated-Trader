@@ -77,96 +77,6 @@ class StockPredictor {
         return "No model loaded";
     }
 
-    static private ArrayList<String> convertToClassificationTrainingArray(String stock, int index, int[] amountOfDaysArray) throws SQLException {
-        ArrayList<String> dataPoints = new ArrayList<>();
-
-        ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
-
-        StringBuilder command = new StringBuilder("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "'");
-
-        for(String column:dbSchema)
-            command.append(" AND ").append(column).append(" IS NOT NULL");
-
-        ArrayList<String> priceValues = dh.executeQuery(command + " ORDER BY TradeDate ASC;");
-
-        int columnToPredict = dbSchema.indexOf("SmoothedClosePrice");
-        double[] currentPrices = new double[priceValues.size()];
-        double[] sentiments = NaturalLanguageProcessor.getAverageSentiments(stock, priceValues.size());
-
-        for (int amountOfDays : amountOfDaysArray) {
-            double[] futurePrices = new double[priceValues.size() - amountOfDays];
-
-            for (int i = 0; i < priceValues.size() - amountOfDays; i++) {
-                String[] splitString = priceValues.get(i).split(",");
-                currentPrices[i] = Double.parseDouble(splitString[columnToPredict]);
-            }
-
-            for (int i = amountOfDays; i < priceValues.size(); i++) {
-                String[] splitString = priceValues.get(i).split(",");
-                futurePrices[i - amountOfDays] = Double.parseDouble(splitString[columnToPredict]);
-            }
-
-            for (int i = 0; i < futurePrices.length; i++) {
-                StringBuilder dataPoint = new StringBuilder(String.valueOf(index) + "," + String.valueOf(amountOfDays));
-                String[] splitString = priceValues.get(i).split(",");
-
-                for (int j = 2; j < splitString.length; j++)
-                    dataPoint.append(",").append(splitString[j]);
-
-                dataPoint.append(",").append(sentiments[i]).append(",").append(String.valueOf((futurePrices[i] - currentPrices[i]) >= 0 ? 1 : 0));
-                dataPoints.add(dataPoint.toString());
-            }
-        }
-
-        System.out.println("Converted data to Classification Training Array for '" + stock + "'");
-
-        return dataPoints;
-    }
-
-    static public void exportClassificationCSV(ArrayList<String> stocks, String path, int[] days, ProgressBar pb) throws FileNotFoundException, SQLException {
-        final int t = stocks.size() - 1;
-        int c = 0;
-        File file = new File(path);
-        PrintWriter pw = new PrintWriter(file);
-
-        for (String stock : stocks) {
-            for (String value : convertToClassificationTrainingArray(stock, c, days))
-                pw.println(value);
-
-            Controller.updateProgress(++c, t, pb);
-        }
-
-        pw.close();
-    }
-
-    static public void exportLibSVMFile(String csvPath, String libSVMPath) throws IOException {
-        FileReader fr = new FileReader(csvPath);
-        BufferedReader br = new BufferedReader(fr);
-
-        File writeFile = new File(libSVMPath);
-        PrintWriter pw = new PrintWriter(writeFile);
-
-        String line;
-
-        while ((line = br.readLine()) != null)
-            pw.println(StockPredictor.convertToLibSVM(line));
-
-        fr.close();
-        pw.close();
-    }
-
-    static public String convertToLibSVM(String dataPoint){
-        String[] splitString = dataPoint.split(",");
-        int index = 1;
-
-        StringBuilder dp = new StringBuilder(splitString[splitString.length - 1]);
-
-        for (int j = 0; j < splitString.length - 1; j++)
-            dp.append(" ").append(index++).append(":").append(splitString[j]);
-
-        return dp.toString();
-    }
-
     static public boolean predictDirection(Vector data){
         double value = model.predict(data);
 
@@ -183,31 +93,6 @@ class StockPredictor {
         System.out.println("Loading Machine Learning Model '" + modelFile + "'...");
         model = RandomForestModel.load(jsc.sc(), modelFile);
         System.out.println("Loaded Machine Learning Model: " + model.toString()) ;
-    }
-
-    static public void exportSeparateClassificationCSV(ArrayList<String> stocks, String filePath, int[] days, ProgressBar pb) throws FileNotFoundException, SQLException {
-        final int t = stocks.size() - 1;
-        int c = 0;
-        File featureFile = new File(filePath + "Features.csv");
-        File labelFile = new File(filePath + "Labels.csv");
-        PrintWriter fpw = new PrintWriter(featureFile);
-        PrintWriter lpw = new PrintWriter(labelFile);
-
-        for (String stock : stocks) {
-            for (String value : convertToClassificationTrainingArray(stock, c, days)) {
-                String[] splitString = value.split(",");
-                StringBuilder feature = new StringBuilder(splitString[0]);
-                for(int i = 1; i < splitString.length-1; i++)
-                    feature.append(",").append(splitString[i]);
-                fpw.println(feature);
-                lpw.println(splitString[splitString.length-1]);
-            }
-
-            Controller.updateProgress(++c, t, pb);
-        }
-
-        fpw.close();
-        lpw.close();
     }
 
     static public void trainLSTM(int inputColumns) {

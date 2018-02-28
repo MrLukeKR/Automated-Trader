@@ -85,7 +85,7 @@ class NewsAPIHandler {
     private static boolean isOverLimit(int callsToPerform) throws SQLException {
         int limit = Integer.parseInt(dh.executeQuery("SELECT DailyLimit FROM apimanagement WHERE Name='INTRINIO';").get(0));
 
-        return (callsToPerform + getCurrentCalls()) > limit;
+        return (callsToPerform + getCurrentCalls()) >= limit;
     }
 
     private static int[] getCSVMetaData(String stock) throws IOException, SQLException, InterruptedException {
@@ -101,7 +101,7 @@ class NewsAPIHandler {
         } catch (IOException e) {
             HttpURLConnection http = (HttpURLConnection) connect;
             if (http.getResponseCode() == 429)
-                System.err.println("Too many requests"); //TODO: Make a GUI graphic that shows this has occurred
+                System.err.println("Too many requests");
 
             ((HttpURLConnection) connect).disconnect();
 
@@ -272,7 +272,7 @@ class NewsAPIHandler {
             return;
         }
 
-        Semaphore availableThreads = new Semaphore(10, false);
+        Semaphore availableThreads = new Semaphore(30, false);
 
         double t = undownloadedArticles.size() - 1;
         progress = 0;
@@ -283,10 +283,9 @@ class NewsAPIHandler {
                 String[] splitArticle = article.split(",");
                 int id = Integer.parseInt(splitArticle[0]);
 
-                System.out.println("Downloading news article " + splitArticle[0] + ": " + splitArticle[1]);
+                Main.getController().updateCurrentTask("Downloading news article " + splitArticle[0] + ": " + splitArticle[1], false, false);
 
                 String site = null;
-
 
                 while (site == null)
                     try {

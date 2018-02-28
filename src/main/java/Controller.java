@@ -386,20 +386,26 @@ public class Controller {
 
             try {
                 updateCurrentTask("Exporting to ML File...", false, false);
-                StockPredictor.exportSeparateClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining", dayArray, stockForecastProgress);
+                mainThread.interrupt();
+                TrainingFileUtils.exportAllFiles(stocks,stockForecastProgress);
+                mainThread.start();
+                /*
+                TrainingFileUtils.exportSeparateClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining", dayArray, stockForecastProgress);
                 StockPredictor.trainLSTM(29);
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
 
-                StockPredictor.exportClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress);
+                TrainingFileUtils.exportClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress);
 
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
 
-                StockPredictor.exportLibSVMFile("res/TrainingFiles/SmoothedNASDAQTraining.csv", "res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt");
+                TrainingFileUtils.exportLibSVMFile("res/TrainingFiles/SmoothedNASDAQTraining.csv", "res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt");
 
                 StockPredictor.trainRandomForest("res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt", stocks.size());
+                */
             }catch (Exception e){e.printStackTrace();}
 
             updateProgress(0, stockForecastProgress);
+            Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
             Platform.runLater(() -> exportToMLFileButton.setDisable(false));
         }).start();
     }
@@ -792,7 +798,6 @@ public class Controller {
                 //DOWNLOAD INTRADAY DATA FOR VISUALISATION PURPOSES
                 if (s == 0 && h < 21 && h >= 14) {
                     try {
-
                         //updateBatchStockData();
                         if (!priceUpdating)
                             updateIntradayStockData();
@@ -817,8 +822,8 @@ public class Controller {
                 if (m % 30 == 0 && s == 0) {
                     try {
                         StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
-                        SmoothingUtils.smoothStocks(stocks);
-                        TechnicalAnalyser.calculateTechnicalIndicators(stocks);
+                        SmoothingUtils.smoothStocks(stocks, 0.2);
+                        TechnicalAnalyser.calculateTechnicalIndicators(stocks, true);
                         updatePredictions(predictStocks());
                         if (automated)
                             autoTrade();
@@ -842,6 +847,7 @@ public class Controller {
         NewsAPIHandler.initialise(nddh, newsFeedProgress);
         PortfolioManager.initialise(pmdh); //TODO: Get a progessbar for this
         StockPredictor.initialise(spdh);
+        TrainingFileUtils.initialise(dh);
         StockPredictor.loadLatestRandomForest();
 
         initialiseStocks();
@@ -946,9 +952,9 @@ public class Controller {
 
         Thread taThread = new Thread(() -> {
             try {
-                SmoothingUtils.smoothStocks(stocks);
+                SmoothingUtils.smoothStocks(stocks, 0.2);
                 TechnicalAnalyser.calculatePercentChanges(stocks);
-                TechnicalAnalyser.calculateTechnicalIndicators(stocks);
+                TechnicalAnalyser.calculateTechnicalIndicators(stocks, true);
             } catch (Exception e) { e.printStackTrace(); }
         });
 
@@ -1015,8 +1021,8 @@ public class Controller {
                 Platform.runLater(()->stockPredictionsBox.getChildren().add(pb.getNode()));
         }).start();
 
-
-        controlPanel.setDisable(false);
+        Platform.runLater(() -> exportToMLFileButton.setDisable(false));
+        Platform.runLater(() -> controlPanel.setDisable(false));
 
         mainThread.start();
     }

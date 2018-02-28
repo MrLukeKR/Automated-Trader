@@ -7,15 +7,18 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class Main extends Application {
+    static FXMLLoader loader;
 
     public static void main(String[] args) {
-        System.setProperty("hadoop.home.dir", "C:/hadoop");
+        //System.setProperty("hadoop.home.dir", "C:/hadoop");
         launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) throws IOException {
-        Parent root = FXMLLoader.load(getClass().getResource("view.fxml"));
+        loader = new FXMLLoader(getClass().getResource("view.fxml"));
+        Parent root = loader.load();
+
         primaryStage.setScene(new Scene(root, 1920, 1030));
         primaryStage.setTitle("Automated Stock Trader");
         primaryStage.show();
@@ -27,5 +30,9 @@ public class Main extends Application {
             }
             System.exit(1);
         });
+    }
+
+    static public Controller getController(){
+        return loader.getController();
     }
 }

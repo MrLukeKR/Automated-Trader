@@ -96,6 +96,11 @@ public class TechnicalAnalyser {
                 dh.addBatchCommand("UPDATE dailystockprices SET " + indicator + "=" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "' AND (" + indicator + " is null OR " + indicator + "!='" + records.get(key) + "');");
     }
 
+    static public void calculatePercentChanges(String stock) throws SQLException {
+        System.out.println("Calculating Close Price Percent Changes for " + stock);
+        calculatePercentChanges(stock, getFromDatabase(stock, "ClosePrice"));
+    }
+
     static public void calculatePercentChanges(ArrayList<String> stocks) throws SQLException {
         double c = 0, t = stocks.size() - 1;
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
@@ -103,8 +108,7 @@ public class TechnicalAnalyser {
         dh.setAutoCommit(false);
 
         for(String stock : stocks) {
-            System.out.println("Calculating Close Price Percent Changes for " + stock);
-            calculatePercentChanges(stock, getFromDatabase(stock, "ClosePrice"));
+            calculatePercentChanges(stock);
             Controller.updateProgress(c++, t, pb);
         }
 
@@ -136,33 +140,41 @@ public class TechnicalAnalyser {
         for(int i = 0; i < percentChangeArray.length; i++)
             percentChanges.put(dates.get(i), percentChangeArray[i]);
 
-        sendToDatabase(stock,"PercentChange",percentChanges);
+        sendToDatabase(stock,"PercentChange", percentChanges);
 
     }
 
-    static public void calculateTechnicalIndicators(ArrayList<String> stocks) throws SQLException {
+    static public void calculateTechnicalIndicators(String stock, boolean useSmoothedData) throws SQLException {
+        TreeMap<Date, Double> closePrices;
+        if(useSmoothedData)
+            closePrices = getFromDatabase(stock, "SmoothedClosePrice");
+        else
+            closePrices = getFromDatabase(stock, "ClosePrice");
+        TreeMap<Date, Double> volumes = getFromDatabase(stock, "TradeVolume");
+        TreeMap<Date, Double> openPrices = getFromDatabase(stock, "OpenPrice");
+        TreeMap<Date, Double> lowPrices = getFromDatabase(stock, "LowPrice");
+        TreeMap<Date, Double> highPrices = getFromDatabase(stock, "HighPrice");
+
+        dh.setAutoCommit(false);
+
+        for (TechnicalIndicator ti : TechnicalIndicator.values()) {
+            HashMap<String, TreeMap<Date, Double>> indicators = calculateTechnicalIndicator(ti, stock, openPrices, highPrices, lowPrices, closePrices, volumes, technicalIndicatorToDays(ti));
+            for (String indicator : Objects.requireNonNull(indicators).keySet())
+                sendToDatabase(stock, indicator, indicators.get(indicator));
+
+        }
+
+        dh.executeBatch();
+        dh.setAutoCommit(true);
+    }
+
+    static public void calculateTechnicalIndicators(ArrayList<String> stocks, boolean useSmoothedData) throws SQLException {
         double c = 0, t = (stocks.size() * TechnicalIndicator.values().length) - 1;
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
 
         for (String stock : stocks) {
-            //TreeMap<Date, Double> closePrices = getFromDatabase(stock, "ClosePrice");
-            TreeMap<Date, Double> closePrices = getFromDatabase(stock, "SmoothedClosePrice");
-            TreeMap<Date, Double> volumes = getFromDatabase(stock, "TradeVolume");
-            TreeMap<Date, Double> openPrices = getFromDatabase(stock, "OpenPrice");
-            TreeMap<Date, Double> lowPrices = getFromDatabase(stock, "LowPrice");
-            TreeMap<Date, Double> highPrices = getFromDatabase(stock, "HighPrice");
-
-            dh.setAutoCommit(false);
-
-            for (TechnicalIndicator ti : TechnicalIndicator.values()) {
-                HashMap<String, TreeMap<Date, Double>> indicators = calculateTechnicalIndicator(ti, stock, openPrices, highPrices, lowPrices, closePrices, volumes, technicalIndicatorToDays(ti));
-                for (String indicator : Objects.requireNonNull(indicators).keySet())
-                    sendToDatabase(stock, indicator, indicators.get(indicator));
-                Controller.updateProgress(c++, t, pb);
-            }
-
-            dh.executeBatch();
-            dh.setAutoCommit(true);
+            calculateTechnicalIndicators(stock, useSmoothedData);
+            Controller.updateProgress(c++, t, pb);
         }
 
         Controller.updateProgress(0, pb);
@@ -207,7 +219,7 @@ public class TechnicalAnalyser {
     }
 
     private static HashMap<String, TreeMap<Date, Double>> calculateTechnicalIndicator(TechnicalIndicator indicator, String stock, TreeMap<Date, Double> openPrices, TreeMap<Date, Double> highPrices, TreeMap<Date, Double> lowPrices, TreeMap<Date, Double> closePrices, TreeMap<Date, Double> volumes, int days) {
-        System.out.println("Calculating " + technicalIndicatorToString(indicator) + " for " + stock + "...");
+        System.out.println("Calculating " + indicator.name() + " for " + stock + "...");
 
         MInteger begin = new MInteger(), length = new MInteger();
 

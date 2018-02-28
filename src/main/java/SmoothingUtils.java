@@ -9,7 +9,7 @@ import java.util.TreeMap;
 class SmoothingUtils {
     private static DatabaseHandler dh;
     private static ProgressBar pb;
-    private static final double ALPHA = 0.1;
+    private static double ALPHA;
 
     static public void initialise(DatabaseHandler sudh, ProgressBar supb){
         dh = sudh;
@@ -30,11 +30,10 @@ class SmoothingUtils {
         double[] forecasts = new double[closePrices.size()];
         ArrayList<Date> dates = new ArrayList<>(closePrices.keySet());
 
-        forecasts[0] = 0;
-        forecasts[1] = closePrices.get(dates.get(0));
+        forecasts[0] = closePrices.get(dates.get(0));
 
-        for (int i = 2; i < forecasts.length; i++)
-                forecasts[i] = alpha * closePrices.get(dates.get(i-1)) + (1-alpha) * forecasts[i-1];
+        for (int i = 1; i < forecasts.length; i++)
+                forecasts[i] = alpha * closePrices.get(dates.get(i)) + (1-alpha) * forecasts[i-1];
 
             int j = 0;
 
@@ -44,28 +43,35 @@ class SmoothingUtils {
         return smoothedPrices;
     }
 
-    static public void smoothStocks(ArrayList<String> stocks) throws SQLException {
+    static public void smoothStock(String stock, double alpha) throws SQLException {
+        ALPHA = alpha;
+
+        System.out.println("Smoothing Stock Close Prices for " + stock + "...");
+
+        TreeMap<Date, Double> priceHistory = new TreeMap<>();
+        ArrayList<String> results = dh.executeQuery("SELECT TradeDate, ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC");
+
+        for(String result : results) {
+            String[] splitString = result.split(",");
+            Date date = Date.valueOf(splitString[0]);
+            double price = Double.parseDouble(splitString[1]);
+
+            priceHistory.put(date,price);
+        }
+
+        TreeMap<Date, Double> smoothed = exponentialSmooth(priceHistory, alpha);
+        priceHistory.clear();
+        sendToDatabase(stock, smoothed);
+    }
+
+    static public void smoothStocks(ArrayList<String> stocks, double alpha) throws SQLException {
         double t = stocks.size()-1, c = 0;
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
 
         dh.setAutoCommit(false);
         for(String stock : stocks){
-            System.out.println("Smoothing Stock Close Prices for " + stock + "...");
-
-            TreeMap<Date, Double> priceHistory = new TreeMap<>();
-            ArrayList<String> results = dh.executeQuery("SELECT TradeDate, ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC");
-
-            for(String result : results) {
-                String[] splitString = result.split(",");
-                Date date = Date.valueOf(splitString[0]);
-                double price = Double.parseDouble(splitString[1]);
-
-                priceHistory.put(date,price);
-            }
-                TreeMap<Date, Double> smoothed = exponentialSmooth(priceHistory, ALPHA);
-                priceHistory.clear();
-                sendToDatabase(stock, smoothed);
+            smoothStock(stock,alpha);
             Controller.updateProgress(c++, t, pb);
         }
         dh.executeBatch();

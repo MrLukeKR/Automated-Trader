@@ -20,7 +20,6 @@ import java.util.Calendar;
 
 class LiveStockRecord {
     final String symbol;
-    private String date;
 
     private final HBox hStock = new HBox();
     private final Label stockPrice = new Label();
@@ -216,10 +215,6 @@ class LiveStockRecord {
 
     public void setUpdating(boolean isUpdating) {
         Platform.runLater(() -> progress.setVisible(isUpdating));
-    }
-
-    public String getDate() {
-        return date;
     }
 
     public String getSymbol() {

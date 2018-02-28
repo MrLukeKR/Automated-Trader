@@ -25,7 +25,7 @@ class NaturalLanguageProcessor {
                     STOP_WORDS.add(word);
 
 
-        System.out.println("Initialised Natural Language Processor");
+        Main.getController().updateCurrentTask("Initialised Natural Language Processor",false,false);
     }
 
     private static ArrayList<String> splitToSentences(String document) {
@@ -90,7 +90,7 @@ class NaturalLanguageProcessor {
 
     static public void enumerateSentencesFromArticles() throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 0");
-        System.out.println("Enumerating sentences for " + unprocessedIDs.size() + " documents...");
+        Main.getController().updateCurrentTask("Enumerating sentences for " + unprocessedIDs.size() + " documents...", false, false);
 
         double i = 0, t = unprocessedIDs.size() - 1;
 
@@ -138,7 +138,7 @@ class NaturalLanguageProcessor {
             Controller.updateProgress(i++, t, pb);
 
             dh.addBatchCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = '" + unprocessedID + "';");
-            System.out.println("Enumerated " + temporaryDatabase.size() + " sentences");
+            Main.getController().updateCurrentTask("Enumerated " + temporaryDatabase.size() + " sentences", false, false);
             dh.executeBatch();
 
             temporaryDatabase.clear();
@@ -186,7 +186,7 @@ class NaturalLanguageProcessor {
 
     static public void enumerateNGramsFromArticles(int n) throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) < CURDATE()"); //TODO: (Use join) Price difference can't be calculated for the weekend or after hours before the next day
-        System.out.println("Enumerating n-grams for " + unprocessedIDs.size() + " documents...");
+        Main.getController().updateCurrentTask("Enumerating n-grams for " + unprocessedIDs.size() + " documents...", false, false);
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         int k = 0, t = unprocessedIDs.size() - 1;
@@ -261,7 +261,7 @@ class NaturalLanguageProcessor {
 
         sendNGramsToDatabase(temporaryDatabase);
         Controller.updateProgress(0, pb);
-        System.out.println("Finished processing n-grams");
+        Main.getController().updateCurrentTask("Finished processing n-grams", false, false);
     }
 
     static private void sendNGramsToDatabase(Map<String, Double[]> temporaryDatabase) throws SQLException {
@@ -345,8 +345,7 @@ class NaturalLanguageProcessor {
     }
 
     static public void processArticlesForSentiment(int ngramSize) throws SQLException {
-        System.out.println("Processing Sentiment of Articles");
-
+        Main.getController().updateCurrentTask("Processing Sentiment of Articles", false, false);
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         dh.setAutoCommit(false);
@@ -362,7 +361,7 @@ class NaturalLanguageProcessor {
                 sentiment = 0.5;
 
             dh.addBatchCommand("UPDATE newsarticles SET processed = 1, mood = " + sentiment + " WHERE ID = " + id);
-            System.out.println("Sentiment for Article ID " + id + ": " + sentiment);
+            Main.getController().updateCurrentTask("Sentiment for Article ID " + id + ": " + sentiment,false,false);
 
 
             Controller.updateProgress(++curr, t, pb);

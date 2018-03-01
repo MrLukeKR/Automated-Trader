@@ -57,29 +57,47 @@ public class TrainingFileUtils {
 
     static public void exportAllFiles(ArrayList<String> stocks, ProgressBar pb) throws FileNotFoundException, SQLException {
         //No technical indicators, no sentiment, no smoothing
-        exportClassificationCSV(stocks,"Standard_NASDAQ.csv",new int[]{1,5,20,200},pb,1,false, false);
+        //exportClassificationCSV(stocks,"res/TrainingFiles/Standard_NASDAQ.csv",new int[]{1,5,20,200},pb,1,false, false);
+
+        //resetPriceValues();
+        //TechnicalAnalyser.calculateTechnicalIndicators(stocks,false);
 
         //Technical indicators, no sentiment, no smoothing
-        exportClassificationCSV(stocks,"Standard_TA_NASDAQ.csv",new int[]{1,5,20,200},pb,1,true, false);
+        //exportClassificationCSV(stocks,"res/TrainingFiles/Standard_TA_NASDAQ.csv",new int[]{1,5,20,200},pb,1,true, false);
 
         //No technical indicators, no sentiment, smoothing
-        for(double i = 0.1; i < 1; i+=0.1)
-            exportClassificationCSV(stocks,"Standard_" + i + "Smooth_NASDAQ.csv",new int[]{1,5,20,200},pb,i,true, false);
+        for(double i = 0.1; i < 1; i+=0.1) {
+            resetPriceValues();
+            SmoothingUtils.smoothStocks(stocks,i);
+            exportClassificationCSV(stocks, "res/TrainingFiles/Standard_" + i + "Smooth_NASDAQ.csv", new int[]{1, 5, 20, 200}, pb, i, false, false);
+        }
 
         //Technical indicators, smoothing, no sentiment
-        for(double i = 0.1; i < 1; i+=0.1)
-            exportClassificationCSV(stocks,"Standard_TA_" + i + "Smooth_NASDAQ.csv",new int[]{1,5,20,200},pb,i,true, false);
+        for(double i = 0.1; i < 1; i+=0.1) {
+            resetPriceValues();
+            SmoothingUtils.smoothStocks(stocks,i);
+            TechnicalAnalyser.calculateTechnicalIndicators(stocks,true);
 
+            exportClassificationCSV(stocks, "res/TrainingFiles/Standard_TA_" + i + "Smooth_NASDAQ.csv", new int[]{1, 5, 20, 200}, pb, i, true, false);
+        }
+
+        resetPriceValues();
+        TechnicalAnalyser.calculateTechnicalIndicators(stocks,false);
         //Technical indicators, sentiment, no smoothing
-        exportClassificationCSV(stocks,"Standard_TA_Sent_NASDAQ.csv",new int[]{1,5,20,200},pb,1,true, true);
+        exportClassificationCSV(stocks,"res/TrainingFiles/Standard_TA_Sent_NASDAQ.csv",new int[]{1,5,20,200},pb,1,true, true);
 
         //No technical indicators, sentiment, no smoothing
-        exportClassificationCSV(stocks,"Standard_Sent_NASDAQ.csv",new int[]{1,5,20,200},pb,1,false, true);
+        exportClassificationCSV(stocks,"res/TrainingFiles/Standard_Sent_NASDAQ.csv",new int[]{1,5,20,200},pb,1,false, true);
 
         //Technical indicators, smoothing, sentiment
-        for(double i = 0.1; i < 1; i+=0.1)
-            exportClassificationCSV(stocks,"Standard_TA_Sent_" + i + "Smooth_NASDAQ.csv",new int[]{1,5,20,200},pb,i,true, true);
-    }
+        for(double i = 0.1; i < 1; i+=0.1) {
+            resetPriceValues();
+            SmoothingUtils.smoothStocks(stocks,i);
+            TechnicalAnalyser.calculateTechnicalIndicators(stocks,true);
+
+            exportClassificationCSV(stocks, "res/TrainingFiles/Standard_TA_Sent_" + i + "Smooth_NASDAQ.csv", new int[]{1, 5, 20, 200}, pb, i, true, true);
+        }
+        }
 
     static public void exportSeparateClassificationCSV(ArrayList<String> stocks, String filePath, int[] days, ProgressBar pb) throws FileNotFoundException, SQLException {
         final int t = stocks.size() - 1;
@@ -108,7 +126,7 @@ public class TrainingFileUtils {
 
     static public void resetPriceValues() throws SQLException {
         ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
-        String[] removeColumns = {"OpenPrice", "HighPrice", "LowPrice", "ClosePrice", "Symbol", "TradeDate", "TradeVolume"};
+        String[] removeColumns = {"OpenPrice", "HighPrice", "LowPrice", "ClosePrice", "Symbol", "TradeDate", "TradeVolume", "PercentChange"};
 
         for(String column:removeColumns)
             dbSchema.remove(column);
@@ -124,17 +142,16 @@ public class TrainingFileUtils {
     static private ArrayList<String> convertToClassificationTrainingArray(String stock, int index, int[] amountOfDaysArray, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiments) throws SQLException {
         ArrayList<String> dataPoints = new ArrayList<>();
 
-        resetPriceValues();
-        SmoothingUtils.smoothStock(stock,smoothPriceAlpha);
-        TechnicalAnalyser.calculatePercentChanges(stock);
-        TechnicalAnalyser.calculateTechnicalIndicators(stock,smoothPriceAlpha!=1);
-
         ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
 
         StringBuilder command = new StringBuilder("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "'");
 
-        for(String column:dbSchema)
-            command.append(" AND ").append(column).append(" IS NOT NULL");
+        if(includeIndicators)
+            for(String column:new String[]{"SMA5", "SMA20", "SMA200", "EMA5", "EMA10", "EMA20", "EMA200", "MACD", "MACDSig", "MACDHist", "RSI", "ADX10", "CCI", "AD", "OBV", "StoOscSlowK", "StoOscSlowD", "WillR"})
+                command.append(" AND ").append(column).append(" IS NOT NULL");
+
+        if(smoothPriceAlpha!=1)
+            command.append(" AND SmoothedClosePrice IS NOT NULL");
 
         ArrayList<String> priceValues = dh.executeQuery(command + " ORDER BY TradeDate ASC;");
 
@@ -168,15 +185,24 @@ public class TrainingFileUtils {
                 StringBuilder dataPoint = new StringBuilder(String.valueOf(index) + "," + String.valueOf(amountOfDays));
                 String[] splitString = priceValues.get(i).split(",");
 
-                for(String priceColumn : new String[]{"OpenPrice", "HighPrice", "LowPrice", "ClosePrice"})
-                dataPoint.append(",").append(splitString[dbSchema.indexOf(priceColumn)]);
+                for(String priceColumn : new String[]{"OpenPrice", "HighPrice", "LowPrice", "ClosePrice", "TradeVolume", "PercentChange"})
+                    dataPoint.append(",").append(splitString[dbSchema.indexOf(priceColumn)]);
 
                 if(smoothPriceAlpha != 1)
                     dataPoint.append(",").append(splitString[dbSchema.indexOf("SmoothedClosePrice")]);
 
                 if(includeIndicators)
-                    for(TechnicalAnalyser.TechnicalIndicator indicator : TechnicalAnalyser.TechnicalIndicator.values())
+                    for(TechnicalAnalyser.TechnicalIndicator indicator : TechnicalAnalyser.TechnicalIndicator.values()) {
+                        if(indicator.equals(TechnicalAnalyser.TechnicalIndicator.MACD)){
+                            dataPoint.append(",").append(splitString[dbSchema.indexOf("MACD")]);
+                            dataPoint.append(",").append(splitString[dbSchema.indexOf("MACDSig")]);
+                            dataPoint.append(",").append(splitString[dbSchema.indexOf("MACDHist")]);
+                        }else if (indicator.equals(TechnicalAnalyser.TechnicalIndicator.StoOsc)){
+                            dataPoint.append(",").append(splitString[dbSchema.indexOf("StoOscSlowD")]);
+                            dataPoint.append(",").append(splitString[dbSchema.indexOf("StoOscSlowK")]);
+                        }else
                         dataPoint.append(",").append(splitString[dbSchema.indexOf(indicator.name())]);
+                    }
 
                 if(includeSentiments)
                     dataPoint.append(",").append(sentiments[i]);

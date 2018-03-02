@@ -40,8 +40,11 @@ public class Controller {
     static private final STOCK_API useAPI = STOCK_API.AlphaVantage;
     static private Thread mainThread;
     static private boolean quit = false;
-    static private int dayArray[] = new int[]{1};
+    static private int dayArray[] = new int[]{1, 5, 20, 200};
 
+    static final private double smoothRate = 0.25;
+
+    static final private boolean DISABLE_SYSTEM_UPDATE = true;
     static private ArrayList<String> stocks = new ArrayList<>();
     static private ArrayList<LiveStockRecord> records = new ArrayList<>();
     static private ArrayList<PredictionBox> predictions = new ArrayList<>();
@@ -176,9 +179,9 @@ public class Controller {
 
         new Thread(() -> {
             String stock = historicStockDropdown.getValue();
-            if(stock == null){
-                Platform.runLater(()->displayHistoricDataButton.setDisable(false));
-                Platform.runLater(()->historicOptions.setDisable(false));
+            if (stock == null) {
+                Platform.runLater(() -> displayHistoricDataButton.setDisable(false));
+                Platform.runLater(() -> historicOptions.setDisable(false));
                 return;
             }
 
@@ -190,181 +193,193 @@ public class Controller {
                 dbData = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC;");
                 String startDate = dh.executeQuery("SELECT MIN(TradeDate) FROM dailystockprices WHERE Symbol='" + stock + "';").get(0);
                 String endDate = dh.executeQuery("SELECT MAX(TradeDate) FROM dailystockprices WHERE Symbol='" + stock + "';").get(0);
-                Platform.runLater(()->historicDateRange.setText(startDate + " to " + endDate));
-            } catch (SQLException e) {e.printStackTrace();}
+                Platform.runLater(() -> historicDateRange.setText(startDate + " to " + endDate));
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
 
             int count = 0;
 
-            HashMap<String, ArrayDeque<XYChart.Data<Number, Number>>> values = new HashMap<>();
+            try {
+                HashMap<String, ArrayDeque<XYChart.Data<Number, Number>>> values = new HashMap<>();
 
-            for(String column : Objects.requireNonNull(dbSchema)) values.put(column, new ArrayDeque<>());
+                for (String column : Objects.requireNonNull(dbSchema)) values.put(column, new ArrayDeque<>());
 
-            for (String record : Objects.requireNonNull(dbData)) {
-                int idx, rIdx = 0;
+                for (String record : Objects.requireNonNull(dbData)) {
+                    int idx, rIdx = 0;
 
-                String[] splitRecord = record.split(",");
+                    String[] splitRecord = record.split(",");
 
-                values.get("OpenPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("OpenPrice")])));
-                values.get("HighPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("HighPrice")])));
-                values.get("LowPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("LowPrice")])));
-                values.get("ClosePrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("ClosePrice")])));
-                values.get("TradeVolume").add(new XYChart.Data<>(count, Integer.parseInt(splitRecord[dbSchema.indexOf("TradeVolume")])));
-                values.get("SmoothedClosePrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("SmoothedClosePrice")])));
+                    if(!splitRecord[dbSchema.indexOf("OpenPrice")].equals("null"))
+                        values.get("OpenPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("OpenPrice")])));
+                    if(!splitRecord[dbSchema.indexOf("HighPrice")].equals("null"))
+                        values.get("HighPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("HighPrice")])));
+                    if(!splitRecord[dbSchema.indexOf("LowPrice")].equals("null"))
+                        values.get("LowPrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("LowPrice")])));
+                    if(!splitRecord[dbSchema.indexOf("ClosePrice")].equals("null"))
+                        values.get("ClosePrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("ClosePrice")])));
+                    if(!splitRecord[dbSchema.indexOf("TradeVolume")].equals("null"))
+                        values.get("TradeVolume").add(new XYChart.Data<>(count, Integer.parseInt(splitRecord[dbSchema.indexOf("TradeVolume")])));
+                    if(!splitRecord[dbSchema.indexOf("SmoothedClosePrice")].equals("null"))
+                        values.get("SmoothedClosePrice").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[dbSchema.indexOf("SmoothedClosePrice")])));
 
-                Rectangle[] rects = new Rectangle[dbSchema.size()];
+                    Rectangle[] rects = new Rectangle[dbSchema.size()];
 
-                for (int i = 0; i < rects.length; i++) {
-                    rects[i] = new Rectangle(0, 0);
-                    rects[i].setVisible(false);
+                    for (int i = 0; i < rects.length; i++) {
+                        rects[i] = new Rectangle(0, 0);
+                        rects[i].setVisible(false);
+                    }
+
+                    if (showSMA5.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA5")].equals("null"))
+                        values.get("SMA5").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showSMA10.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA10")].equals("null"))
+                        values.get("SMA10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showSMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA20")].equals("null"))
+                        values.get("SMA20").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showSMA200.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA200")].equals("null"))
+                        values.get("SMA200").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showEMA5.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA5")].equals("null"))
+                        values.get("EMA5").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showEMA10.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA10")].equals("null"))
+                        values.get("EMA10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showEMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA20")].equals("null"))
+                        values.get("EMA20").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showEMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA200")].equals("null"))
+                        values.get("EMA200").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showMACD.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACD")].equals("null"))
+                        values.get("MACD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showMACDSig.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACDSig")].equals("null"))
+                        values.get("MACDSig").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showMACDHist.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACDHist")].equals("null"))
+                        values.get("MACDHist").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showRSI.isSelected() && !splitRecord[idx = dbSchema.indexOf("RSI")].equals("null"))
+                        values.get("RSI").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showADX10.isSelected() && !splitRecord[idx = dbSchema.indexOf("ADX10")].equals("null"))
+                        values.get("ADX10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showCCI.isSelected() && !splitRecord[idx = dbSchema.indexOf("CCI")].equals("null"))
+                        values.get("CCI").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showAD.isSelected() && !splitRecord[idx = dbSchema.indexOf("AD")].equals("null"))
+                        values.get("AD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showOBV.isSelected() && !splitRecord[idx = dbSchema.indexOf("OBV")].equals("null"))
+                        values.get("OBV").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showStoOscSlowD.isSelected() && !splitRecord[idx = dbSchema.indexOf("StoOscSlowD")].equals("null"))
+                        values.get("StoOscSlowD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showStoOscSlowK.isSelected() && !splitRecord[idx = dbSchema.indexOf("StoOscSlowK")].equals("null"))
+                        values.get("StoOscSlowK").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    if (showWillR.isSelected() && !splitRecord[idx = dbSchema.indexOf("WillR")].equals("null"))
+                        values.get("WillR").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+
+                    for (String column : dbSchema)
+                        if (!values.get(column).isEmpty())
+                            values.get(column).getLast().setNode(rects[rIdx++]);
+
+                    count++;
                 }
 
-                if (showSMA5.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA5")].equals("null"))
-                    values.get("SMA5").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+                XYChart.Series<Number, Number> openPrices = new XYChart.Series<>("Open Prices", FXCollections.observableArrayList(values.get("OpenPrice")));
+                XYChart.Series<Number, Number> highPrices = new XYChart.Series<>("High Prices", FXCollections.observableArrayList(values.get("HighPrice")));
+                XYChart.Series<Number, Number> lowPrices = new XYChart.Series<>("Low Prices", FXCollections.observableArrayList(values.get("LowPrice")));
+                XYChart.Series<Number, Number> closePrices = new XYChart.Series<>("Close Prices", FXCollections.observableArrayList(values.get("ClosePrice")));
+                AreaChart.Series<Number, Number> volumes = new AreaChart.Series<>("Trade Volume", FXCollections.observableArrayList(values.get("TradeVolume")));
+                XYChart.Series<Number, Number> smoothedClosePrices = new XYChart.Series<>("Smoothed Close Prices", FXCollections.observableArrayList(values.get("SmoothedClosePrice")));
+                XYChart.Series<Number, Number> sma5 = new XYChart.Series<>("Simple Moving Average (5-Day)", FXCollections.observableArrayList(values.get("SMA5")));
+                XYChart.Series<Number, Number> sma10 = new XYChart.Series<>("Simple Moving Average (10-Day)", FXCollections.observableArrayList(values.get("SMA10")));
+                XYChart.Series<Number, Number> sma20 = new XYChart.Series<>("Simple Moving Average (20-Day)", FXCollections.observableArrayList(values.get("SMA20")));
+                XYChart.Series<Number, Number> sma200 = new XYChart.Series<>("Simple Moving Average (200-Day)", FXCollections.observableArrayList(values.get("SMA200")));
+                XYChart.Series<Number, Number> ema5 = new XYChart.Series<>("Exponential Moving Average (5-Day)", FXCollections.observableArrayList(values.get("EMA5")));
+                XYChart.Series<Number, Number> ema10 = new XYChart.Series<>("Exponential Moving Average (10-Day)", FXCollections.observableArrayList(values.get("EMA10")));
+                XYChart.Series<Number, Number> ema20 = new XYChart.Series<>("Exponential Moving Average (20-Day)", FXCollections.observableArrayList(values.get("EMA20")));
+                XYChart.Series<Number, Number> ema200 = new XYChart.Series<>("Exponential Moving Average (200-Day)", FXCollections.observableArrayList(values.get("EMA200")));
+                XYChart.Series<Number, Number> macd = new XYChart.Series<>("Moving Average Convergence/Divergence", FXCollections.observableArrayList(values.get("MACD")));
+                XYChart.Series<Number, Number> macdSig = new XYChart.Series<>("Moving Average Convergence/Divergence Signal Line", FXCollections.observableArrayList(values.get("MACDSig")));
+                XYChart.Series<Number, Number> macdHist = new XYChart.Series<>("Moving Average Convergence/Divergence Histogram", FXCollections.observableArrayList(values.get("MACDHist")));
+                XYChart.Series<Number, Number> rsi = new XYChart.Series<>("Relative Strength Indicator", FXCollections.observableArrayList(values.get("RSI")));
+                XYChart.Series<Number, Number> adx10 = new XYChart.Series<>("Average Directional Index (10-Day)", FXCollections.observableArrayList(values.get("ADX10")));
+                XYChart.Series<Number, Number> cci = new XYChart.Series<>("Commodity Channel Index", FXCollections.observableArrayList(values.get("CCI")));
+                XYChart.Series<Number, Number> ad = new XYChart.Series<>("Accumulation Distribution", FXCollections.observableArrayList(values.get("AD")));
+                XYChart.Series<Number, Number> obv = new XYChart.Series<>("On-Balance Volume", FXCollections.observableArrayList(values.get("OBV")));
+                XYChart.Series<Number, Number> stoOscSlowK = new XYChart.Series<>("Stochastic Oscillator Slow %K", FXCollections.observableArrayList(values.get("StoOscSlowK")));
+                XYChart.Series<Number, Number> stoOscSlowD = new XYChart.Series<>("Stochastic Oscillator Slow %D", FXCollections.observableArrayList(values.get("StoOscSlowD")));
+                XYChart.Series<Number, Number> willR = new XYChart.Series<>("Williams %R", FXCollections.observableArrayList(values.get("WillR")));
 
-                if (showSMA10.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA10")].equals("null"))
-                    values.get("SMA10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
+                Platform.runLater(() -> {
+                    historicPriceChart.getData().addAll(openPrices, highPrices, lowPrices, closePrices, smoothedClosePrices,
+                            sma5, sma10, sma20, sma200,
+                            ema5, ema10, ema20, ema200);
+                    for (XYChart.Series<Number, Number> series : historicPriceChart.getData())
+                        series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
 
-                if (showSMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA20")].equals("null"))
-                    values.get("SMA20").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showSMA200.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA200")].equals("null"))
-                    values.get("SMA200").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showEMA5.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA5")].equals("null"))
-                    values.get("EMA5").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showEMA10.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA10")].equals("null"))
-                    values.get("EMA10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showEMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA20")].equals("null"))
-                    values.get("EMA20").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showEMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA200")].equals("null"))
-                    values.get("EMA200").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showMACD.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACD")].equals("null"))
-                    values.get("MACD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showMACDSig.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACDSig")].equals("null"))
-                    values.get("MACDSig").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showMACDHist.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACDHist")].equals("null"))
-                    values.get("MACDHist").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showRSI.isSelected() && !splitRecord[idx = dbSchema.indexOf("RSI")].equals("null"))
-                    values.get("RSI").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showADX10.isSelected() && !splitRecord[idx = dbSchema.indexOf("ADX10")].equals("null"))
-                    values.get("ADX10").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showCCI.isSelected() && !splitRecord[idx = dbSchema.indexOf("CCI")].equals("null"))
-                    values.get("CCI").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showAD.isSelected() && !splitRecord[idx = dbSchema.indexOf("AD")].equals("null"))
-                    values.get("AD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showOBV.isSelected() && !splitRecord[idx = dbSchema.indexOf("OBV")].equals("null"))
-                    values.get("OBV").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showStoOscSlowD.isSelected() && !splitRecord[idx = dbSchema.indexOf("StoOscSlowD")].equals("null"))
-                    values.get("StoOscSlowD").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showStoOscSlowK.isSelected() && !splitRecord[idx = dbSchema.indexOf("StoOscSlowK")].equals("null"))
-                    values.get("StoOscSlowK").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                if (showWillR.isSelected() && !splitRecord[idx = dbSchema.indexOf("WillR")].equals("null"))
-                    values.get("WillR").add(new XYChart.Data<>(count, Double.parseDouble(splitRecord[idx])));
-
-                for(String column:dbSchema)
-                    if(!values.get(column).isEmpty())
-                        values.get(column).getLast().setNode(rects[rIdx++]);
-
-                count++;
-            }
-
-            XYChart.Series<Number, Number> openPrices = new XYChart.Series<>("Open Prices", FXCollections.observableArrayList(values.get("OpenPrice")));
-            XYChart.Series<Number, Number> highPrices = new XYChart.Series<>("High Prices", FXCollections.observableArrayList(values.get("HighPrice")));
-            XYChart.Series<Number, Number> lowPrices = new XYChart.Series<>("Low Prices", FXCollections.observableArrayList(values.get("LowPrice")));
-            XYChart.Series<Number, Number> closePrices = new XYChart.Series<>("Close Prices", FXCollections.observableArrayList(values.get("ClosePrice")));
-            AreaChart.Series<Number, Number> volumes = new AreaChart.Series<>("Trade Volume", FXCollections.observableArrayList(values.get("TradeVolume")));
-            XYChart.Series<Number, Number> smoothedClosePrices = new XYChart.Series<>("Smoothed Close Prices", FXCollections.observableArrayList(values.get("SmoothedClosePrice")));
-            XYChart.Series<Number, Number> sma5 = new XYChart.Series<>("Simple Moving Average (5-Day)", FXCollections.observableArrayList(values.get("SMA5")));
-            XYChart.Series<Number, Number> sma10 = new XYChart.Series<>("Simple Moving Average (10-Day)", FXCollections.observableArrayList(values.get("SMA10")));
-            XYChart.Series<Number, Number> sma20 = new XYChart.Series<>("Simple Moving Average (20-Day)", FXCollections.observableArrayList(values.get("SMA20")));
-            XYChart.Series<Number, Number> sma200 = new XYChart.Series<>("Simple Moving Average (200-Day)", FXCollections.observableArrayList(values.get("SMA200")));
-            XYChart.Series<Number, Number> ema5 = new XYChart.Series<>("Exponential Moving Average (5-Day)", FXCollections.observableArrayList(values.get("EMA5")));
-            XYChart.Series<Number, Number> ema10 = new XYChart.Series<>("Exponential Moving Average (10-Day)", FXCollections.observableArrayList(values.get("EMA10")));
-            XYChart.Series<Number, Number> ema20 = new XYChart.Series<>("Exponential Moving Average (20-Day)", FXCollections.observableArrayList(values.get("EMA20")));
-            XYChart.Series<Number, Number> ema200 = new XYChart.Series<>("Exponential Moving Average (200-Day)", FXCollections.observableArrayList(values.get("EMA200")));
-            XYChart.Series<Number, Number> macd = new XYChart.Series<>("Moving Average Convergence/Divergence", FXCollections.observableArrayList(values.get("MACD")));
-            XYChart.Series<Number, Number> macdSig = new XYChart.Series<>("Moving Average Convergence/Divergence Signal Line", FXCollections.observableArrayList(values.get("MACDSig")));
-            XYChart.Series<Number, Number> macdHist = new XYChart.Series<>("Moving Average Convergence/Divergence Histogram", FXCollections.observableArrayList(values.get("MACDHist")));
-            XYChart.Series<Number, Number> rsi = new XYChart.Series<>("Relative Strength Indicator", FXCollections.observableArrayList(values.get("RSI")));
-            XYChart.Series<Number, Number> adx10 = new XYChart.Series<>("Average Directional Index (10-Day)", FXCollections.observableArrayList(values.get("ADX10")));
-            XYChart.Series<Number, Number> cci = new XYChart.Series<>("Commodity Channel Index", FXCollections.observableArrayList(values.get("CCI")));
-            XYChart.Series<Number, Number> ad = new XYChart.Series<>("Accumulation Distribution", FXCollections.observableArrayList(values.get("AD")));
-            XYChart.Series<Number, Number> obv = new XYChart.Series<>("On-Balance Volume", FXCollections.observableArrayList(values.get("OBV")));
-            XYChart.Series<Number, Number> stoOscSlowK = new XYChart.Series<>("Stochastic Oscillator Slow %K", FXCollections.observableArrayList(values.get("StoOscSlowK")));
-            XYChart.Series<Number, Number> stoOscSlowD = new XYChart.Series<>("Stochastic Oscillator Slow %D", FXCollections.observableArrayList(values.get("StoOscSlowD")));
-            XYChart.Series<Number, Number> willR = new XYChart.Series<>("Williams %R", FXCollections.observableArrayList(values.get("WillR")));
-
-            Platform.runLater(()-> {
-                historicPriceChart.getData().addAll(openPrices, highPrices, lowPrices, closePrices, smoothedClosePrices,
-                        sma5, sma10, sma20, sma200,
-                        ema5, ema10, ema20, ema200);
-                for(XYChart.Series<Number, Number> series : historicPriceChart.getData())
-                    series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
-
-            Platform.runLater(()->{
+                Platform.runLater(() -> {
                     historicVolumeChart.getData().add(volumes);
                     volumes.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
+                });
 
-            Platform.runLater(()->{
-                macdChart.getData().addAll(macd, macdSig, macdHist);
-                for(XYChart.Series<Number, Number> series : macdChart.getData())
-                    series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
+                Platform.runLater(() -> {
+                    macdChart.getData().addAll(macd, macdSig, macdHist);
+                    for (XYChart.Series<Number, Number> series : macdChart.getData())
+                        series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
 
-            Platform.runLater(()->{
-                rsiChart.getData().add(rsi);
-                rsi.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
+                Platform.runLater(() -> {
+                    rsiChart.getData().add(rsi);
+                    rsi.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
 
-            Platform.runLater(()->{
-                adxChart.getData().add(adx10);
-                adx10.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
+                Platform.runLater(() -> {
+                    adxChart.getData().add(adx10);
+                    adx10.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
 
-            Platform.runLater(()->{
-                cciChart.getData().add(cci);
-                cci.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
+                Platform.runLater(() -> {
+                    cciChart.getData().add(cci);
+                    cci.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
 
-            Platform.runLater(()->{
-                adChart.getData().add(ad);
-                ad.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
+                Platform.runLater(() -> {
+                    adChart.getData().add(ad);
+                    ad.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
 
-            Platform.runLater(()->{
-                obvChart.getData().add(obv);
-                obv.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
+                Platform.runLater(() -> {
+                    obvChart.getData().add(obv);
+                    obv.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
 
-            Platform.runLater(()->{
-                willRChart.getData().add(willR);
-                willR.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
+                Platform.runLater(() -> {
+                    willRChart.getData().add(willR);
+                    willR.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
 
-            Platform.runLater(()->{
-                stoOscChart.getData().addAll(stoOscSlowD,stoOscSlowK);
-                for(XYChart.Series<Number, Number> series : stoOscChart.getData())
-                    series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
-            });
-
+                Platform.runLater(() -> {
+                    stoOscChart.getData().addAll(stoOscSlowD, stoOscSlowK);
+                    for (XYChart.Series<Number, Number> series : stoOscChart.getData())
+                        series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+                });
+            }catch(Exception e){
+                e.printStackTrace();
+            }finally{
                 Platform.runLater(()->displayHistoricDataButton.setDisable(false));
-            Platform.runLater(()->historicOptions.setDisable(false));
+                Platform.runLater(()->historicOptions.setDisable(false));
+            }
         }).start();
     }
 
@@ -386,22 +401,22 @@ public class Controller {
 
             try {
                 updateCurrentTask("Exporting to ML File...", false, false);
-                mainThread.interrupt();
-                TrainingFileUtils.exportAllFiles(stocks,stockForecastProgress);
-                mainThread.start();
+
+                //TrainingFileUtils.exportAllFiles(stocks,stockForecastProgress);
+
                 /*
                 TrainingFileUtils.exportSeparateClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining", dayArray, stockForecastProgress);
                 StockPredictor.trainLSTM(29);
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
-
-                TrainingFileUtils.exportClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress);
+                */
+                TrainingFileUtils.exportClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress,smoothRate,true,true);
 
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
 
                 TrainingFileUtils.exportLibSVMFile("res/TrainingFiles/SmoothedNASDAQTraining.csv", "res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt");
 
                 StockPredictor.trainRandomForest("res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt", stocks.size());
-                */
+
             }catch (Exception e){e.printStackTrace();}
 
             updateProgress(0, stockForecastProgress);
@@ -504,15 +519,13 @@ public class Controller {
             }
         });
 
-            dh.init("Agent", "0Y5q0m28pSB9jj2O");
-            nlpdh.init("NaturalLanguageProcessor", "p1pONM8zhI6GgCfy");
-            tadh.init("TechnicalAnalyser", "n6qvdUkFOoFCxPq5");
-            nddh.init("NewsDownloader", "wu0Ni6YF3yLTVp2A");
-            sqdh.init("StockQuoteDownloader", "j2wbvx19Gg1Be22J");
-            pmdh.init("PortfolioManager", "mAjwa22NdsrRihi4");
-            spdh.init("StockPredictor", "wfN1XLoW810diEhR");
-
-
+        dh.init("Agent", "0Y5q0m28pSB9jj2O");
+        nlpdh.init("NaturalLanguageProcessor", "p1pONM8zhI6GgCfy");
+        tadh.init("TechnicalAnalyser", "n6qvdUkFOoFCxPq5");
+        nddh.init("NewsDownloader", "wu0Ni6YF3yLTVp2A");
+        sqdh.init("StockQuoteDownloader", "j2wbvx19Gg1Be22J");
+        pmdh.init("PortfolioManager", "mAjwa22NdsrRihi4");
+        spdh.init("StockPredictor", "wfN1XLoW810diEhR");
         avh.init("UFKUIPVK2VFA83U0"); //PBATJ7L9N8SNK835
         bch.init("07467da3de1195c974b66c46b8523e23", sqdh, stockFeedProgress);
         NewsAPIHandler.authenticate("be7afde61f5e10bb20393025c35e50c7", "1ff9ab03aa8e5bd073345d70d588abde");
@@ -629,7 +642,12 @@ public class Controller {
                 break;
         }
 
-        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(om);
+        TreeMap<String, ArrayList<Double>> prices = new TreeMap<>();
+
+        for(String stock : stocks)
+            prices.put(stock, PortfolioManager.getPrices(stock, 20));
+
+        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(om,1,prices);
         double cutoff = portfolio.get("RETURN");
 
         calculateLossCutoff(cutoff);
@@ -709,15 +727,14 @@ public class Controller {
         double newsSentiment = NaturalLanguageProcessor.getTodaysAverageSentiment(stock, 2);
         double features[] = new double[splitString.length + 1];
 
-        features[0] = stocks.indexOf(stock);
-        features[1] = numberOfDays;
+        features[0] = numberOfDays;
 
-        for (int i = 2; i < splitString.length - 1; i++)
+        for (int i = 1; i < splitString.length - 1; i++)
             features[i] = Double.parseDouble(splitString[i + 1]);
 
         features[features.length - 1] = newsSentiment;
 
-        return StockPredictor.predictDirection(new DenseVector(features));
+        return StockPredictor.predictDirection(new DenseVector(features), stock);
     }
 
     private boolean[] predictStocks() throws SQLException {
@@ -743,6 +760,10 @@ public class Controller {
         updateCurrentTask("Predicted Stock Performance!", false, false);
 
         return predictions;
+    }
+
+    private void updateInvestments(){
+
     }
 
     private void autoTrade() throws SQLException, ParseException {
@@ -788,7 +809,7 @@ public class Controller {
     }
 
     @FXML
-    public void initialize() throws SQLException, IOException {
+    public void initialize() throws SQLException, IOException, InterruptedException {
         mainThread = new Thread(() -> {
             while (!quit) {
                 int s = LocalTime.now().getSecond();
@@ -822,8 +843,8 @@ public class Controller {
                 if (m % 30 == 0 && s == 0) {
                     try {
                         StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
-                        SmoothingUtils.smoothStocks(stocks, 0.2);
-                        TechnicalAnalyser.calculateTechnicalIndicators(stocks, true);
+                        SmoothingUtils.smoothStocks(stocks, smoothRate);
+                        TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
                         updatePredictions(predictStocks());
                         if (automated)
                             autoTrade();
@@ -848,12 +869,28 @@ public class Controller {
         PortfolioManager.initialise(pmdh); //TODO: Get a progessbar for this
         StockPredictor.initialise(spdh);
         TrainingFileUtils.initialise(dh);
-        StockPredictor.loadLatestRandomForest();
+        TradingSimulator.initialise(dh);
 
         initialiseStocks();
+        StockPredictor.loadLatestRandomForest();
+        ArrayList<Thread> threads = new ArrayList<>();
+
+       /* for(String stock:stocks) {
+            Thread modelThread = new Thread(()-> {
+                try { StockPredictor.loadLatestRandomForest(stock);
+                } catch (SQLException e) { e.printStackTrace(); }
+            });
+            threads.add(modelThread);
+            modelThread.start();
+        }
+
+        for(Thread thread : threads)
+            thread.join();
+*/
         initialiseClocks();
         initialiseDisplay();
         startClocks();
+
 
         Platform.runLater(()->stockDropdown.getItems().addAll(stocks));
         Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
@@ -899,10 +936,10 @@ public class Controller {
     }
 
     private void updateBankBalance(){
-            Platform.runLater(() -> {
-                try { currentBalanceLabel.setText(String.valueOf(getBalance())); }
-                catch (SQLException e) { e.printStackTrace(); }
-            });
+        Platform.runLater(() -> {
+            try { currentBalanceLabel.setText(String.valueOf(getBalance())); }
+            catch (SQLException e) { e.printStackTrace(); }
+        });
     }
 
     public void printToInfoBox(String string) {
@@ -927,15 +964,15 @@ public class Controller {
             Platform.runLater(() -> stockList.getChildren().add(rec.getNode()));
     }
 
-    private void updateSystem() throws SQLException, InterruptedException, ParseException {
+    private void updateSystem() throws SQLException, InterruptedException, ParseException, IOException {
         Thread stockThread = new Thread(() -> {
             try {
                 processYahooHistories();
                 dh.executeCommand("DELETE FROM intradaystockprices WHERE Temporary = 1;");
 
-                StockQuoteDownloader.downloadStockHistory(stocks, true, false, false);
-
                 bch.downloadIntradayHistory(stocks);
+                StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
+
 /*
                 switch (useAPI) {
                     case BarChart:
@@ -952,9 +989,10 @@ public class Controller {
 
         Thread taThread = new Thread(() -> {
             try {
-                SmoothingUtils.smoothStocks(stocks, 0.2);
+                TrainingFileUtils.resetPriceValues();
                 TechnicalAnalyser.calculatePercentChanges(stocks);
-                TechnicalAnalyser.calculateTechnicalIndicators(stocks, true);
+                SmoothingUtils.smoothStocks(stocks, smoothRate);
+                TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
             } catch (Exception e) { e.printStackTrace(); }
         });
 
@@ -966,11 +1004,14 @@ public class Controller {
                 nddh.sendSQLFileToDatabase(false);
 
                 NewsAPIHandler.downloadArticles(); //Has to be done individually to check for duplicate values
+            } catch (Exception e) { e.printStackTrace(); }
 
+            try{
                 NaturalLanguageProcessor.enumerateSentencesFromArticles();
                 NaturalLanguageProcessor.determineUselessSentences();
+            }catch(Exception e){
 
-            } catch (Exception e) { e.printStackTrace(); }
+            }
         });
 
         Thread nlpThread = new Thread(() -> {
@@ -987,16 +1028,18 @@ public class Controller {
         setLossCutoff(Double.parseDouble(dh.executeQuery("SELECT Value FROM settings WHERE ID = 'LCUTOFF';").get(0)));
         checkServices();
 
-        newsThread.start();
-        stockThread.start();
+        if(!DISABLE_SYSTEM_UPDATE) {
+            newsThread.start();
+            stockThread.start();
 
-        stockThread.join();
-        taThread.start();
-        newsThread.join();
+            stockThread.join();
+            taThread.start();
+            newsThread.join();
 
-        nlpThread.start();
-        nlpThread.join();
-        taThread.join();
+            nlpThread.start();
+            nlpThread.join();
+            taThread.join();
+        }
 
         new Thread(()-> {
             for (LiveStockRecord curr : records) {
@@ -1005,6 +1048,7 @@ public class Controller {
             }
         }).start();
 
+        if(!StockPredictor.getModelInformation().equals("No model loaded"))
         new Thread(()->{
             boolean[] predictionArray = new boolean[0];
             try { predictionArray = predictStocks(); } catch (SQLException e) { e.printStackTrace(); }
@@ -1023,6 +1067,8 @@ public class Controller {
 
         Platform.runLater(() -> exportToMLFileButton.setDisable(false));
         Platform.runLater(() -> controlPanel.setDisable(false));
+
+       TradingSimulator.simulate(stocks);
 
         mainThread.start();
     }
@@ -1126,14 +1172,14 @@ public class Controller {
     }
 
     private void updateGUI() throws SQLException, ParseException {
-            updateStocksOwned();
-            updateComponentChart();
-            updateAllocationChart();
-            updateProfitLoss();
-            updateProfitLossChart();
-            updateBankBalance();
-            updateStockValues();
-            updateTotalWorth();
+        updateStocksOwned();
+        updateComponentChart();
+        updateAllocationChart();
+        updateProfitLoss();
+        updateProfitLossChart();
+        updateBankBalance();
+        updateStockValues();
+        updateTotalWorth();
     }
 
     private void updateStocksOwned() throws SQLException {
@@ -1210,7 +1256,7 @@ public class Controller {
     }
 
     private int getHeldStocks(String stock) throws SQLException {
-            return Integer.parseInt(dh.executeQuery("SELECT COALESCE(Held,0) FROM Portfolio WHERE Symbol='" + stock + "';").get(0));
+        return Integer.parseInt(dh.executeQuery("SELECT COALESCE(Held,0) FROM Portfolio WHERE Symbol='" + stock + "';").get(0));
     }
 
     private void updateComponentChart() throws SQLException {
@@ -1418,14 +1464,14 @@ public class Controller {
 
     private void updateBatchStockData() throws SQLException, ParseException, IOException {
         ArrayList<String> temp = null;
-            switch (useAPI) {
-                case AlphaVantage:
-                    temp = StockQuoteDownloader.downloadBatchStockData(stocks);
-                    break;
-                case BarChart:
-                    temp = bch.downloadQuotes(stocks);
-                    break;
-            }
+        switch (useAPI) {
+            case AlphaVantage:
+                temp = StockQuoteDownloader.downloadBatchStockData(stocks);
+                break;
+            case BarChart:
+                temp = bch.downloadQuotes(stocks);
+                break;
+        }
 
         int i = 0;
 

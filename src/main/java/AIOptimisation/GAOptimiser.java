@@ -5,25 +5,13 @@ import java.util.*;
 import static AIOptimisation.Utils.getRandomWeights;
 
 public class GAOptimiser {
-    private ArrayList<double[]> population;
-    private double[] returns;
-    private final Map<Integer, Double> fitnesses = new HashMap<>();
-    private int generations;
-    private double[][] riskCovarianceMatrix;
-    private double[] bestWeights;
+    static private ArrayList<double[]> population;
+    static private double[] returns;
+    static private final Map<Integer, Double> fitnesses = new TreeMap<>();
+    static private int generations;
+    static private double[][] riskCovariance;
 
-    public void initialise(int amountOfWeights, int numberOfGenerations, int populationSize, double[] returns, double[][] riskCovarianceMatrix) {
-        population = new ArrayList<>();
-        generations = numberOfGenerations;
-
-        this.returns = returns;
-        this.riskCovarianceMatrix = riskCovarianceMatrix;
-
-        for (int i = 0; i < populationSize; i++)
-            population.add(getRandomWeights(amountOfWeights));
-    }
-
-    private ArrayList<double[]> selection(ArrayList<double[]> population) {
+    static private ArrayList<double[]> selection(ArrayList<double[]> population) {
         ArrayList<double[]> selectedPopulation = new ArrayList<>();
         ArrayList<Map.Entry<Integer, Double>> orderedIndividuals = new ArrayList<>(fitnesses.entrySet());
         orderedIndividuals.sort(Comparator.comparing(Map.Entry::getValue));
@@ -47,7 +35,7 @@ public class GAOptimiser {
         return selectedPopulation;
     }
 
-    private ArrayList<double[]> crossover(ArrayList<double[]> parents1, ArrayList<double[]> parents2, double rate) {
+    static private ArrayList<double[]> crossover(ArrayList<double[]> parents1, ArrayList<double[]> parents2, double rate) {
         ArrayList<double[]> newPopulation = new ArrayList<>();
 
         for (int i = 0; i < parents1.size(); i++) {
@@ -59,7 +47,7 @@ public class GAOptimiser {
         return newPopulation;
     }
 
-    private ArrayList<double[]> crossover(double[] parent1, double[] parent2, double rate) {
+    static private ArrayList<double[]> crossover(double[] parent1, double[] parent2, double rate) {
         double[] child1 = new double[parent1.length], child2 = new double[parent2.length];
         ArrayList<double[]> children = new ArrayList<>();
 
@@ -78,7 +66,7 @@ public class GAOptimiser {
         return children;
     }
 
-    private ArrayList<double[]> mutate(ArrayList<double[]> population, double rate) {
+    static private ArrayList<double[]> mutate(ArrayList<double[]> population, double rate) {
         ArrayList<double[]> mutatedPopulation = new ArrayList<>();
         for (double[] individual : population)
             mutatedPopulation.add(Utils.mutate(individual, rate));
@@ -86,16 +74,18 @@ public class GAOptimiser {
         return mutatedPopulation;
     }
 
-    private double evaluate(int generation) {
+    static private double evaluate(int generation) {
         double sum = 0;
         double best = Double.MIN_VALUE;
 
         for (int i = 0; i < population.size(); i++) {
-            double currFitness = EvaluationFunction.getReturnToRiskRatio(population.get(i), returns, riskCovarianceMatrix);
+            double[] currentGene = population.get(i);
+            double currFitness = EvaluationFunction.getReturnToRiskRatio(currentGene, returns, riskCovariance);
 
             sum += currFitness;
             fitnesses.put(i, currFitness);
-            if (currFitness > best) best = currFitness;
+            if (currFitness > best)
+                best = currFitness;
         }
 
         System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + "\tBEST FITNESS: " + best);
@@ -103,20 +93,31 @@ public class GAOptimiser {
         return sum / population.size();
     }
 
-    public void run() {
+    static public double[] optimise(int amountOfWeights, int numberOfGenerations, int populationSize, double[] returnsArray, double[][] riskCovarianceMatrix){
         System.out.println("Performing Genetic Portfolio Optimisation");
+        double[] bestWeights;
+        population = new ArrayList<>();
+        generations = numberOfGenerations;
 
-        double prevFitness = -1, currFitness, bestFitness = Double.MIN_VALUE;
+        returns = returnsArray;
+        riskCovariance = riskCovarianceMatrix;
+
+        for (int i = 0; i < populationSize; i++)
+            population.add(getRandomWeights(amountOfWeights));
+
+        double prevFitness = -1, currFitness;
         int convergenceCount = 0;
 
-        evaluate(0); //Evaluate
+        double bestFitness = evaluate(0); //Evaluate
+
+        bestWeights = getBestOfPopulation();
 
         for (int i = 1; i <= generations; i++) {
             ArrayList<double[]> parents1 = selection(population); //Selection of parent population 1
             ArrayList<double[]> parents2 = selection(population); //Selection of parent population 2
 
             population = crossover(parents1, parents2, 0.5);//Crossover
-            population = mutate(population, 0.01);//Mutation
+            population = mutate(population, 0.1);//Mutation
 
             currFitness = evaluate(i); //Evaluate
 
@@ -130,13 +131,10 @@ public class GAOptimiser {
 
             prevFitness = currFitness;
         }
-    }
-
-    public double[] getBest() {
         return bestWeights;
     }
 
-    private double[] getBestOfPopulation() {
+   static private double[] getBestOfPopulation() {
         double best = 0;
         int bestInd = 0;
 

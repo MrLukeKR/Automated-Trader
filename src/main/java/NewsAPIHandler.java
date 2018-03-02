@@ -140,7 +140,7 @@ class NewsAPIHandler {
         } catch (IOException e) {
             HttpURLConnection http = (HttpURLConnection) connect;
             if (http.getResponseCode() == 429)
-                System.err.println("Too many requests"); //TODO: Make a GUI graphic that shows this has occurred
+                System.err.println("Too many requests");
 
             ((HttpURLConnection) connect).disconnect();
 

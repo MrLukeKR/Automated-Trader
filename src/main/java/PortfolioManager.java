@@ -3,10 +3,7 @@ import AIOptimisation.GAOptimiser;
 import AIOptimisation.SAOptimiser;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 class PortfolioManager {
 
@@ -18,7 +15,7 @@ class PortfolioManager {
         System.out.println("Initialised Portfolio Manager");
     }
 
-    static private ArrayList<Double> getPrices(String symbol, int limit) throws SQLException {
+    static public ArrayList<Double> getPrices(String symbol, int limit) throws SQLException {
         ArrayList<Double> prices = new ArrayList<>();
 
         for (String record : dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND ClosePrice is not null AND ClosePrice != 0 ORDER BY TradeDate DESC LIMIT " + limit))
@@ -65,7 +62,10 @@ class PortfolioManager {
     }
 
     private static double calculateAverage(ArrayList<Double> values) {
-        return values.stream().mapToDouble(Double::doubleValue).sum() / values.size();
+        double sum = 0;
+        for(double value : values)
+            sum+= value;
+        return sum / values.size();
     }
 
     private static double[][] calculateCovarianceMatrix(ArrayList<ArrayList<Double>> returns) {
@@ -78,18 +78,15 @@ class PortfolioManager {
         return covarianceMatrix;
     }
 
-    static public Map<String, Double> optimisePortfolio(OptimisationMethod method) throws SQLException {
-        int timeFrame = 5; //The last n days to consider (A shorter value can be susceptible to noise, but longer values are susceptible to long-term trend bias)
-        int holdPeriod = 1; //Amount of days you want to hold this portfolio
-
-        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol FROM indices;");
+    static public Map<String, Double> optimisePortfolio(OptimisationMethod method, int holdPeriod, TreeMap<String, ArrayList<Double>> prices) throws SQLException {
+        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol FROM indices ORDER BY Symbol ASC;");
         ArrayList<ArrayList<Double>> returns = new ArrayList<>();
         double[] expectedReturns = new double[stocks.size()];
 
         int i = 0;
 
         for (String stock : stocks) {
-            ArrayList<Double> currentReturns = calculateReturns(getPrices(stock, timeFrame), holdPeriod);
+            ArrayList<Double> currentReturns = calculateReturns(prices.get(stock), holdPeriod);
             returns.add(currentReturns);
             expectedReturns[i++] = calculateAverage(currentReturns);
         }
@@ -99,12 +96,7 @@ class PortfolioManager {
 
         switch(method) {
             case GENETIC_ALGORITHM:
-            GAOptimiser ga = new GAOptimiser();
-
-            ga.initialise(stocks.size(), 1000, 200, expectedReturns, covarianceMatrix);
-            ga.run();
-
-            best = ga.getBest();
+                best = GAOptimiser.optimise(stocks.size(), 1000, 500, expectedReturns, covarianceMatrix);
             break;
             case SIMULATED_ANNEALING:
             best = SAOptimiser.optimise(stocks.size(), 1, 0.0001, 0.99, 1000, expectedReturns, covarianceMatrix);

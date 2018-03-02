@@ -194,7 +194,7 @@
                                          <VBox prefHeight="177.0" prefWidth="200.0" BorderPane.alignment="CENTER">
                                              <Label alignment="TOP_CENTER" contentDisplay="CENTER" prefHeight="17.0" prefWidth="200.0" text="Model Information" textAlignment="CENTER" underline="true" />
                                              <TextArea fx:id="predictionModelInformationBox" editable="false" prefHeight="200.0" prefWidth="200.0" wrapText="true" />
-                                             <Button fx:id="exportToMLFileButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#exportToMLFile" prefHeight="25.0" prefWidth="200.0" text="Train Model" />
+                                             <Button fx:id="exportToMLFileButton" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#exportToMLFile" prefHeight="25.0" prefWidth="200.0" text="Train Model" disable="true"/>
                                          </VBox>
                                      </right>
                                      <center>

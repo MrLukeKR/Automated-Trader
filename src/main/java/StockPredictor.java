@@ -50,6 +50,7 @@ class StockPredictor {
     private static final SparkConf sparkConf = new SparkConf().setAppName("StockMarketPredictor").setMaster("local");
     private static final JavaSparkContext jsc = new JavaSparkContext(sparkConf);
     private static RandomForestModel model;
+    private static HashMap<String, RandomForestModel> singleModels = new HashMap<>();
     private static DatabaseHandler dh;
 
     static public void initialise(DatabaseHandler spdh) {
@@ -59,7 +60,7 @@ class StockPredictor {
 
     static public String getModelInformation(){
         try {
-            ArrayList<String> results = dh.executeQuery("SELECT Description, Accuracy FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION' ORDER BY ModelNumber DESC LIMIT 1;");
+            ArrayList<String> results = dh.executeQuery("SELECT Description, Accuracy FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION' AND Scope='MultiStock' ORDER BY ModelNumber DESC LIMIT 1;");
             if(!results.isEmpty()) {
              String[] splitString = results.get(0).split(",");
              StringBuilder finalString = new StringBuilder();
@@ -83,10 +84,28 @@ class StockPredictor {
         return value == 1;
     }
 
+    static public boolean predictDirection(Vector data, String stock){
+        double value = singleModels.get(stock).predict(data);
+
+        return value == 1;
+    }
+
+    static public void loadLatestRandomForest(String stock) throws SQLException {
+        ArrayList<String> results = dh.executeQuery("SELECT Filepath FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION' AND Scope = '" + stock + "' ORDER BY ModelNumber DESC LIMIT 1;");
+        if(results.isEmpty()) return;
+        loadRandomForest(results.get(0),stock);
+    }
+
     static public void loadLatestRandomForest() throws SQLException {
-        ArrayList<String> results = dh.executeQuery("SELECT Filepath FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION' ORDER BY ModelNumber DESC LIMIT 1;");
+        ArrayList<String> results = dh.executeQuery("SELECT Filepath FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION' AND Scope = 'MultiStock' ORDER BY ModelNumber DESC LIMIT 1;");
         if(results.isEmpty()) return;
         loadRandomForest(results.get(0));
+    }
+
+    private static void loadRandomForest(String modelFile, String stock) {
+        System.out.println("Loading Machine Learning Model '" + modelFile + "'...");
+        singleModels.put(stock, RandomForestModel.load(jsc.sc(), modelFile));
+        System.out.println("Loaded Machine Learning Model: " + singleModels.get(stock).toString()) ;
     }
 
     private static void loadRandomForest(String modelFile) {
@@ -148,9 +167,50 @@ class StockPredictor {
         */
             }
 
+    static public void trainRandomForest(String libSVMFilePath, String stock) throws SQLException {
+        System.out.println("Training Single-Stock Random Forest for " + stock + "...");
+        JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(jsc.sc(), libSVMFilePath).toJavaRDD().unpersist();
+
+        JavaRDD<LabeledPoint>[] trainingTestSplits = data.randomSplit(new double[]{0.7, 0.3});
+        JavaRDD<LabeledPoint> trainingData = trainingTestSplits[0];
+        JavaRDD<LabeledPoint> testData = trainingTestSplits[1];
+
+        Integer classes = 2;
+        HashMap<Integer, Integer> categoryInfo = new HashMap<>();
+
+        Integer trees = 150;
+        String featureSubsetStrategy = "auto";
+        String impurity = "gini";
+        Integer maxDepth = 10;
+        Integer seed = 12345;
+
+        RandomForestModel tempModel;
+
+        tempModel = RandomForest.trainClassifier(trainingData, classes, categoryInfo, trees, featureSubsetStrategy, impurity, maxDepth, 32, seed);
+        trainingData = null;
+        RandomForestModel finalTempModel = tempModel;
+        JavaPairRDD<Double, Double> predictionAndLabel = testData.mapToPair((PairFunction<LabeledPoint, Double, Double>) point -> new Tuple2<>(finalTempModel.predict(point.features()), point.label()));
+
+        Double testErr = 1.0 * predictionAndLabel.filter((Function<Tuple2<Double, Double>, Boolean>) predictionLabel -> !predictionLabel._1().equals(predictionLabel._2())).count() / testData.count();
+        System.out.println(tempModel.toDebugString() + " Accuracy: " + (1 - testErr) * 100 + "%");
+        testData = null;
+
+        tempModel = RandomForest.trainClassifier(data,classes,categoryInfo,trees,featureSubsetStrategy,impurity,maxDepth,32,seed);
+
+        int modelNo = Integer.parseInt((dh.executeQuery("SELECT COALESCE(MAX(ModelNumber),0) FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION' AND Scope='" + stock + "'")).get(0)) + 1;
+        dh.executeCommand("INSERT INTO predictors(Model, Type, ModelNumber, Accuracy, Description, Filepath, Scope) VALUES ('Random Forest', 'CLASSIFICATION', " + modelNo + ", " + (1-testErr) + ", 'Exponentially Smoothed Prices (Alpha 0.25), Single Stock" + tempModel.toString() + ", Depth " + maxDepth + "', 'res/model/" + stock + "/RF" + modelNo + ".model', '" + stock + "')");
+        File stockDir = new File("res/model/" + stock);
+        if(! stockDir.exists())
+            stockDir.mkdirs();
+
+        tempModel.save(jsc.sc(), "res/model/" + stock + "/RF" + modelNo + ".model");
+        singleModels.put(stock,tempModel);
+        System.out.println("Saved Model Successfully!");
+    }
+
     static public void trainRandomForest(String libSVMFilePath, int noOfStocks) throws SQLException {
-        System.out.println("Training Random Forest...");
-        JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(jsc.sc(), libSVMFilePath).toJavaRDD();
+        System.out.println("Training Multi-Stock Random Forest...");
+        JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(jsc.sc(), libSVMFilePath).toJavaRDD().unpersist();
 
         JavaRDD<LabeledPoint>[] trainingTestSplits = data.randomSplit(new double[]{0.7, 0.3});
         JavaRDD<LabeledPoint> trainingData = trainingTestSplits[0];
@@ -161,7 +221,7 @@ class StockPredictor {
 
         categoryInfo.put(0, noOfStocks);
 
-        Integer trees = 300;
+        Integer trees = 150;
         String featureSubsetStrategy = "auto";
         String impurity = "gini";
         Integer maxDepth = 8;
@@ -169,7 +229,7 @@ class StockPredictor {
         Integer seed = 12345;
 
         model = RandomForest.trainClassifier(trainingData, classes, categoryInfo, trees, featureSubsetStrategy, impurity, maxDepth, maxBins, seed);
-
+        trainingData = null;
         JavaPairRDD<Double, Double> predictionAndLabel = testData.mapToPair((PairFunction<LabeledPoint, Double, Double>) point -> new Tuple2<>(model.predict(point.features()), point.label()));
 
         Double testErr = 1.0 * predictionAndLabel.filter((Function<Tuple2<Double, Double>, Boolean>) predictionLabel -> !predictionLabel._1().equals(predictionLabel._2())).count() / testData.count();
@@ -178,7 +238,7 @@ class StockPredictor {
         model = RandomForest.trainClassifier(data,classes,categoryInfo,trees,featureSubsetStrategy,impurity,maxDepth,maxBins,seed);
 
         int modelNo = Integer.parseInt((dh.executeQuery("SELECT COALESCE(MAX(ModelNumber),0) FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION'")).get(0)) + 1;
-        dh.executeCommand("INSERT INTO predictors(Model, Type, ModelNumber, Accuracy, Description, Filepath) VALUES ('Random Forest', 'CLASSIFICATION', " + modelNo + ", " + (1-testErr) + ", 'Exponentially Smoothed Prices (Alpha "+ SmoothingUtils.getAlpha() + "), Categorical Features, " + model.toString() + ", Depth " + maxDepth + "', 'res/model/RF" + modelNo + ".model')");
+        dh.executeCommand("INSERT INTO predictors(Model, Type, ModelNumber, Accuracy, Description, Filepath, Scope) VALUES ('Random Forest', 'CLASSIFICATION', " + modelNo + ", " + (1-testErr) + ", 'Exponentially Smoothed Prices (Alpha "+ SmoothingUtils.getAlpha() + "), Categorical Features, " + model.toString() + ", Depth " + maxDepth + "', 'res/model/RF" + modelNo + ".model', 'MultiStock')");
         model.save(jsc.sc(), "res/model/RF" + modelNo + ".model");
         System.out.println("Saved Model Successfully!");
     }

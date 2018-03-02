@@ -3,7 +3,6 @@ import com.tictactec.ta.lib.MAType;
 import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 import javafx.scene.control.ProgressBar;
-
 import java.sql.Date;
 import java.sql.SQLException;
 import java.util.*;
@@ -19,46 +18,6 @@ public class TechnicalAnalyser {
 
         System.out.println("Initialised Technical Analyser");
     }
-
-    static private String technicalIndicatorToString(TechnicalIndicator indicator) {
-        switch (indicator) {
-            case SMA10:
-                return "SMA10";
-            case MACD:
-                return "MACD";
-            case EMA10:
-                return "EMA10";
-            case RSI:
-                return "RSI";
-            case ADX10:
-                return "ADX10";
-            case OBV:
-                return "OBV";
-            case CCI:
-                return "CCI";
-            case AD:
-                return "AD";
-            case StoOsc:
-                return "StoOsc";
-            case SMA20:
-                return "SMA20";
-            case SMA200:
-                return "SMA200";
-                case SMA5:
-                    return "SMA5";
-            case EMA5:
-                return "EMA5";
-            case EMA20:
-                return "EMA20";
-            case EMA200:
-                return "EMA200";
-            case WillR:
-                return "WillR";
-            default:
-                return null;
-        }
-    }
-
 
     static private int technicalIndicatorToDays(TechnicalIndicator indicator) {
         switch (indicator) {
@@ -83,6 +42,18 @@ public class TechnicalAnalyser {
 
         return 0;
     }
+
+    static private void sendToDatabase(String stock, TreeMap<Date, HashMap<String, Double>> records) throws SQLException {
+        for(Date date : records.keySet()){
+            String command = "UPDATE dailystockprices SET ";
+            HashMap<String, Double> temp = records.get(date);
+            for(String indicator : temp.keySet())
+                command += indicator + "='" + temp.get(indicator)+"',";
+            command = command.substring(0, command.length() - 1) + " WHERE TradeDate = '" + date + "' AND Symbol='" + stock + "';";
+            dh.addBatchCommand(command);
+        }
+    }
+
 
     static private void sendToDatabase(String stock, String indicator, TreeMap<Date, Double> records) throws SQLException {
         ArrayList<String> result = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol='" + stock + "' AND " + indicator + " is not null ORDER BY TradeDate DESC LIMIT 1");
@@ -109,7 +80,7 @@ public class TechnicalAnalyser {
 
         for(String stock : stocks) {
             calculatePercentChanges(stock);
-            Controller.updateProgress(c++, t, pb);
+            Controller.updateProgress(++c, t, pb);
         }
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, t, pb);
@@ -144,7 +115,7 @@ public class TechnicalAnalyser {
 
     }
 
-    static public void calculateTechnicalIndicators(String stock, boolean useSmoothedData) throws SQLException {
+    static public void calculateTechnicalIndicators(String stock, boolean useSmoothedData, boolean fullUpdate) throws SQLException {
         TreeMap<Date, Double> closePrices;
         if(useSmoothedData)
             closePrices = getFromDatabase(stock, "SmoothedClosePrice");
@@ -155,27 +126,40 @@ public class TechnicalAnalyser {
         TreeMap<Date, Double> lowPrices = getFromDatabase(stock, "LowPrice");
         TreeMap<Date, Double> highPrices = getFromDatabase(stock, "HighPrice");
 
+            TreeMap<Date, HashMap<String, Double>> reshapedIndicators = new TreeMap<>();
+            HashMap<String, TreeMap<Date, Double>> indicators = new HashMap<>();
+        for (TechnicalIndicator ti : TechnicalIndicator.values())
+            indicators.putAll(calculateTechnicalIndicator(ti, stock, openPrices, highPrices, lowPrices, closePrices, volumes, technicalIndicatorToDays(ti)));
+
+        for(String ind : indicators.keySet()){
+            TreeMap<Date,Double> temp = indicators.get(ind);
+            for(Date date : temp.keySet()){
+                if(reshapedIndicators.get(date) == null)
+                    reshapedIndicators.put(date, new HashMap<>());
+                reshapedIndicators.get(date).put(ind, temp.get(date));
+            }
+        }
+
+        if(fullUpdate)
+            sendToDatabase(stock, reshapedIndicators);
+        else
+            for(String ind : indicators.keySet())
+                sendToDatabase(stock,ind,indicators.get(ind));
+    }
+
+    static public void calculateTechnicalIndicators(ArrayList<String> stocks, boolean useSmoothedData, boolean fullUpdate) throws SQLException {
+        double c = 0, t = stocks.size()- 1;
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
+
         dh.setAutoCommit(false);
 
-        for (TechnicalIndicator ti : TechnicalIndicator.values()) {
-            HashMap<String, TreeMap<Date, Double>> indicators = calculateTechnicalIndicator(ti, stock, openPrices, highPrices, lowPrices, closePrices, volumes, technicalIndicatorToDays(ti));
-            for (String indicator : Objects.requireNonNull(indicators).keySet())
-                sendToDatabase(stock, indicator, indicators.get(indicator));
-
+        for (String stock : stocks) {
+            calculateTechnicalIndicators(stock, useSmoothedData, fullUpdate);
+            Controller.updateProgress(++c, t, pb);
         }
 
         dh.executeBatch();
         dh.setAutoCommit(true);
-    }
-
-    static public void calculateTechnicalIndicators(ArrayList<String> stocks, boolean useSmoothedData) throws SQLException {
-        double c = 0, t = (stocks.size() * TechnicalIndicator.values().length) - 1;
-        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
-
-        for (String stock : stocks) {
-            calculateTechnicalIndicators(stock, useSmoothedData);
-            Controller.updateProgress(c++, t, pb);
-        }
 
         Controller.updateProgress(0, pb);
     }
@@ -239,7 +223,7 @@ public class TechnicalAnalyser {
             case SMA200: {
                 double[] out = new double[closePrices.size()];
                 rc = ta.sma(0, cPrices.length - 1, cPrices, days, begin, length, out);
-                results.put(technicalIndicatorToString(indicator), priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+                results.put(indicator.name(), priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
             }
             break;
             case MACD: {
@@ -256,7 +240,7 @@ public class TechnicalAnalyser {
             case EMA200: {
                 double[] out = new double[closePrices.size()];
                 rc = ta.ema(0, cPrices.length - 1, cPrices, days, begin, length, out);
-                results.put(technicalIndicatorToString(indicator), priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
+                results.put(indicator.name(), priceArrayToRecordMap(closePrices.keySet(), begin.value, length.value, out));
             }
                 break;
             case RSI: {

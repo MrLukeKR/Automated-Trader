@@ -17,12 +17,12 @@ class NaturalLanguageProcessor {
         pb = nlpProgress;
 
 
-        ArrayList<String> stopWords = dh.executeQuery("SELECT Gram FROM ngrams WHERE Blacklisted = 1");
+     /*   ArrayList<String> stopWords = dh.executeQuery("SELECT Gram FROM ngrams WHERE Blacklisted = 1");
 
         if (STOP_WORDS.isEmpty())
             for (String word : stopWords)
                 if (!word.isEmpty())
-                    STOP_WORDS.add(word);
+                    STOP_WORDS.add(word);*/
 
 
         Main.getController().updateCurrentTask("Initialised Natural Language Processor",false,false);
@@ -135,16 +135,16 @@ class NaturalLanguageProcessor {
             }
 
 
-            Controller.updateProgress(i++, t, pb);
+            Controller.updateProgress(++i, t, pb);
 
             dh.addBatchCommand("UPDATE newsarticles SET Enumerated = 1 WHERE ID = '" + unprocessedID + "';");
             Main.getController().updateCurrentTask("Enumerated " + temporaryDatabase.size() + " sentences", false, false);
-            dh.executeBatch();
 
             temporaryDatabase.clear();
         }
 
         Controller.updateProgress(0, pb);
+        dh.executeBatch();
         dh.setAutoCommit(true);
     }
 
@@ -185,7 +185,7 @@ class NaturalLanguageProcessor {
     }
 
     static public void enumerateNGramsFromArticles(int n) throws SQLException {
-        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND DATE(Published) < CURDATE()"); //TODO: (Use join) Price difference can't be calculated for the weekend or after hours before the next day
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND PublishedDate < CURDATE()"); //TODO: (Use join) Price difference can't be calculated for the weekend or after hours before the next day
         Main.getController().updateCurrentTask("Enumerating n-grams for " + unprocessedIDs.size() + " documents...", false, false);
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
@@ -331,7 +331,7 @@ class NaturalLanguageProcessor {
 
     static public double getTodaysAverageSentiment(String stock, int ngramSize) throws SQLException {
         String latestDate = dh.executeQuery("SELECT MAX(TradeDate) FROM dailystockprices WHERE Symbol='" + stock + "'").get(0);
-        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Symbol='" + stock + "' AND DATE(Published) = '" + latestDate +"' AND Content IS NOT NULL AND Enumerated = 1 AND Tokenised = 1 AND Processed = 0 AND Blacklisted = 0");
+        ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Symbol='" + stock + "' AND PublishedDate = '" + latestDate +"' AND Content IS NOT NULL AND Enumerated = 1 AND Tokenised = 1 AND Processed = 0 AND Blacklisted = 0");
 
         if(unprocessedIDs.isEmpty())
             return 0.5;
@@ -389,7 +389,7 @@ class NaturalLanguageProcessor {
     }
 
     static public double[] getAverageSentiments(String stock, int size) throws SQLException {
-        ArrayList<String> results = dh.executeQuery("SELECT COALESCE(AVG(newsarticles.Mood), 0.5) FROM dailystockprices LEFT JOIN newsarticles ON (dailystockprices.Symbol, dailystockprices.TradeDate) = (newsarticles.Symbol, DATE(newsarticles.Published)) WHERE dailystockprices.Symbol='" + stock + "' GROUP BY dailystockprices.TradeDate ORDER BY dailystockprices.TradeDate ASC");
+        ArrayList<String> results = dh.executeQuery("SELECT COALESCE(AVG(newsarticles.Mood), 0.5) FROM dailystockprices LEFT JOIN newsarticles ON (dailystockprices.Symbol, dailystockprices.TradeDate) = (newsarticles.Symbol, newsarticles.PublishedDate) WHERE dailystockprices.Symbol='" + stock + "' GROUP BY dailystockprices.TradeDate ORDER BY dailystockprices.TradeDate ASC");
 
         double[] sentiments = new double[size];
 
@@ -406,8 +406,8 @@ class NaturalLanguageProcessor {
         return sentiments;
     }
 
-    static private double getAverageSentimentOnDate(String stock, String date) throws SQLException {
-        ArrayList<String> result = dh.executeQuery("SELECT COALESCE(AVG(Mood),0.5) FROM newsarticles WHERE Symbol = '" + stock + "' AND DATE(Published) = '" + date + "' AND Processed = 1");
+    static public double getAverageSentimentOnDate(String stock, String date) throws SQLException {
+        ArrayList<String> result = dh.executeQuery("SELECT COALESCE(AVG(Mood),0.5) FROM newsarticles WHERE Symbol = '" + stock + "' AND PublishedDate = '" + date + "' AND Processed = 1");
 
         if (result == null || result.isEmpty())
             return 0.5;

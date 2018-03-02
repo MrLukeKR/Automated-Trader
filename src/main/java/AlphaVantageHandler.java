@@ -13,9 +13,9 @@ import java.util.concurrent.TimeUnit;
 
 
 class AlphaVantageHandler {
-    private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9150));
+    private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9050));
 
-    private final boolean USE_PROXY = false;
+    private final boolean USE_PROXY = true;
 
     private String apiKey;
     private boolean useProxy = false;

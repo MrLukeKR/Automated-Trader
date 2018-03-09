@@ -1,3 +1,5 @@
+package Records;
+
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -5,11 +7,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
-class PredictionBox {
+public class PredictionBox {
     private final HBox predictions = new HBox();
     Label[] predictionLabels;
 
-    PredictionBox(String stock, int[] days, boolean[] predictionValues){
+    public PredictionBox(String stock, int[] days, boolean[] predictionValues) {
         predictions.setMinSize(610,20);
         predictions.setPrefSize(610,20);
         predictions.setMaxSize(610,20);

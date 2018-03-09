@@ -1,20 +1,29 @@
+package APIHandler;
+
+import Default.Controller;
+import Default.DatabaseHandler;
+import Default.Main;
 import javafx.scene.control.ProgressBar;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.safety.Whitelist;
 import org.jsoup.select.Elements;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.*;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-class NewsAPIHandler {
+public class NewsAPIHandler {
     private static final String INTRINIO_API_CALL = "https://api.intrinio.com/news?ticker=";
     private static final String INTRINIO_CSV_CALL = "https://api.intrinio.com/news.csv?page_size=10000&ticker=";
     static private String INTRINIO_USERNAME;
@@ -46,13 +55,13 @@ class NewsAPIHandler {
 
         int missingArticles = values[ARTICLES] - storedArticles;
 
-        System.out.println("MISSING ARTICLES FOR '" + stock + "': " + missingArticles);
+        Main.getController().updateCurrentTask("MISSING ARTICLES FOR '" + stock + "': " + missingArticles, false, false);
 
         if (missingArticles == 0)
             return;
 
         if (missingArticles < 0) {
-            System.err.println("NEGATIVE MISSING ARTICLE VALUE - May be due to API inaccessibility");
+            Main.getController().updateCurrentTask("NEGATIVE MISSING ARTICLE VALUE - May be due to API inaccessibility", true, false);
             return;
         }
 
@@ -63,14 +72,14 @@ class NewsAPIHandler {
         }
 
         if (missingArticles > 0)
-            System.err.println("DID NOT DOWNLOAD ALL ARTICLES");
+            Main.getController().updateCurrentTask("DID NOT DOWNLOAD ALL ARTICLES", true, false);
     }
 
     static public void initialise(DatabaseHandler nddh, ProgressBar pb) {
         dh = nddh;
         NewsAPIHandler.pb = pb;
 
-        System.out.println("Initialised News API Handler");
+        Main.getController().updateCurrentTask("Initialised News API Handler", false, false);
     }
 
     private static int getCurrentCalls() throws SQLException {
@@ -101,7 +110,7 @@ class NewsAPIHandler {
         } catch (IOException e) {
             HttpURLConnection http = (HttpURLConnection) connect;
             if (http.getResponseCode() == 429)
-                System.err.println("Too many requests");
+                Main.getController().updateCurrentTask("Too many requests", true, false);
 
             ((HttpURLConnection) connect).disconnect();
 
@@ -128,7 +137,7 @@ class NewsAPIHandler {
     }
 
     private static int getCSVNews(String stock, int page, int missingArticles) throws IOException, SQLException, InterruptedException {
-        System.out.println("Getting headlines for " + stock + " (Page " + page + ")");
+        Main.getController().updateCurrentTask("Getting headlines for " + stock + " (Page " + page + ")", false, false);
         URL url = new URL(INTRINIO_CSV_CALL + stock + "&page_number=" + page);
 
         TimeUnit.MILLISECONDS.sleep(1000);
@@ -148,7 +157,7 @@ class NewsAPIHandler {
         }
 
         if (isr == null) {
-            System.out.println("Could not connect URL Stream");
+            Main.getController().updateCurrentTask("Could not connect URL Stream", false, false);
             return -1;
         }
 
@@ -157,7 +166,7 @@ class NewsAPIHandler {
 
         ArrayList<String> newsArray = new ArrayList<>();
 
-        System.out.println("Downloading & Reading '" + stock + "' PAGE " + page + " news file...");
+        Main.getController().updateCurrentTask("Downloading & Reading '" + stock + "' PAGE " + page + " news file...", false, false);
 
         for (int i = 0; i < 2; i++)  //Remove preamble
             br.readLine();
@@ -167,12 +176,12 @@ class NewsAPIHandler {
 
         br.close();
 
-        System.out.println("Sorting '" + stock + "' PAGE " + page + " news file into chronological order...");
+        Main.getController().updateCurrentTask("Sorting '" + stock + "' PAGE " + page + " news file into chronological order...", false, false);
 
         //Preprocess news data to remove corrupted entries
         Set<String> newsSet = new LinkedHashSet<>(); //Linked hashset retains insertion order and removes duplicates
 
-        System.out.println("Cleaning '" + stock + "' PAGE " + page + " news file...");
+        Main.getController().updateCurrentTask("Cleaning '" + stock + "' PAGE " + page + " news file...", false, false);
 
         for (String news : newsArray) {
             String[] splitString = news.split(",");
@@ -210,7 +219,7 @@ class NewsAPIHandler {
 
             if (news.split(",").length == 7) {
                 if (!(news.split(",")[4].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}\\s.\\d{4}") || news.split(",")[4].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}")))
-                    System.err.println("NO DATE FOUND IN: " + news);
+                    Main.getController().updateCurrentTask("NO DATE FOUND IN: " + news, true, false);
                 newsSet.add(news);
             }
         }
@@ -220,7 +229,7 @@ class NewsAPIHandler {
         int downloaded = 0;
         int newsSize = newsSet.size();
 
-        System.out.println("'" + stock + "' PAGE " + page + " WITH " + newsSize + " (Missing " + missingArticles + " articles)");
+        Main.getController().updateCurrentTask("'" + stock + "' PAGE " + page + " WITH " + newsSize + " (Missing " + missingArticles + " articles)", false, false);
 
         dh.setAutoCommit(false);
 
@@ -233,7 +242,7 @@ class NewsAPIHandler {
             date = date.split(" ")[0] + " " + date.split(" ")[1];
 
             if (!date.matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}"))
-                System.err.println("NO DATE FOUND IN: " + news);
+                Main.getController().updateCurrentTask("NO DATE FOUND IN: " + news, false, false);
 
             String data = "'" + stock + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
 
@@ -241,7 +250,7 @@ class NewsAPIHandler {
             ArrayList<String> result = dh.executeQuery(query);
 
             if (result.isEmpty()) {
-                System.out.println("Discovered News Article for " + stock + ": " + title);
+                Main.getController().updateCurrentTask("Discovered News Article for " + stock + ": " + title, false, false);
                 String command;
 
                 command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL,Duplicate) VALUES (" + data + ", (SELECT COALESCE((SELECT * FROM (SELECT 1 FROM newsarticles WHERE Symbol='" + stock + "' AND (Headline='" + title + "' OR URL='" + link + "') LIMIT 1) as t),0)));";
@@ -262,8 +271,8 @@ class NewsAPIHandler {
         return downloaded;
     }
 
-    public static void downloadArticles() throws SQLException {
-        System.out.println("Downloading missing news article content...");
+    public static void downloadArticles() throws SQLException, InterruptedException {
+        Main.getController().updateCurrentTask("Downloading missing news article content...", false, false);
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         ArrayList<String> undownloadedArticles = dh.executeQuery("SELECT ID, URL FROM newsarticles WHERE Content IS NULL AND Blacklisted = 0 AND Redirected = 0 AND Duplicate = 0 AND URL != \"\";");
 
@@ -276,6 +285,8 @@ class NewsAPIHandler {
 
         double t = undownloadedArticles.size() - 1;
         progress = 0;
+
+        ArrayList<Thread> threads = new ArrayList<>();
 
         for (String article : undownloadedArticles) {
             availableThreads.acquireUninterruptibly();
@@ -292,14 +303,14 @@ class NewsAPIHandler {
                         site = NewsAPIHandler.downloadArticle(splitArticle[1]);
                         break;
                     } catch (FileNotFoundException e) {
-                        System.err.println("Article is no longer available!");
+                        Main.getController().updateCurrentTask("Article is no longer available!", true, false);
                         break;
                     } catch (MalformedURLException e) {
-                        System.err.println(e.getMessage());
+                        Main.getController().updateCurrentTask(e.getMessage(), true, false);
                         if (!Objects.equals(splitArticle[1].substring(0, 3), "http"))
                             splitArticle[1] = "http://" + splitArticle[1];
                     } catch (ConnectException e) {
-                        System.err.println("Connection error (Timed Out)");
+                        Main.getController().updateCurrentTask("Connection error (Timed Out)", true, false);
                     } catch (Exception e) {
                         e.printStackTrace();
                         break;
@@ -326,6 +337,8 @@ class NewsAPIHandler {
                 availableThreads.release();
             }).start();
         }
+
+        while (availableThreads.availablePermits() != 30) TimeUnit.SECONDS.sleep(1);
 
         Controller.updateProgress(0, pb);
     }
@@ -375,56 +388,6 @@ class NewsAPIHandler {
             return null;
 
         return cleanHTML;
-    }
-
-    static public void getNews(String stock, int page) throws IOException, SQLException {
-
-        URL url = new URL(INTRINIO_API_CALL + stock + "&page_number=" + page);
-
-        if(page == 1)
-            System.out.println("Downloading Latest News for " + stock + "...");
-        else
-            System.out.println("Downloading Historical News (Page " + page + ") for " + stock + "...");
-
-        String doc;
-        try (InputStream in = url.openStream()) {
-            Scanner s = new Scanner(in).useDelimiter(("\\A"));
-            doc = s.next();
-        }
-
-        dh.executeCommand("INSERT INTO apicalls VALUES('INTRINIO', CURDATE(), 1) ON DUPLICATE KEY UPDATE Calls = Calls +1;");
-
-        try {
-            JSONObject obj = new JSONObject(doc);
-            JSONArray arr = obj.getJSONArray("data");
-            String punctuationRemover = "'";
-
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject ob2 = (JSONObject) arr.get(i);
-                String title = ob2.getString("title").replaceAll(punctuationRemover, "");
-                String summary = ob2.getString("summary").replaceAll(punctuationRemover, "");
-                String date = ob2.getString("publication_date").replaceAll(punctuationRemover, "");
-                String link = ob2.getString("url").replaceAll(punctuationRemover, "");
-                date = date.split(" ")[0] + " " + date.split(" ")[1];
-
-                String data = "'" + stock + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
-
-                String query = "SELECT * FROM newsarticles WHERE headline = '" + title + "' AND Symbol = '" + stock + "'";
-
-                ArrayList<String> results = dh.executeQuery(query);
-
-                if(results.isEmpty()) {
-                    System.out.println(title);
-                    String command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL) VALUES (" + data + ");";
-
-                    try {
-                        dh.executeCommand(command);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        } catch (Exception e) { e.printStackTrace(); }
     }
 
     static public void getHistoricNews(ArrayList<String> stockList) throws IOException, SQLException, InterruptedException {

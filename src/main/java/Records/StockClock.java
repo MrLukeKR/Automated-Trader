@@ -1,3 +1,5 @@
+package Records;
+
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -13,7 +15,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 
-class StockClock {
+public class StockClock {
     private final VBox node = new VBox();
     private final Label clockTime = new Label();
     private final Label status = new Label();

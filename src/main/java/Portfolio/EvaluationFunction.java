@@ -1,4 +1,4 @@
-package AIOptimisation;
+package Portfolio;
 
 public class EvaluationFunction {
     static public double getVariance(double[] weights, double[][] riskCovarianceMatrix) {

@@ -1,10 +1,15 @@
+package Processing;
+
+import Default.Controller;
+import Default.DatabaseHandler;
+import Default.Main;
 import javafx.scene.control.ProgressBar;
 
 import java.sql.SQLException;
 import java.text.BreakIterator;
 import java.util.*;
 
-class NaturalLanguageProcessor {
+public class NaturalLanguageProcessor {
 
     private static DatabaseHandler dh;
     private static ProgressBar pb;
@@ -12,24 +17,15 @@ class NaturalLanguageProcessor {
     static private final Set<String> STOP_WORDS = new HashSet<>();
     static private final Set<String> USELESS_SENTENCES = new HashSet<>();
 
-    static public void initialise(DatabaseHandler dbh, ProgressBar nlpProgress) throws SQLException {
+    static public void initialise(DatabaseHandler dbh, ProgressBar nlpProgress) {
         dh = dbh;
         pb = nlpProgress;
-
-
-     /*   ArrayList<String> stopWords = dh.executeQuery("SELECT Gram FROM ngrams WHERE Blacklisted = 1");
-
-        if (STOP_WORDS.isEmpty())
-            for (String word : stopWords)
-                if (!word.isEmpty())
-                    STOP_WORDS.add(word);*/
-
 
         Main.getController().updateCurrentTask("Initialised Natural Language Processor",false,false);
     }
 
     private static ArrayList<String> splitToSentences(String document) {
-        //https://stackoverflow.com/questions/2687012/split-string-into-sentences
+        //Based on the code from https://stackoverflow.com/questions/2687012/split-string-into-sentences
         BreakIterator it = BreakIterator.getSentenceInstance(Locale.US);
         it.setText(document);
 
@@ -157,12 +153,6 @@ class NaturalLanguageProcessor {
             for (String sentence : uselessSentences)
                 if (!sentence.isEmpty())
                     USELESS_SENTENCES.add(sentence);
-    }
-
-    static public void determineUselessNGrams() throws SQLException {
-        int mostCommonNGram = Integer.valueOf(dh.executeQuery("SELECT MAX(Documents) FROM ngrams").get(0));
-
-        //TODO: Remove useless Ngrams
     }
 
     private static double getPriceChangeOnDate(String symbol, String date) throws SQLException {

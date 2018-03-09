@@ -1,3 +1,7 @@
+package Processing;
+
+import Default.DatabaseHandler;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -9,7 +13,7 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 
 
-class StockRecordParser {
+public class StockRecordParser {
     private static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
     private static DatabaseHandler dh;
 
@@ -180,16 +184,16 @@ class StockRecordParser {
 
         TreeMap<Date, String> newCSV = cleanCSVWithDate(csv, 6, dateFrom);
 
-         for (Date curr : newCSV.keySet()) {
+        for (Date curr : newCSV.keySet()) {
             count++;
             String data = newCSV.get(curr);
             String split[] = data.split(",");
 
             statement.append("('").append(symbol).append("','").append(split[0]).append("'").append(data.replaceAll(split[0], "")).append(")");
             if (count < newCSV.size() && curr != dateFrom)
-                        statement.append(",\r\n");
+                statement.append(",\r\n");
             newValues++;
-            }
+        }
 
         statement.append(" ON DUPLICATE KEY UPDATE " + "OpenPrice = VALUES(OpenPrice)" + ", HighPrice = VALUES(HighPrice)" + ", LowPrice = VALUES(LowPrice)" + ", ClosePrice = VALUES(ClosePrice)" + ", TradeVolume = VALUES(TradeVolume);");
 

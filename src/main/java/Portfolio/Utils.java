@@ -1,4 +1,4 @@
-package AIOptimisation;
+package Portfolio;
 
 import java.util.Arrays;
 import java.util.Random;

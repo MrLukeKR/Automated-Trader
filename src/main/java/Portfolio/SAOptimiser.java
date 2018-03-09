@@ -1,13 +1,13 @@
-package AIOptimisation;
+package Portfolio;
 
-import static AIOptimisation.Utils.getRandomWeights;
+import static Portfolio.Utils.getRandomWeights;
 
 /**
  * Simulated Annealing Portfolio Optimiser
  */
 public class SAOptimiser {
 
-    static public double[] optimise(int noOfStocks, double initialTemperature, double minimumTemperature, double coolRate, int iterations, double[] expectedReturns, double[][] riskCovarianceMatrix){
+    static public double[] optimise(int noOfStocks, double initialTemperature, double minimumTemperature, double coolRate, int iterations, double[] expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
         double t = initialTemperature;
         double[] solution = getRandomWeights(noOfStocks);
         double bestFitness = EvaluationFunction.getReturnToRiskRatio(solution,expectedReturns,riskCovarianceMatrix);
@@ -18,7 +18,9 @@ public class SAOptimiser {
             for(int i = 0; i < iterations; i++) {
                 double[] candidateSolution = Utils.mutate(currentSolution, 1);
                 double fitness = EvaluationFunction.getReturnToRiskRatio(candidateSolution, expectedReturns, riskCovarianceMatrix);
-                System.out.println("ITERATION " + i + " - CURRENT FITNESS: " + currentFitness + " CANDIDATE FITNESS: " + fitness + " BEST FITNESS: " + bestFitness);
+
+                if (showDebug)
+                    System.out.println("ITERATION " + i + " - CURRENT FITNESS: " + currentFitness + " CANDIDATE FITNESS: " + fitness + " BEST FITNESS: " + bestFitness);
 
                 if(fitness > currentFitness){
                     currentFitness = fitness;

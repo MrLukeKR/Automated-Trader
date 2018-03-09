@@ -1,3 +1,7 @@
+package APIHandler;
+
+import Default.Main;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -12,10 +16,10 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 
-class AlphaVantageHandler {
+public class AlphaVantageHandler {
     private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9050));
 
-    private final boolean USE_PROXY = true;
+    private final boolean USE_PROXY = false;
 
     private String apiKey;
     private boolean useProxy = false;
@@ -36,25 +40,47 @@ class AlphaVantageHandler {
     public synchronized void setPauseDownloadThreads(boolean pause){ allPaused = pause;}
 
     private synchronized int getDownloadsSinceToggle() {return downloadsSinceToggle;}
+
     private synchronized void incrementDownloadsSinceToggle(){downloadsSinceToggle++;}
+
     private synchronized void resetDownloadsSinceToggle(){downloadsSinceToggle = 0;}
+
     private synchronized boolean getUseProxy() {return useProxy;}
+
     private synchronized void toggleProxy() {useProxy = !useProxy;}
 
-    private synchronized void decrementPause(){ pausedDownloads--; System.out.println("> DECREMENTING PAUSE");}
-    private synchronized void incrementPause(){ pausedDownloads++; System.out.println("> INCREMENTING PAUSE");}
+    private synchronized void decrementPause() {
+        pausedDownloads--;
+    }
+
+    private synchronized void incrementPause() {
+        pausedDownloads++;
+    }
+
     private synchronized int getPausedDownloads() {return pausedDownloads;}
+
     private synchronized void decrementCurrentlyDownloading(){ currentlyDownloading--;}
+
     private synchronized void incrementCurrentlyDownloading(){ currentlyDownloading++;}
+
     private synchronized int getCurrentlyDownloading() {return currentlyDownloading;}
+
     private synchronized void unpauseAll(){ allPaused = false; pausedDownloads = 0;}
+
     private synchronized void pauseAll(){allPaused = true;}
+
     private synchronized boolean getAllPaused() {return allPaused;}
+
     private synchronized void resetPaused() {pausedDownloads = 0;}
+
     private synchronized int getFailedDownloads() { return failedDownloads;}
+
     private synchronized void incrementFailedDownloads(){ failedDownloads++;}
+
     private synchronized void resetFailedDownloads(){failedDownloads = 0;}
+
     private synchronized void incrementSuccessfulDownloads(){successfulDownloads++;}
+
     private synchronized int getSuccessfulDownloads(){return successfulDownloads;}
 
     public ArrayList<String> submitRequest(String request) throws IOException {
@@ -65,9 +91,9 @@ class AlphaVantageHandler {
         int fails = 0;
         String errMessage = "";
 
-        availableThreads.acquireUninterruptibly();
 
         do {
+            availableThreads.acquireUninterruptibly();
             //try { TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
             HttpURLConnection connection = null;
             Reader reader = null;
@@ -75,7 +101,7 @@ class AlphaVantageHandler {
             InputStream is = null;
 
             if(USE_PROXY && getDownloadsSinceToggle() >= 30) {
-                System.out.println("!---SWITCHING PROXY---!");
+                Main.getController().updateCurrentTask("SWITCHING PROXY", false, false);
                 toggleProxy();
                 resetDownloadsSinceToggle();
             }
@@ -86,8 +112,8 @@ class AlphaVantageHandler {
                     decrementPause();
                     paused = false;
 
-                    while(getPausedDownloads() > 0)
-                        try{TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
+                    //    while(getPausedDownloads() > 0)
+                    //       try{TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
 
                     if(getAllPaused() && getPausedDownloads() == 0)
                         unpauseAll();
@@ -153,31 +179,34 @@ class AlphaVantageHandler {
                 fails++;
 
                 //if(failedDownloads >= getCurrentlyDownloading()) {
-                    //setPauseDownloadThreads(true);
-                    paused = true;
-                    incrementPause();
+                //setPauseDownloadThreads(true);
+                paused = true;
+                incrementPause();
                 //}
 
                 exceeded++;
                 failed = false;
-                System.err.println("FAILED "+ getFailedDownloads() +" TIMES, RETRYING! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading() + "\r\n\t-> " + errMessage);
+                Main.getController().updateCurrentTask("FAILED " + getFailedDownloads() + " TIMES, RETRYING! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading() + "\r\n\t-> " + errMessage, true, false);
             }
 
+            availableThreads.release();
         } while (exceeded > 1 && exceeded < 10);
 
         decrementCurrentlyDownloading();
 
-        if(getCurrentlyDownloading() == 0 && availableThreads.availablePermits() == MAX_CONCURRENT_DOWNLOADS)
+        if (getCurrentlyDownloading() == 0 && availableThreads.availablePermits() == MAX_CONCURRENT_DOWNLOADS) {
             resetFailedDownloads();
+        }
 
         if (temp.size() < 100) //Minimum size of a download is 100 records
-            System.err.println("Error with quote download");
+        {
+            Main.getController().updateCurrentTask("Error with quote download", true, false);
+        }
 
         incrementSuccessfulDownloads();
         incrementDownloadsSinceToggle();
 
-        System.out.println("COMPLETED! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading());
-        availableThreads.release();
+        Main.getController().updateCurrentTask("COMPLETED! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading(), false, false);
 
         return temp;
     }

@@ -1,3 +1,9 @@
+package APIHandler;
+
+import Default.Controller;
+import Default.DatabaseHandler;
+import Default.Main;
+import Processing.StockRecordParser;
 import javafx.scene.control.ProgressBar;
 
 import java.io.IOException;
@@ -10,7 +16,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-class BarChartHandler {
+public class BarChartHandler {
     private String apiKey;
 
     private final int CALL_LIMIT = 1;
@@ -47,7 +53,7 @@ class BarChartHandler {
 
 
             if(splitString.length < 8) {
-                System.err.println("Erroneous quote: " + value);
+                Main.getController().updateCurrentTask("Erroneous quote: " + value, true, false);
                 return;
             }
 
@@ -58,7 +64,7 @@ class BarChartHandler {
         }
 
         StockRecordParser.importIntradayMarketData(reducedResult, stock);
-        System.out.println("Successfully committed Intraday history for " + stock + " to the database!");
+        Main.getController().updateCurrentTask("Successfully committed Intraday history for " + stock + " to the database!", false, false);
     }
 
     public void downloadIntradayHistory(ArrayList<String> stocks) throws IOException, SQLException {
@@ -67,7 +73,7 @@ class BarChartHandler {
 
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         for(String stock:stocks) {
-            System.out.println("Downloading Intraday History for " + stock);
+            Main.getController().updateCurrentTask("Downloading Intraday History for " + stock, false, false);
             sendToDatabase(downloadIntradayHistory(stock), stock);
             Controller.updateProgress(++c,t,pb);
         }
@@ -88,9 +94,7 @@ class BarChartHandler {
                 results.addAll(submitRequest(url + symbols + "&mode=R"));
                 symbols = new StringBuilder("&symbols=");
                 amount = 0;
-            }
-
-            else if(i < stocks.size() - 1)
+            } else if(i < stocks.size() - 1)
                 symbols.append(",");
         }
 
@@ -148,7 +152,7 @@ class BarChartHandler {
 
                 String sTemp = sb.toString();
 
-                    temp.addAll(Arrays.asList(sTemp.split("\r\n")));
+                temp.addAll(Arrays.asList(sTemp.split("\r\n")));
             }catch (Exception e){
                 exceeded++;
             }finally {
@@ -162,7 +166,7 @@ class BarChartHandler {
         } while (exceeded > 1 && exceeded < 10);
 
         if (temp.size() <= 1)
-            System.err.println("Error with quote download");
+            Main.getController().updateCurrentTask("Error with quote download", true, false);
 
         return temp;
     }

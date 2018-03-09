@@ -1,8 +1,8 @@
-package AIOptimisation;
+package Portfolio;
 
 import java.util.*;
 
-import static AIOptimisation.Utils.getRandomWeights;
+import static Portfolio.Utils.getRandomWeights;
 
 public class GAOptimiser {
     static private ArrayList<double[]> population;
@@ -74,7 +74,7 @@ public class GAOptimiser {
         return mutatedPopulation;
     }
 
-    static private double evaluate(int generation) {
+    static private double evaluate(int generation, boolean showDebug) {
         double sum = 0;
         double best = Double.MIN_VALUE;
 
@@ -88,12 +88,13 @@ public class GAOptimiser {
                 best = currFitness;
         }
 
-        System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + "\tBEST FITNESS: " + best);
+        if (showDebug)
+            System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + "\tBEST FITNESS: " + best);
 
         return sum / population.size();
     }
 
-    static public double[] optimise(int amountOfWeights, int numberOfGenerations, int populationSize, double[] returnsArray, double[][] riskCovarianceMatrix){
+    static public double[] optimise(int amountOfWeights, int numberOfGenerations, int populationSize, double[] returnsArray, double[][] riskCovarianceMatrix, boolean showDebug) {
         System.out.println("Performing Genetic Portfolio Optimisation");
         double[] bestWeights;
         population = new ArrayList<>();
@@ -108,7 +109,7 @@ public class GAOptimiser {
         double prevFitness = -1, currFitness;
         int convergenceCount = 0;
 
-        double bestFitness = evaluate(0); //Evaluate
+        double bestFitness = evaluate(0, showDebug); //Evaluate
 
         bestWeights = getBestOfPopulation();
 
@@ -119,7 +120,7 @@ public class GAOptimiser {
             population = crossover(parents1, parents2, 0.5);//Crossover
             population = mutate(population, 0.1);//Mutation
 
-            currFitness = evaluate(i); //Evaluate
+            currFitness = evaluate(i, showDebug); //Evaluate
 
             if (currFitness > bestFitness) {
                 bestFitness = currFitness;

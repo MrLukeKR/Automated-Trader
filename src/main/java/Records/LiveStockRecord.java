@@ -1,3 +1,6 @@
+package Records;
+
+import Default.DatabaseHandler;
 import javafx.application.Platform;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -18,7 +21,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 
-class LiveStockRecord {
+public class LiveStockRecord {
     final String symbol;
 
     private final HBox hStock = new HBox();
@@ -97,9 +100,9 @@ class LiveStockRecord {
 
     public void updateRecord(DatabaseHandler dh){
         float currPrice = getCurrentPrice(dh),
-              prevPrice = getPreviousPrice(dh),
-              change = currPrice - prevPrice,
-              percentChange = (change / prevPrice * 100.0f);
+                prevPrice = getPreviousPrice(dh),
+                change = currPrice - prevPrice,
+                percentChange = (change / prevPrice * 100.0f);
 
         Platform.runLater(() -> {
             stockPrice.setText(String.valueOf(currPrice));
@@ -160,7 +163,7 @@ class LiveStockRecord {
     public void updateChart(DatabaseHandler dh, boolean forceClear) {
         try {
             float prevPrice = getPreviousPrice(dh), //TODO: remove the need to keep passing the database handler
-                  currPrice = getCurrentPrice(dh);  //TODO: remove the need to keep passing the database handler
+                    currPrice = getCurrentPrice(dh);  //TODO: remove the need to keep passing the database handler
 
             if(prevPrice < 0 || currPrice < 0) return;
 

@@ -1,3 +1,7 @@
+package Utility;
+
+import Default.Controller;
+import Default.DatabaseHandler;
 import javafx.scene.control.ProgressBar;
 
 import java.sql.Date;
@@ -6,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Objects;
 import java.util.TreeMap;
 
-class SmoothingUtils {
+public class SmoothingUtils {
     private static DatabaseHandler dh;
     private static ProgressBar pb;
     private static double ALPHA;
@@ -33,12 +37,12 @@ class SmoothingUtils {
         forecasts[0] = closePrices.get(dates.get(0));
 
         for (int i = 1; i < forecasts.length; i++)
-                forecasts[i] = alpha * closePrices.get(dates.get(i)) + (1-alpha) * forecasts[i-1];
+            forecasts[i] = alpha * closePrices.get(dates.get(i)) + (1-alpha) * forecasts[i-1];
 
-            int j = 0;
+        int j = 0;
 
-            for(Date day : closePrices.keySet())
-                smoothedPrices.put(day, forecasts[j++]);
+        for(Date day : closePrices.keySet())
+            smoothedPrices.put(day, forecasts[j++]);
 
         return smoothedPrices;
     }
@@ -72,10 +76,11 @@ class SmoothingUtils {
         dh.setAutoCommit(false);
         for(String stock : stocks){
             smoothStock(stock,alpha);
-            Controller.updateProgress(c++, t, pb);
+            Controller.updateProgress(++c, t, pb);
         }
         dh.executeBatch();
         dh.setAutoCommit(true);
+        Controller.updateProgress(0, t, pb);
     }
 
     static private void sendToDatabase(String stock, TreeMap<Date, Double> records) throws SQLException {

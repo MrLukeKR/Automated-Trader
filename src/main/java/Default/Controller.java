@@ -60,7 +60,7 @@ public class Controller {
 
     static final private double smoothRate = 0.25;
 
-    static final private boolean DISABLE_SYSTEM_UPDATE = false;
+    static final private boolean DISABLE_SYSTEM_UPDATE = true;
     static private ArrayList<String> stocks = new ArrayList<>();
     static private ArrayList<LiveStockRecord> records = new ArrayList<>();
     static private ArrayList<PredictionBox> predictions = new ArrayList<>();
@@ -1137,11 +1137,11 @@ public class Controller {
         Platform.runLater(() -> exportToMLFileButton.setDisable(false));
         Platform.runLater(() -> controlPanel.setDisable(false));
 
-/*
+
         new Thread(()->
         {
             try {
-                TradingSimulator.simulate(stocks);
+                TradingSimulator.simulate(stocks, false);
             } catch (SQLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -1150,8 +1150,8 @@ public class Controller {
                 e.printStackTrace();
             }
         }).start();
-*/
-        mainThread.start();
+
+        //mainThread.start();
     }
 
     private void initialiseClocks() {

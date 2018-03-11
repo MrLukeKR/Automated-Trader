@@ -1,6 +1,5 @@
 package APIHandler;
 
-import APIHandler.AlphaVantageHandler;
 import Default.Controller;
 import Default.DatabaseHandler;
 import Processing.StockRecordParser;
@@ -174,6 +173,8 @@ public class StockQuoteDownloader {
 
         return Integer.parseInt(latestDate) == 1;
     }
+
+
 
     public enum OutputSize {COMPACT, FULL}
 

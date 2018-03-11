@@ -145,11 +145,13 @@ public class NaturalLanguageProcessor {
     }
 
     static public void determineUselessSentences() throws SQLException {
-        dh.executeCommand("UPDATE sentences SET Blacklisted = 1 WHERE Occurrences > 5;");
+        dh.executeCommand("UPDATE sentences SET Blacklisted = 1 WHERE Occurrences > 5 AND Blacklisted = 0;");
 
         ArrayList<String> uselessSentences = dh.executeQuery("SELECT Sentence FROM sentences WHERE Blacklisted = 1");
 
-        if (USELESS_SENTENCES.isEmpty())
+        if (!USELESS_SENTENCES.isEmpty())
+            USELESS_SENTENCES.clear();
+
             for (String sentence : uselessSentences)
                 if (!sentence.isEmpty())
                     USELESS_SENTENCES.add(sentence);

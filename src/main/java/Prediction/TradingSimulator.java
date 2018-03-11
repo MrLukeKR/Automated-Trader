@@ -77,18 +77,18 @@ public class TradingSimulator {
     }
 
     static private void trainSingleStocks(ArrayList<String> stocks) throws IOException, SQLException {
-        File trainRecs = new File("res/Simulator/TrainingRecords.csv");
-        File testRecs = new File("res/Simulator/TestingRecords.csv");
-        PrintWriter pwTrainRec = new PrintWriter(trainRecs);
-        PrintWriter pwTestRec = new PrintWriter(testRecs);
 
         for(String stock : stocks) {
             File dir = new File("res/Simulator/" + stock);
             if(!dir.exists())
                 dir.mkdirs();
 
+            File trainRecs = new File("res/Simulator/" + stock + "/TrainingRecords.csv");
+            File testRecs = new File("res/Simulator/" + stock + "/TestingRecords.csv");
             File trainFile = new File("res/Simulator/" + stock + "/TrainingFile.csv");
 
+            PrintWriter pwTrainRec = new PrintWriter(trainRecs);
+            PrintWriter pwTestRec = new PrintWriter(testRecs);
             PrintWriter pwTrain = new PrintWriter(trainFile);
 
             HashMap<String, ArrayList<String>> values = getSplit(stock, 200,-1);
@@ -100,34 +100,30 @@ public class TradingSimulator {
                 pwTestRec.println(record);
 
             pwTrain.close();
-
+            pwTestRec.close();
+            pwTrainRec.close();
 
             if(dh.executeQuery("SELECT COUNT(*) FROM predictors WHERE Scope = '" + stock + "';").get(0).equals("0")) {
                 TrainingFileUtils.exportLibSVMFile("res/Simulator/" + stock + "/TrainingFile.csv", "res/Simulator/" + stock + "/TrainingFile.libsvm");
                 StockPredictor.trainRandomForest("res/Simulator/" + stock + "/TrainingFile.libsvm", stock);
             }
-
-
         }
-        pwTestRec.close();
-        pwTrainRec.close();
     }
 
     static private void trainMultiStock(ArrayList<String> stocks) throws IOException, SQLException, InterruptedException {
-        /*
-        File dir = new File("res/Simulator/MultiStock");
-            if(!dir.exists())
-                dir.mkdirs();
 
-            File trainFile = new File("res/Simulator/MultiStock/TrainingFile.csv");
-            File trainRecs = new File("res/Simulator/MultiStock/TrainingRecords.csv");
-            File testRecs = new File("res/Simulator/MultiStock/TestingRecords.csv");
-            PrintWriter pwTestRec = new PrintWriter(testRecs);
-            PrintWriter pwTrain = new PrintWriter(trainFile);
-            PrintWriter pwTrainRec = new PrintWriter(trainRecs);
+        File dir = new File("res/Simulator/MultiStock");
+        if(!dir.exists())
+            dir.mkdirs();
+
+        File trainFile = new File("res/Simulator/MultiStock/TrainingFile.csv");
+        File trainRecs = new File("res/Simulator/MultiStock/TrainingRecords.csv");
+        File testRecs = new File("res/Simulator/MultiStock/TestingRecords.csv");
+        PrintWriter pwTestRec = new PrintWriter(testRecs);
+        PrintWriter pwTrain = new PrintWriter(trainFile);
+        PrintWriter pwTrainRec = new PrintWriter(trainRecs);
 
         for(String stock : stocks) {
-
             HashMap<String, ArrayList<String>> values = getSplit(stock,200,stocks.indexOf(stock));
             for (String record : values.get("TrainingSet"))
                 pwTrain.println(record);
@@ -137,36 +133,43 @@ public class TradingSimulator {
                 pwTestRec.println(record);
         }
 
-            pwTrain.close();
-            pwTrainRec.close();
-            pwTestRec.close();
-*/
+        pwTrain.close();
+        pwTrainRec.close();
+        pwTestRec.close();
+
         if(dh.executeQuery("SELECT COUNT(*) FROM predictors WHERE Scope = 'MultiStock';").get(0).equals("0")) {
-            //TrainingFileUtils.exportLibSVMFile("res/Simulator/MultiStock/TrainingFile.csv", "res/Simulator/MultiStock/TrainingFile.libsvm");
+            TrainingFileUtils.exportLibSVMFile("res/Simulator/MultiStock/TrainingFile.csv", "res/Simulator/MultiStock/TrainingFile.libsvm");
             StockPredictor.trainRandomForest("res/Simulator/MultiStock/TrainingFile.libsvm",stocks.size());
         }
     }
 
-    static public void simulate(ArrayList<String> stocksToSimulate) throws SQLException, IOException, InterruptedException {
-        Main.getController().updateCurrentTask("Starting Simulation",false,false);
-        //trainMultiStock(stocksToSimulate);
-        //trainSingleStocks(stocksToSimulate);
+    static public void simulate(ArrayList<String> stocksToSimulate, boolean singleStock) throws SQLException, IOException, InterruptedException {
+        Main.getController().updateCurrentTask("Starting Simulation", false, false);
 
-        ArrayList<Thread> threads = new ArrayList<>();
-/*
+        if (singleStock) {
+            //trainSingleStocks(stocksToSimulate);
 
-        for(String stock:stocksToSimulate) {
-            Thread modelThread = new Thread(()-> {
-                try { StockPredictor.loadLatestRandomForest(stock);
-                } catch (SQLException e) { e.printStackTrace(); }
-            });
-            threads.add(modelThread);
-            modelThread.start();
+            ArrayList<Thread> threads = new ArrayList<>();
+
+            for (String stock : stocksToSimulate) {
+                Thread modelThread = new Thread(() -> {
+                    try {
+                        StockPredictor.loadLatestRandomForest(stock);
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                });
+                threads.add(modelThread);
+                modelThread.start();
+            }
+
+            for (Thread thread : threads)
+                thread.join();
+
+        } else {
+            trainMultiStock(stocksToSimulate);
         }
 
-        for(Thread thread : threads)
-            thread.join();
-*/
         TreeMap<String, ArrayList<Double>> prices = new TreeMap<>();
         TreeMap<String, ArrayList<Double>> reducedPrices = new TreeMap<>();
         int portfolioTimeFrame = 20;
@@ -175,31 +178,63 @@ public class TradingSimulator {
 
         TreeSet<Date> testDates = new TreeSet<>();
         HashMap<String, TreeMap<Date, String>> records = new HashMap<>();
+        if (singleStock){
+            for (String stock : stocksToSimulate) {
+                FileReader fr = new FileReader("res/Simulator/" + stock + "/TrainingRecords.csv");
+                BufferedReader br = new BufferedReader(fr);
 
-        FileReader fr = new FileReader("res/Simulator/TrainingRecords.csv");
-        BufferedReader br = new BufferedReader(fr);
+                while ((line = br.readLine()) != null) {
+                    String[] splitString = line.split(",");
 
-        while ((line = br.readLine()) != null) {
-            String[] splitString = line.split(",");
+                    if (prices.get(splitString[0]) == null)
+                        prices.put(splitString[0], new ArrayList<>());
 
-            if(prices.get(splitString[0]) == null)
-                prices.put(splitString[0],new ArrayList<>());
+                    prices.get(splitString[0]).add(Double.parseDouble(splitString[5]));
+                }
 
-            prices.get(splitString[0]).add(Double.parseDouble(splitString[5]));
-        }
+                br.close();
+                fr.close();
 
-        br.close();
-        fr.close();
-        fr = new FileReader("res/Simulator/TestingRecords.csv");
-        br = new BufferedReader(fr);
+                fr = new FileReader("res/Simulator/" + stock + "/TestingRecords.csv");
+                br = new BufferedReader(fr);
 
-        while((line = br.readLine()) != null){
-            String[] splitString = line.split(",");
-            if(records.get(splitString[0]) == null)
-                records.put(splitString[0], new TreeMap<>());
+                while ((line = br.readLine()) != null) {
+                    String[] splitString = line.split(",");
+                    if (records.get(splitString[0]) == null)
+                        records.put(splitString[0], new TreeMap<>());
 
-            records.get(splitString[0]).put(Date.valueOf(splitString[1]), line);
-            testDates.add(Date.valueOf(splitString[1]));
+                    records.get(splitString[0]).put(Date.valueOf(splitString[1]), line);
+                    testDates.add(Date.valueOf(splitString[1]));
+                }
+            }
+
+        }else{
+            FileReader fr = new FileReader("res/Simulator/TrainingRecords.csv");
+            BufferedReader br = new BufferedReader(fr);
+
+            while ((line = br.readLine()) != null) {
+                String[] splitString = line.split(",");
+
+                if (prices.get(splitString[0]) == null)
+                    prices.put(splitString[0], new ArrayList<>());
+
+                prices.get(splitString[0]).add(Double.parseDouble(splitString[5]));
+            }
+
+            br.close();
+            fr.close();
+
+            fr = new FileReader("res/Simulator/TestingRecords.csv");
+            br = new BufferedReader(fr);
+
+            while((line = br.readLine()) != null){
+                String[] splitString = line.split(",");
+                if(records.get(splitString[0]) == null)
+                    records.put(splitString[0], new TreeMap<>());
+
+                records.get(splitString[0]).put(Date.valueOf(splitString[1]), line);
+                testDates.add(Date.valueOf(splitString[1]));
+            }
         }
 
         for(String stock : prices.keySet())
@@ -256,7 +291,7 @@ public class TradingSimulator {
                 for (String stock : stocksToSimulate) {
 
                     String rec = records.get(stock).get(date);
-                    predictions.put(stock, predictStock(stock, 1, stocksToSimulate.indexOf(stock), date, rec));
+                    predictions.put(stock, predictStock(stock, 1, stocksToSimulate.indexOf(stock), date, rec,singleStock));
                     reducedPrices.get(stock).remove(0);
                     double price = Double.parseDouble(records.get(stock).get(date).split(",")[5]);
                     reducedPrices.get(stock).add(price);
@@ -306,29 +341,34 @@ public class TradingSimulator {
         System.out.println("Finished Simulation with: " + currentBalance);
     }
 
-    static private boolean predictStock(String stock, int numberOfDays, int stockIndex, Date date, String record) throws SQLException {
-
+    static private boolean predictStock(String stock, int numberOfDays, int stockIndex, Date date, String record, boolean singleStock) throws SQLException {
         String[] splitString = record.split(",");
         double newsSentiment = NaturalLanguageProcessor.getAverageSentimentOnDate(stock, date.toString());
-        double features[] = new double[splitString.length];
-        //double features[] = new double[splitString.length-1];
 
-        features[0] = stockIndex;
-        features[1] = numberOfDays;
+        if(singleStock) {
+            double features[] = new double[splitString.length];
 
-        for (int i = 2; i < splitString.length - 1; i++)
-            features[i] = Double.parseDouble(splitString[i]);
+            features[0] = numberOfDays;
 
-        features[features.length - 1] = newsSentiment;
-        return StockPredictor.predictDirection(new DenseVector(features));
-/*
-        features[0] = numberOfDays;
+            for (int i = 2; i < splitString.length; i++)
+                features[i-1] = Double.parseDouble(splitString[i]);
 
-        for (int i = 2; i < splitString.length - 1; i++)
-            features[i-1] = Double.parseDouble(splitString[i]);
+            features[features.length - 1] = newsSentiment;
 
-        features[features.length - 1] = newsSentiment;
-        return StockPredictor.predictDirection(new DenseVector(features), stock);
-        */
+            return StockPredictor.predictDirection(new DenseVector(features), stock);
+        }else {
+            double features[] = new double[splitString.length+1];
+
+            features[0] = stockIndex;
+            features[1] = numberOfDays;
+
+            for (int i = 2; i < splitString.length; i++)
+                features[i] = Double.parseDouble(splitString[i]);
+
+            features[features.length - 1] = newsSentiment;
+            return StockPredictor.predictDirection(new DenseVector(features));
+        }
+
+
     }
 }

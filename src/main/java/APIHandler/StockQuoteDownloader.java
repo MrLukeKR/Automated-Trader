@@ -2,23 +2,31 @@ package APIHandler;
 
 import Default.Controller;
 import Default.DatabaseHandler;
+import Default.Main;
 import Processing.StockRecordParser;
+import Records.LiveStockRecord;
 import javafx.scene.control.ProgressBar;
 
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class StockQuoteDownloader {
     static private DatabaseHandler databaseHandler = null;
     static private AlphaVantageHandler alphaVantageHandler = null;
+    static private BarChartHandler barChartHandler = null;
     static private ProgressBar stockProgressBar;
     static private int c = 0;
+    static private STOCK_API useAPI;
+    static private boolean priceUpdating = false;
 
-    static public void initialise(DatabaseHandler dh, AlphaVantageHandler avh, ProgressBar pb) {
+    static public void initialise(DatabaseHandler dh, AlphaVantageHandler avh, BarChartHandler bch, ProgressBar pb, STOCK_API stockApi) {
         databaseHandler = dh;
         alphaVantageHandler = avh;
+        barChartHandler = bch;
         stockProgressBar = pb;
+        useAPI = stockApi;
 
         System.out.println("Initialised Stock Quote Downloader");
     }
@@ -174,7 +182,129 @@ public class StockQuoteDownloader {
         return Integer.parseInt(latestDate) == 1;
     }
 
+    static public void updateBatchStockData(ArrayList<String> stocks, ArrayList<LiveStockRecord> records) throws SQLException, IOException {
+        ArrayList<String> temp = null;
+        switch (useAPI) {
+            case AlphaVantage:
+                temp = StockQuoteDownloader.downloadBatchStockData(stocks);
+                break;
+            case BarChart:
+                temp = barChartHandler.downloadQuotes(stocks);
+                break;
+        }
 
+        int i = 0;
+
+        for (LiveStockRecord curr : records) {
+            String record = Objects.requireNonNull(temp).get(i++);
+            String[] splitString = record.split(",");
+            record = record.replace(splitString[0] + ",", "");
+
+            ArrayList<String> tempRec = new ArrayList<>();
+            tempRec.add(record);
+
+            if (splitString[0].equals(curr.getSymbol())) {
+                StockRecordParser.importCurrentQuote(tempRec.get(0), curr.getSymbol());
+                Main.getController().updateCurrentTask("Downloaded " + curr.getSymbol() + " current price:" + record, false, false);
+                curr.updateRecord(databaseHandler);
+                curr.updateChart(databaseHandler, false);
+            } else
+                Main.getController().updateCurrentTask("Batch download mismatch", true, true);
+        }
+
+    }
+
+    static public void updateIntradayStockData(ArrayList<LiveStockRecord> records) throws SQLException, InterruptedException {
+        if (priceUpdating) return;
+
+        databaseHandler.executeCommand("DELETE FROM intradaystockprices WHERE Temporary = 1");
+        priceUpdating = true;
+        databaseHandler.setAutoCommit(false);
+        ArrayList<Thread> threads = new ArrayList<>();
+        for (LiveStockRecord curr : records) {
+            Thread downloadThread = new Thread(() -> {
+                curr.setUpdating(true);
+                ArrayList<String> temp = null;
+
+                try {
+                    switch (useAPI) {
+                        case BarChart:
+                            temp = barChartHandler.downloadIntradayHistory(curr.getSymbol());
+                            break;
+                        case AlphaVantage:
+                            temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.INTRADAY, StockQuoteDownloader.OutputSize.COMPACT);
+                            break;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                if (temp != null && temp.size() > 1) {
+                    try {
+                        StockRecordParser.importIntradayMarketData(temp, curr.getSymbol());
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                    Main.getController().updateCurrentTask("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1), false, false);
+                }
+                curr.setUpdating(false);
+            });
+
+            threads.add(downloadThread);
+            downloadThread.start();
+        }
+
+        for (Thread thread : threads)
+            thread.join();
+
+        databaseHandler.executeBatch();
+        databaseHandler.setAutoCommit(true);
+
+        for (LiveStockRecord curr : records) {
+            curr.updateRecord(databaseHandler);
+            curr.updateChart(databaseHandler, false);
+        }
+
+        priceUpdating = false;
+    }
+
+    static public void updateDailyStockData(ArrayList<LiveStockRecord> records) throws InterruptedException {
+        if (priceUpdating) return;
+        priceUpdating = true;
+        ArrayList<Thread> threads = new ArrayList<>();
+        for (LiveStockRecord curr : records) {
+            Thread downloadThread = new Thread(() -> {
+                curr.setUpdating(true);
+                ArrayList<String> temp = null;
+
+                try {
+                    temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.DAILY, StockQuoteDownloader.OutputSize.COMPACT);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                if (temp != null && temp.size() > 1) {
+                    try {
+                        StockRecordParser.importDailyMarketData(temp, curr.getSymbol());
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                    Main.getController().updateCurrentTask("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1), false, false);
+                }
+                curr.setUpdating(false);
+            });
+
+            threads.add(downloadThread);
+            downloadThread.start();
+        }
+
+        for (Thread thread : threads)
+            thread.join();
+
+        priceUpdating = false;
+    }
+
+    public enum STOCK_API {AlphaVantage, BarChart}
 
     public enum OutputSize {COMPACT, FULL}
 

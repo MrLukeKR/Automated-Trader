@@ -4,7 +4,6 @@ import Default.Controller;
 import Default.DatabaseHandler;
 import Processing.NaturalLanguageProcessor;
 import Processing.TechnicalAnalyser;
-import Utility.SmoothingUtils;
 import javafx.scene.control.ProgressBar;
 
 import java.io.*;
@@ -13,10 +12,10 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 
 public class TrainingFileUtils {
-    static private DatabaseHandler dh;
+    static private DatabaseHandler databaseHandler;
 
-    static public void initialise(DatabaseHandler tfudh){
-        dh = tfudh;
+    static public void setDatabaseHandler(DatabaseHandler tfudh) {
+        databaseHandler = tfudh;
     }
 
     static public void splitClassificationLibSVM(String path, double splitPoint, String trainingPath, String testingPath) throws IOException {
@@ -125,7 +124,7 @@ public class TrainingFileUtils {
         File file = new File(path);
         PrintWriter pw = new PrintWriter(file);
 
-        ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
+        ArrayList<String> dbSchema = databaseHandler.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
 
         for (String stock : stocks) {
             String commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ")" ;
@@ -233,7 +232,7 @@ public class TrainingFileUtils {
     }
 
     static public void resetPriceValues() throws SQLException {
-        ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
+        ArrayList<String> dbSchema = databaseHandler.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
         String[] removeColumns = {"OpenPrice", "HighPrice", "LowPrice", "ClosePrice", "Symbol", "TradeDate", "TradeVolume", "PercentChange"};
 
         for(String column:removeColumns)
@@ -244,13 +243,13 @@ public class TrainingFileUtils {
         for(int i = 1; i < dbSchema.size(); i++)
             command += "," + dbSchema.get(i) + "=null";
 
-       dh.executeCommand(command + ";");
+        databaseHandler.executeCommand(command + ";");
     }
 
     static public ArrayList<String> convertToClassificationTrainingArray(String stock, String commandStart, String commandEnd, int index, int[] amountOfDaysArray, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiments, boolean ignoreNull) throws SQLException {
         ArrayList<String> dataPoints = new ArrayList<>();
 
-        ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
+        ArrayList<String> dbSchema = databaseHandler.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
 
         StringBuilder command = new StringBuilder(commandStart);
 
@@ -261,7 +260,7 @@ public class TrainingFileUtils {
         if(!ignoreNull && smoothPriceAlpha!=1)
             command.append(" AND SmoothedClosePrice IS NOT NULL");
 
-        ArrayList<String> priceValues = dh.executeQuery(command + commandEnd);
+        ArrayList<String> priceValues = databaseHandler.executeQuery(command + commandEnd);
 
         int columnToPredict;
 

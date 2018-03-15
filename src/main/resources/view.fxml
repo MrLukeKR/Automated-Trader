@@ -348,7 +348,8 @@
                       </ScrollPane>
                   </center>
                   <bottom>
-                      <TitledPane prefHeight="150.0" prefWidth="1920.0" text="Options" BorderPane.alignment="CENTER">
+                      <TitledPane animated="false" collapsible="false" prefHeight="150.0" prefWidth="1920.0"
+                                  text="Options" BorderPane.alignment="CENTER">
                           <HBox prefHeight="100.0" prefWidth="200.0">
                               <VBox prefHeight="104.0" prefWidth="220.0">
                                   <HBox>
@@ -398,24 +399,42 @@
           <Tab text="Trading Simulator">
               <content>
                   <BorderPane prefHeight="200.0" prefWidth="200.0">
-                      <bottom>
-                          <LineChart fx:id="simulatorProfitLoss" prefHeight="280.0" prefWidth="1920.0"
-                                     title="Profit/Loss" BorderPane.alignment="CENTER">
-                              <xAxis>
-                                  <NumberAxis side="BOTTOM"/>
-                              </xAxis>
-                              <yAxis>
-                                  <NumberAxis side="LEFT"/>
-                              </yAxis>
-                          </LineChart>
-                      </bottom>
                       <center>
-                          <ScrollPane BorderPane.alignment="CENTER">
+                          <TitledPane animated="false" collapsible="false" prefHeight="600.0" prefWidth="1920.0"
+                                      text="Stock Prices" BorderPane.alignment="CENTER">
                               <content>
-                                  <VBox fx:id="priceHistoryChartBox" prefHeight="200.0" prefWidth="100.0"/>
+                                  <ScrollPane>
+                                      <content>
+                                          <VBox fx:id="priceHistoryChartBox" prefHeight="200.0" prefWidth="100.0"/>
+                                      </content>
+                                  </ScrollPane>
                               </content>
-                          </ScrollPane>
+                          </TitledPane>
                       </center>
+                      <top>
+                          <VBox BorderPane.alignment="CENTER">
+                              <children>
+                                  <LineChart fx:id="simulatorProfitLoss" prefHeight="280.0" prefWidth="1920.0"
+                                             title="Profit/Loss">
+                                      <xAxis>
+                                          <NumberAxis side="BOTTOM"/>
+                                      </xAxis>
+                                      <yAxis>
+                                          <NumberAxis side="LEFT"/>
+                                      </yAxis>
+                                  </LineChart>
+                              </children>
+                          </VBox>
+                      </top>
+                      <bottom>
+                          <TitledPane animated="false" collapsible="false" prefHeight="125.0" prefWidth="1920.0"
+                                      text="Simulator Control Panel" BorderPane.alignment="CENTER">
+                              <content>
+                                  <Button fx:id="simulateTradingButton" mnemonicParsing="false"
+                                          text="Simulate Automated Trading"/>
+                              </content>
+                          </TitledPane>
+                      </bottom>
                   </BorderPane>
               </content>
           </Tab>

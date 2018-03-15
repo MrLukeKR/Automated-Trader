@@ -2,6 +2,7 @@ package Utility;
 
 import Default.Controller;
 import Default.DatabaseHandler;
+import Default.Main;
 import javafx.scene.control.ProgressBar;
 
 import java.sql.Date;
@@ -50,7 +51,7 @@ public class SmoothingUtils {
     static public void smoothStock(String stock, double alpha) throws SQLException {
         ALPHA = alpha;
 
-        System.out.println("Smoothing Stock Close Prices for " + stock + "...");
+        Main.getController().updateCurrentTask("Smoothing Stock Close Prices for " + stock + "...", false, false);
 
         TreeMap<Date, Double> priceHistory = new TreeMap<>();
         ArrayList<String> results = dh.executeQuery("SELECT TradeDate, ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate ASC");

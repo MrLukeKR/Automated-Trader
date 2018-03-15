@@ -1,8 +1,10 @@
 package Portfolio;
 
+import Utility.PortfolioUtils;
+
 import java.util.*;
 
-import static Portfolio.Utils.getRandomWeights;
+import static Utility.PortfolioUtils.getRandomWeights;
 
 public class GAOptimiser {
     static private ArrayList<double[]> population;
@@ -69,7 +71,7 @@ public class GAOptimiser {
     static private ArrayList<double[]> mutate(ArrayList<double[]> population, double rate) {
         ArrayList<double[]> mutatedPopulation = new ArrayList<>();
         for (double[] individual : population)
-            mutatedPopulation.add(Utils.mutate(individual, rate));
+            mutatedPopulation.add(PortfolioUtils.mutate(individual, rate));
 
         return mutatedPopulation;
     }

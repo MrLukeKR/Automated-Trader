@@ -2,6 +2,8 @@ package Prediction;
 
 import Default.Controller;
 import Default.DatabaseHandler;
+import Default.Main;
+import Processing.NaturalLanguageProcessor;
 import Utility.SmoothingUtils;
 import javafx.scene.control.ProgressBar;
 import org.apache.log4j.Level;
@@ -12,12 +14,20 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.mllib.linalg.DenseVector;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.tree.RandomForest;
 import org.apache.spark.mllib.tree.model.RandomForestModel;
 import org.apache.spark.mllib.util.MLUtils;
 import scala.Tuple2;
+
+import java.io.File;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
+
 /*
 import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.SequenceRecordReader;
@@ -47,14 +57,8 @@ import org.nd4j.linalg.io.ClassPathResource;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 */
 
-import java.io.*;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
-
 public class StockPredictor {
-    private static final SparkConf sparkConf = new SparkConf().setMaster("local[*]").setAppName("StockMarketPredictor").set("spark.driver.memory","4g").set("spark.executor.memory","4g").setSparkHome("/Users/lukerose/IdeaProjects/Automated-Trading/res/sparkhome");
+    private static final SparkConf sparkConf = new SparkConf().setMaster("local[*]").setAppName("StockMarketPredictor").set("spark.driver.memory", "4g").set("spark.executor.memory", "8g").setSparkHome("/Users/lukerose/IdeaProjects/Automated-Trading/res/sparkhome");
     private static final JavaSparkContext jsc = new JavaSparkContext(sparkConf);
     private static RandomForestModel model;
     private static HashMap<String, RandomForestModel> singleModels = new HashMap<>();
@@ -222,6 +226,7 @@ public class StockPredictor {
 
     static public void trainRandomForest(String libSVMFilePath, int noOfStocks) throws SQLException, InterruptedException {
         System.out.println("Loading training data for Multi-Stock Random Forest...");
+        model = null;
         JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(jsc.sc(), libSVMFilePath).toJavaRDD().unpersist();
 
         JavaRDD<LabeledPoint>[] trainingTestSplits = data.randomSplit(new double[]{0.7, 0.3});
@@ -233,10 +238,10 @@ public class StockPredictor {
 
         categoryInfo.put(0, noOfStocks);
 
-        Integer trees = 300;
+        Integer trees = 500;
         String featureSubsetStrategy = "auto";
         String impurity = "gini";
-        Integer maxDepth = 6;
+        Integer maxDepth = 5;
         Integer maxBins = noOfStocks;
         Integer seed = 12345;
 
@@ -281,5 +286,48 @@ public class StockPredictor {
         dh.executeCommand("INSERT INTO predictors(Model, Type, ModelNumber, Accuracy, Description, Filepath, Scope) VALUES ('Random Forest', 'CLASSIFICATION', " + modelNo + ", " + (1-testErr) + ", 'Exponentially Smoothed Prices (Alpha "+ SmoothingUtils.getAlpha() + "), Categorical Features, " + model.toString() + ", Depth " + maxDepth + "', 'res/model/RF" + modelNo + ".model', 'MultiStock')");
         model.save(jsc.sc(), "res/model/RF" + modelNo + ".model");
         System.out.println("Saved Model Successfully!");
+    }
+
+    static public boolean[] predictStocks(ArrayList<String> stocks, int[] dayArray, ProgressBar stockForecastProgress) throws SQLException {
+        boolean predictions[] = new boolean[stocks.size() * dayArray.length];
+
+        int i = 0;
+
+        Main.getController().updateCurrentTask("Predicting Stock Performance...", false, false);
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
+
+        for (int numberOfDays : dayArray)
+            for (String stock : stocks) {
+                predictions[i] = predictStock(stocks, stock, numberOfDays);
+                if (predictions[i])
+                    Main.getController().updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": RISE/MAINTAIN", false, false);
+                else
+                    Main.getController().updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": FALL", false, false);
+                i++;
+                Controller.updateProgress(i, predictions.length - 1, stockForecastProgress);
+            }
+
+        Controller.updateProgress(0, stockForecastProgress);
+        Main.getController().updateCurrentTask("Predicted Stock Performance!", false, false);
+
+        return predictions;
+    }
+
+
+    static public boolean predictStock(ArrayList<String> stocks, String stock, int numberOfDays) throws SQLException {
+        String results = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "' AND SmoothedClosePrice is not null AND SMA10 is not null AND EMA10 is not null AND MACD is not null AND MACDSig is not null AND MACDHist is not null AND RSI is not null AND ADX10 is not null AND CCI is not null AND AD is not null AND OBV is not null AND StoOscSlowK is not null AND StoOscSlowD is not null AND SMA20 is not null AND SMA200 is not null AND EMA5 IS NOT NULL AND EMA20 IS NOT NULL AND EMA200 IS NOT NULL AND SMA5 is not null AND WillR is not null ORDER BY TradeDate DESC LIMIT 1").get(0);
+        String[] splitString = results.split(",");
+        double newsSentiment = NaturalLanguageProcessor.getTodaysAverageSentiment(stock, 2);
+        double features[] = new double[splitString.length + 1];
+
+        features[0] = stocks.indexOf(stock);
+        features[1] = numberOfDays;
+
+        for (int i = 2; i < splitString.length; i++)
+            features[i] = Double.parseDouble(splitString[i]);
+
+        features[features.length - 1] = newsSentiment;
+
+        return StockPredictor.predictDirection(new DenseVector(features));
     }
 }

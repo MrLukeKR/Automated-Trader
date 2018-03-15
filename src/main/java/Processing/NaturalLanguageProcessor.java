@@ -145,6 +145,8 @@ public class NaturalLanguageProcessor {
     }
 
     static public void determineUselessSentences() throws SQLException {
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
+        Main.getController().updateCurrentTask("Filtering Useless/Spam Sentences", false, false);
         dh.executeCommand("UPDATE sentences SET Blacklisted = 1 WHERE Occurrences > 5 AND Blacklisted = 0;");
 
         ArrayList<String> uselessSentences = dh.executeQuery("SELECT Sentence FROM sentences WHERE Blacklisted = 1");
@@ -155,6 +157,8 @@ public class NaturalLanguageProcessor {
             for (String sentence : uselessSentences)
                 if (!sentence.isEmpty())
                     USELESS_SENTENCES.add(sentence);
+
+        Controller.updateProgress(0, pb);
     }
 
     private static double getPriceChangeOnDate(String symbol, String date) throws SQLException {

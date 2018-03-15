@@ -186,7 +186,7 @@ public class AlphaVantageHandler {
 
                 exceeded++;
                 failed = false;
-                Main.getController().updateCurrentTask("FAILED " + getFailedDownloads() + " TIMES, RETRYING! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading() + "\r\n\t-> " + errMessage, true, false);
+                Main.getController().updateCurrentTask("FAILED " + getFailedDownloads() + " TIMES, RETRYING! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading() + " -> " + errMessage, true, false);
             }
 
             availableThreads.release();

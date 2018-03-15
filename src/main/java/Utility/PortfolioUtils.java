@@ -1,10 +1,10 @@
-package Portfolio;
+package Utility;
 
 import java.util.Arrays;
 import java.util.Random;
 import java.util.stream.DoubleStream;
 
-public class Utils {
+public class PortfolioUtils {
     static private final Random rng = new Random();
 
     static public double[] getRandomWeights(int amount) {

@@ -1,6 +1,9 @@
 package Processing;
 
+import Default.Controller;
 import Default.DatabaseHandler;
+import Default.Main;
+import javafx.scene.control.ProgressBar;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -203,5 +206,30 @@ public class StockRecordParser {
             } catch (Exception e) {
                 System.err.println(e.getMessage() + " " + statement);
             }
+    }
+
+    static public void processYahooHistories(ArrayList<String> stocks, ProgressBar stockFeedProgress) throws SQLException, IOException {
+
+        double curr = 0;
+        final double t = stocks.size();
+
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockFeedProgress);
+
+        for (String symbol : stocks) {
+            ArrayList<String> results = dh.executeQuery("SELECT COUNT(*) FROM dailystockprices WHERE Symbol='" + symbol + "';");
+            if (results.isEmpty() || Integer.parseInt(results.get(0)) == 0) {
+                Main.getController().updateCurrentTask("Importing Yahoo! records for: " + symbol, false, false);
+
+                File file = new File("res/historicstocks/" + symbol + ".csv");
+
+                if (file.exists()) {
+                    StockRecordParser.importDailyYahooMarketData(file, symbol);
+                    Main.getController().updateCurrentTask("Successfully committed complete Yahoo! records of " + symbol + " to the database!", false, false);
+                } else
+                    Main.getController().updateCurrentTask("No Yahoo history available for " + symbol, true, true);
+            }
+
+            Controller.updateProgress(++curr, t, stockFeedProgress);
+        }
     }
 }

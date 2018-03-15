@@ -2,11 +2,13 @@ package Processing;
 
 import Default.Controller;
 import Default.DatabaseHandler;
+import Default.Main;
 import com.tictactec.ta.lib.Core;
 import com.tictactec.ta.lib.MAType;
 import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 import javafx.scene.control.ProgressBar;
+
 import java.sql.Date;
 import java.sql.SQLException;
 import java.util.*;
@@ -72,7 +74,7 @@ public class TechnicalAnalyser {
     }
 
     static public void calculatePercentChanges(String stock) throws SQLException {
-        System.out.println("Calculating Close Price Percent Changes for " + stock);
+        Main.getController().updateCurrentTask("Calculating Close Price Percent Changes for " + stock, false, false);
         calculatePercentChanges(stock, getFromDatabase(stock, "ClosePrice"));
     }
 
@@ -207,7 +209,7 @@ public class TechnicalAnalyser {
     }
 
     private static HashMap<String, TreeMap<Date, Double>> calculateTechnicalIndicator(TechnicalIndicator indicator, String stock, TreeMap<Date, Double> openPrices, TreeMap<Date, Double> highPrices, TreeMap<Date, Double> lowPrices, TreeMap<Date, Double> closePrices, TreeMap<Date, Double> volumes, int days) {
-        System.out.println("Calculating " + indicator.name() + " for " + stock + "...");
+        Main.getController().updateCurrentTask("Calculating " + indicator.name() + " for " + stock + "...", false, false);
 
         MInteger begin = new MInteger(), length = new MInteger();
 

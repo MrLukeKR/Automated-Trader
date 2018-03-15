@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-public class NewsAPIHandler {
+public class INTRINIOHandler {
     private static final String INTRINIO_API_CALL = "https://api.intrinio.com/news?ticker=";
     private static final String INTRINIO_CSV_CALL = "https://api.intrinio.com/news.csv?page_size=10000&ticker=";
     static private String INTRINIO_USERNAME;
@@ -77,7 +77,7 @@ public class NewsAPIHandler {
 
     static public void initialise(DatabaseHandler nddh, ProgressBar pb) {
         dh = nddh;
-        NewsAPIHandler.pb = pb;
+        INTRINIOHandler.pb = pb;
 
         Main.getController().updateCurrentTask("Initialised News API Handler", false, false);
     }
@@ -300,7 +300,7 @@ public class NewsAPIHandler {
 
                 while (site == null)
                     try {
-                        site = NewsAPIHandler.downloadArticle(splitArticle[1]);
+                        site = INTRINIOHandler.downloadArticle(splitArticle[1]);
                         break;
                     } catch (FileNotFoundException e) {
                         Main.getController().updateCurrentTask("Article is no longer available!", true, false);

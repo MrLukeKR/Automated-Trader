@@ -1,9 +1,6 @@
 package Default;
 
-import APIHandler.AlphaVantageHandler;
-import APIHandler.BarChartHandler;
-import APIHandler.NewsAPIHandler;
-import APIHandler.StockQuoteDownloader;
+import APIHandler.*;
 import Portfolio.PortfolioManager;
 import Prediction.StockPredictor;
 import Prediction.TradingSimulator;
@@ -15,6 +12,7 @@ import Records.NewsRecord;
 import Records.PredictionBox;
 import Records.StockClock;
 import Utility.SmoothingUtils;
+import Utility.TradingUtils;
 import Utility.TrainingFileUtils;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -30,8 +28,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Pair;
-import org.apache.spark.mllib.linalg.DenseVector;
-import java.io.*;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
@@ -43,6 +44,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Controller {
+    static final private double smoothRate = 0.1;
+    static final private boolean DISABLE_SYSTEM_UPDATE = false;
     static private DatabaseHandler dh = new DatabaseHandler();
     static private DatabaseHandler sqdh = new DatabaseHandler();
     static private DatabaseHandler nlpdh = new DatabaseHandler();
@@ -53,14 +56,9 @@ public class Controller {
     static private BarChartHandler bch = new BarChartHandler();
     static private AlphaVantageHandler avh = new AlphaVantageHandler();
     static private double lossCutoff, profitCutoff;
-    static private final STOCK_API useAPI = STOCK_API.AlphaVantage;
     static private Thread mainThread;
     static private boolean quit = false;
     static private int dayArray[] = new int[]{1, 30, 200};
-
-    static final private double smoothRate = 0.25;
-
-    static final private boolean DISABLE_SYSTEM_UPDATE = true;
     static private ArrayList<String> stocks = new ArrayList<>();
     static private ArrayList<LiveStockRecord> records = new ArrayList<>();
     static private ArrayList<PredictionBox> predictions = new ArrayList<>();
@@ -70,6 +68,8 @@ public class Controller {
     static private HashMap<String, LineChart<Number, Number>> simulatorCharts = new HashMap<>();
     static private HashMap<String, NumberAxis> simulatorAxes = new HashMap<>();
 
+    @FXML
+    Button simulateTradingButton;
     @FXML CheckBox showRSI;
 
     @FXML VBox priceHistoryChartBox;
@@ -153,11 +153,10 @@ public class Controller {
     @FXML TextArea predictionModelInformationBox;
 
     private boolean automated = false;
-    private boolean priceUpdating = false;
-    private boolean newsUpdating = false;
 
     public static void shutdown() throws SQLException {
         quit = true;
+
         if (mainThread.isAlive())
             mainThread.interrupt();
 
@@ -171,13 +170,12 @@ public class Controller {
     }
 
     static public void updateProgress(double value, ProgressBar pb) {
-        final double val = value;
-        if (value == 0 || value == 1)
-            Platform.runLater(() -> pb.setVisible(false));
-        else if (!pb.isVisible())
-            Platform.runLater(() -> pb.setVisible(true));
+        Platform.runLater(() -> pb.setVisible(!(value == 0 || value == 1)));
+        Platform.runLater(() -> pb.setProgress(value));
+    }
 
-        Platform.runLater(() -> pb.setProgress(val));
+    static public void updateProgress(double current, double total, ProgressBar pb) {
+        updateProgress(current / total, pb);
     }
 
     public void updateCurrentTask(String task, boolean error, boolean printToInfoBox){
@@ -438,6 +436,11 @@ public class Controller {
                 StockPredictor.trainLSTM(29);
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
                 */
+                //TrainingFileUtils.resetPriceValues();
+                TechnicalAnalyser.calculatePercentChanges(stocks);
+                SmoothingUtils.smoothStocks(stocks, smoothRate);
+                TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
+
                 TrainingFileUtils.exportClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress,smoothRate,true,true);
 
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
@@ -452,11 +455,6 @@ public class Controller {
             Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
             Platform.runLater(() -> exportToMLFileButton.setDisable(false));
         }).start();
-    }
-
-    static public void updateProgress(double current, double total, ProgressBar pb) {
-        Platform.runLater(() -> pb.setVisible(current != 0));
-        Platform.runLater(() -> pb.setProgress(current / total));
     }
 
     @FXML
@@ -487,14 +485,14 @@ public class Controller {
 
     private void calculateLossCutoff(double percentage) throws SQLException {
         float balance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
-        lossCutoff = (balance + getStockWorth()) * (1 - percentage);
+        lossCutoff = (balance + TradingUtils.getStockWorth()) * (1 - percentage);
 
         setLossCutoff(lossCutoff);
     }
 
     private void calculateTargetCutoff(double percentage) throws SQLException {
         float balance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
-        profitCutoff = (balance + getStockWorth()) * (1 + percentage);
+        profitCutoff = (balance + TradingUtils.getStockWorth()) * (1 + percentage);
 
         setProfitCutoff(profitCutoff);
     }
@@ -502,7 +500,7 @@ public class Controller {
     private void initialiseConnections() throws IOException, SQLException {
         updateCurrentTask("Initialising Connections...", false, false);
 
-        //http://code.makery.ch/blog/javafx-dialogs-official/
+        //Based on code from http://code.makery.ch/blog/javafx-dialogs-official/
         Dialog<Pair<String, String>> dialogue = new Dialog<>();
         dialogue.setTitle("SQL Server Login");
 
@@ -532,15 +530,15 @@ public class Controller {
         Platform.runLater(user::requestFocus);
 
         dialogue.setResultConverter(dialogButton -> {
-            if (dialogButton == loginButton) {
+            if (dialogButton == loginButton)
                 return new Pair<>(user.getText(), pass.getText());
-            }
             return null;
         });
 
         Optional<Pair<String, String>> result = dialogue.showAndWait();
 
         result.ifPresent(userPass -> {
+            //End of 3rd Party Code
             try {
                 DatabaseHandler.initialiseDatabase(userPass.getKey(), userPass.getValue());
             } catch (Exception e) {
@@ -557,7 +555,7 @@ public class Controller {
         spdh.init("StockPredictor", "wfN1XLoW810diEhR");
         avh.init("UFKUIPVK2VFA83U0"); //PBATJ7L9N8SNK835
         bch.init("07467da3de1195c974b66c46b8523e23", sqdh, stockFeedProgress);
-        NewsAPIHandler.authenticate("be7afde61f5e10bb20393025c35e50c7", "1ff9ab03aa8e5bd073345d70d588abde");
+        INTRINIOHandler.authenticate("be7afde61f5e10bb20393025c35e50c7", "1ff9ab03aa8e5bd073345d70d588abde");
     }
 
     @FXML
@@ -650,7 +648,7 @@ public class Controller {
 
         for (String stock : stocks) {
             String[] splitStock = stock.split(",");
-            sellStock(splitStock[0], Integer.parseInt(splitStock[1]), automated);
+            TradingUtils.sellStock(splitStock[0], Integer.parseInt(splitStock[1]), automated);
         }
 
         dh.executeCommand("DELETE FROM portfolio;");
@@ -712,7 +710,7 @@ public class Controller {
             setLossCutoffButton.setDisable(newValue.isEmpty());
             if(!newValue.isEmpty()){
                 try {
-                    double worth = getTotalWorth();
+                    double worth = TradingUtils.getTotalWorth();
                     setLossCutoffButton.setDisable(Double.parseDouble(lossCutoffField.getText()) >= worth);
                     lossCutoffPercentageLabel.setText(String.valueOf(Double.parseDouble(lossCutoffField.getText()) / worth * 100) + "%");
                 } catch (SQLException e) { e.printStackTrace();}
@@ -726,7 +724,7 @@ public class Controller {
             setProfitTargetButton.setDisable(newValue.isEmpty());
             if(!newValue.isEmpty()){
                 try {
-                    double worth = getTotalWorth();
+                    double worth = TradingUtils.getTotalWorth();
                     setProfitTargetButton.setDisable(Double.parseDouble(profitTargetField.getText()) <= worth);
                     profitTargetPercentageLabel.setText(String.valueOf(Double.parseDouble(profitTargetField.getText()) / worth * 100) + "%");
                 } catch (SQLException e) { e.printStackTrace();}
@@ -743,57 +741,11 @@ public class Controller {
 
             Platform.runLater(() -> {
                 try {
-                    buyButton.setDisable(disable || !canBuyStock(stock, Integer.parseInt(newValue)));
-                    sellButton.setDisable(disable || !canSellStock(stock, Integer.parseInt(newValue)));
+                    buyButton.setDisable(disable || !TradingUtils.canBuyStock(stock, Integer.parseInt(newValue)));
+                    sellButton.setDisable(disable || !TradingUtils.canSellStock(stock, Integer.parseInt(newValue)));
                 } catch (SQLException e) {e.printStackTrace();}
             });
         }));
-    }
-
-    private boolean predictStock(String stock, int numberOfDays) throws SQLException {
-        String results = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "' AND SmoothedClosePrice is not null AND SMA10 is not null AND EMA10 is not null AND MACD is not null AND MACDSig is not null AND MACDHist is not null AND RSI is not null AND ADX10 is not null AND CCI is not null AND AD is not null AND OBV is not null AND StoOscSlowK is not null AND StoOscSlowD is not null AND SMA20 is not null AND SMA200 is not null AND EMA5 IS NOT NULL AND EMA20 IS NOT NULL AND EMA200 IS NOT NULL AND SMA5 is not null AND WillR is not null ORDER BY TradeDate DESC LIMIT 1").get(0);
-        String[] splitString = results.split(",");
-        double newsSentiment = NaturalLanguageProcessor.getTodaysAverageSentiment(stock, 2);
-        double features[] = new double[splitString.length ];
-
-        features[0] = stocks.indexOf(stock);
-        features[1] = numberOfDays;
-
-        for (int i = 2; i < splitString.length - 1; i++)
-            features[i] = Double.parseDouble(splitString[i]);
-
-        features[features.length - 1] = newsSentiment;
-
-        return StockPredictor.predictDirection(new DenseVector(features));
-    }
-
-    private boolean[] predictStocks() throws SQLException {
-        boolean predictions[] = new boolean[stocks.size() * dayArray.length];
-
-        int i = 0;
-
-        updateCurrentTask("Predicting Stock Performance...", false, false);
-        updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
-
-        for (int numberOfDays : dayArray)
-            for (String stock : stocks) {
-                predictions[i] = predictStock(stock, numberOfDays);
-                if (predictions[i])
-                    updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": RISE/MAINTAIN", false, false);
-                else
-                    updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": FALL", false, false);
-                i++;
-                updateProgress(i, predictions.length  - 1, stockForecastProgress);
-            }
-
-        updateProgress(0, stockForecastProgress);
-        updateCurrentTask("Predicted Stock Performance!", false, false);
-
-        return predictions;
-    }
-
-    private void updateInvestments(){
-
     }
 
     private void autoTrade() throws SQLException, ParseException {
@@ -807,18 +759,18 @@ public class Controller {
             double allocation = Double.parseDouble(splitString[1]) - Double.parseDouble(splitString[3]);
             int held = Integer.parseInt(splitString[2]);
             double currentPrice = Double.parseDouble(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + symbol + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-            boolean priceWillRise = predictStock(symbol, 1);
+            boolean priceWillRise = StockPredictor.predictStock(stocks, symbol, 1);
 
             if (priceWillRise) {
                 int buyAmount = (int) Math.floor(allocation / currentPrice);
                 if ((buyAmount > 0) && (buyAmount * currentPrice) <= balance) {
                     updateCurrentTask("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol, false, true);
-                    buyStock(symbol, buyAmount, true);
+                    TradingUtils.buyStock(symbol, buyAmount, true);
                 }
             } else {
                 if (held > 0) {
                     updateCurrentTask("> AUTOMATED TRADER: SELLING " + held + " " + symbol, false, true);
-                    sellStock(symbol, held, true);
+                    TradingUtils.sellStock(symbol, held, true);
                 }
             }
             //TODO: Rebalance portfolio and cutoff reassignment
@@ -828,7 +780,6 @@ public class Controller {
     }
 
     private void updatePredictions(boolean[] predictionValues){
-        //TODO: Update prediction GUI
         for(int i = 0; i < stocks.size(); i++) {
             boolean[] currentPredictions = new boolean[dayArray.length];
             for(int j = 0; j < dayArray.length; j++)
@@ -848,17 +799,17 @@ public class Controller {
             yAxis.setTickUnit(0.1);
             xAxis.setTickUnit(1);
             LineChart<Number, Number> priceChart = new LineChart<>(xAxis, yAxis);
-                priceChart.setMaxHeight(300);
-                priceChart.setMinHeight(300);
-                priceChart.setMaxWidth(1900);
-                priceChart.setMinWidth(1900);
-                yAxis.setUpperBound(0);
-                yAxis.setLowerBound(0);
-                simulatorAxes.put(stock, yAxis);
-                priceChart.setTitle(stock);
-                yAxis.setAutoRanging(false);
-                priceChart.getData().add(simulatedHistory.get(stock));
-                simulatorCharts.put(stock,priceChart);
+            priceChart.setMaxHeight(300);
+            priceChart.setMinHeight(300);
+            priceChart.setMaxWidth(1900);
+            priceChart.setMinWidth(1900);
+            yAxis.setUpperBound(0);
+            yAxis.setLowerBound(0);
+            simulatorAxes.put(stock, yAxis);
+            priceChart.setTitle(stock);
+            yAxis.setAutoRanging(false);
+            priceChart.getData().add(simulatedHistory.get(stock));
+            simulatorCharts.put(stock, priceChart);
             Platform.runLater(()-> priceHistoryChartBox.getChildren().add(priceChart));
         }
     }
@@ -876,12 +827,12 @@ public class Controller {
         for(String stock : stocks){
             ArrayList<Double> prices = new ArrayList<>();
             Platform.runLater(()-> {
-            for(XYChart.Data data : simulatedHistory.get(stock).getData())
-                if(data != null)
-                    prices.add((double) data.getYValue());
+                for (XYChart.Data data : simulatedHistory.get(stock).getData())
+                    if (data != null)
+                        prices.add((double) data.getYValue());
 
-            if(prices.isEmpty())
-                System.err.println("Price Chart Error");
+                if (prices.isEmpty())
+                    System.err.println("Price Chart Error");
 
                 simulatorAxes.get(stock).setUpperBound(Collections.max(prices));
                 simulatorAxes.get(stock).setLowerBound(Collections.min(prices));
@@ -890,7 +841,7 @@ public class Controller {
     }
 
     @FXML
-    public void initialize() throws SQLException, IOException, InterruptedException {
+    public void initialize() throws SQLException, IOException {
         mainThread = new Thread(() -> {
             while (!quit) {
                 int s = LocalTime.now().getSecond();
@@ -901,13 +852,16 @@ public class Controller {
                 if (s == 0 && h < 21 && h >= 14) {
                     try {
                         //updateBatchStockData();
-                        if (!priceUpdating)
-                            updateIntradayStockData();
-                        if (!priceUpdating)
-                            updateDailyStockData();
-                        if(getTotalWorth() <= lossCutoff || getTotalWorth() >= profitCutoff)
+                        StockQuoteDownloader.updateIntradayStockData(records);
+                        StockQuoteDownloader.updateDailyStockData(records);
+                        double totalWorth = TradingUtils.getTotalWorth();
+                        if (totalWorth <= lossCutoff || totalWorth >= profitCutoff)
                             sellAllStock(false);
-
+                        SmoothingUtils.smoothStocks(stocks, smoothRate);
+                        TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
+                        updatePredictions(StockPredictor.predictStocks(stocks, dayArray, stockForecastProgress));
+                        if (automated)
+                            autoTrade();
                         checkServices();
                         updateGUI();
                     } catch (Exception e) { e.printStackTrace(); }
@@ -915,25 +869,10 @@ public class Controller {
 
                 if ( s==0 && h == 0 && m == 0) {
                     try {
-                        updateNews();
+                        updateNewsGUI(NewsDownloader.updateNews(stocks));
                         checkServices();
                         updateGUI();
                     } catch (Exception e) {e.printStackTrace();}
-                }
-
-                if (m % 30 == 0 && s == 0) {
-                    try {
-                        StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
-                        SmoothingUtils.smoothStocks(stocks, smoothRate);
-                        TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
-                        updatePredictions(predictStocks());
-                        if (automated)
-                            autoTrade();
-                        checkServices();
-                        updateGUI();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
                 }
             }
         });
@@ -941,16 +880,18 @@ public class Controller {
         initialiseConnections();
         initialiseListeners();
 
-        StockQuoteDownloader.initialise(sqdh, avh, stockFeedProgress);
+        StockQuoteDownloader.initialise(sqdh, avh, bch, stockFeedProgress, StockQuoteDownloader.STOCK_API.AlphaVantage);
         StockRecordParser.initialise(sqdh);
         NaturalLanguageProcessor.initialise(nlpdh, nlpProgress);
         SmoothingUtils.initialise(tadh, technicalAnalyserProgress);
         TechnicalAnalyser.initialise(tadh, technicalAnalyserProgress);
-        NewsAPIHandler.initialise(nddh, newsFeedProgress);
+        INTRINIOHandler.initialise(nddh, newsFeedProgress);
         PortfolioManager.initialise(pmdh); //TODO: Get a progessbar for this
         StockPredictor.initialise(spdh, stockForecastProgress);
-        TrainingFileUtils.initialise(dh);
+        TrainingFileUtils.setDatabaseHandler(dh);
+        TradingUtils.setDatabaseHandler(dh);
         TradingSimulator.initialise(dh);
+        NewsDownloader.initialise(nddh);
 
         initialiseStocks();
         StockPredictor.loadLatestRandomForest();
@@ -977,16 +918,7 @@ public class Controller {
     }
 
     private void updateStockValues() throws SQLException {
-        float worth = 0;
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM portfolio WHERE Held > 0;");
-
-        for (String stock : heldStocks) {
-            int volume = getHeldStocks(stock);
-            float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-            worth += volume * currPrice;
-        }
-
-        float finalWorth = worth;
+        float finalWorth = TradingUtils.getStockWorth();
         Platform.runLater(() -> stockValueLabel.setText(String.valueOf(finalWorth)));
     }
 
@@ -1000,13 +932,11 @@ public class Controller {
         }).start();
     }
 
-    private double getBalance() throws SQLException {
-        return Math.floor(100 * Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0))) / 100;
-    }
-
     private void updateBankBalance(){
         Platform.runLater(() -> {
-            try { currentBalanceLabel.setText(String.valueOf(getBalance())); }
+            try {
+                currentBalanceLabel.setText(String.valueOf(TradingUtils.getBalance()));
+            }
             catch (SQLException e) { e.printStackTrace(); }
         });
     }
@@ -1033,10 +963,10 @@ public class Controller {
             Platform.runLater(() -> stockList.getChildren().add(rec.getNode()));
     }
 
-    private void updateSystem() throws SQLException, InterruptedException, ParseException, IOException {
+    private void updateSystem() throws SQLException, InterruptedException, ParseException {
         Thread stockThread = new Thread(() -> {
             try {
-                processYahooHistories();
+                StockRecordParser.processYahooHistories(stocks, stockFeedProgress);
                 dh.executeCommand("DELETE FROM intradaystockprices WHERE Temporary = 1;");
 
                 bch.downloadIntradayHistory(stocks);
@@ -1068,11 +998,11 @@ public class Controller {
         Thread newsThread = new Thread(() -> {
             try {
                 nddh.setWriteToFile(true);
-                updateNews();
+                updateNewsGUI(NewsDownloader.updateNews(stocks));
                 nddh.setWriteToFile(false);
                 nddh.sendSQLFileToDatabase(false);
 
-                NewsAPIHandler.downloadArticles(); //Has to be done individually to check for duplicate values
+                INTRINIOHandler.downloadArticles(); //Has to be done individually to check for duplicate values
             } catch (Exception e) { e.printStackTrace(); }
 
             try{
@@ -1118,26 +1048,30 @@ public class Controller {
         }).start();
 
         if(!StockPredictor.getModelInformation().equals("No model loaded"))
-        new Thread(()->{
-            boolean[] predictionArray = new boolean[0];
-            try { predictionArray = predictStocks(); } catch (SQLException e) { e.printStackTrace(); }
+            new Thread(() -> {
+                boolean[] predictionArray = new boolean[0];
+                try {
+                    predictionArray = StockPredictor.predictStocks(stocks, dayArray, stockForecastProgress);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
 
-            for(int i = 0; i < stocks.size(); i++) {
-                boolean[] currentPredictions = new boolean[dayArray.length];
-                for(int j = 0; j < dayArray.length; j++)
-                    currentPredictions[j] = predictionArray[i + j * stocks.size()];
+                for (int i = 0; i < stocks.size(); i++) {
+                    boolean[] currentPredictions = new boolean[dayArray.length];
+                    for (int j = 0; j < dayArray.length; j++)
+                        currentPredictions[j] = predictionArray[i + j * stocks.size()];
 
-                predictions.add(new PredictionBox(stocks.get(i), dayArray, currentPredictions));
-            }
+                    predictions.add(new PredictionBox(stocks.get(i), dayArray, currentPredictions));
+                }
 
-            for(PredictionBox pb : predictions)
-                Platform.runLater(()->stockPredictionsBox.getChildren().add(pb.getNode()));
-        }).start();
+                for (PredictionBox pb : predictions)
+                    Platform.runLater(() -> stockPredictionsBox.getChildren().add(pb.getNode()));
+            }).start();
 
         Platform.runLater(() -> exportToMLFileButton.setDisable(false));
         Platform.runLater(() -> controlPanel.setDisable(false));
 
-
+/*
         new Thread(()->
         {
             try {
@@ -1150,8 +1084,8 @@ public class Controller {
                 e.printStackTrace();
             }
         }).start();
-
-        //mainThread.start();
+*/
+        mainThread.start();
     }
 
     private void initialiseClocks() {
@@ -1189,7 +1123,7 @@ public class Controller {
         //Orange - Waiting
         //Red - Offline/Error
 
-        if (newsUpdating) {
+        if (NewsDownloader.getNewsUpdating()) {
             nlpAvailability.setFill(Color.ORANGE);
             nlpAvailability.setStroke(Color.ORANGE);
         } else {
@@ -1198,58 +1132,12 @@ public class Controller {
         }
     }
 
-    private void processYahooHistories() throws SQLException, IOException {
 
-        double curr = 0;
-        final double t = stocks.size();
-
-        updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockFeedProgress);
-
-        for (String symbol : stocks) {
-            ArrayList<String> results = sqdh.executeQuery("SELECT COUNT(*) FROM dailystockprices WHERE Symbol='" + symbol + "';");
-            if (results.isEmpty() || Integer.parseInt(results.get(0)) == 0) {
-                updateCurrentTask("Importing Yahoo! records for: " + symbol, false, false);
-
-                File file = new File("res/historicstocks/" + symbol + ".csv");
-
-                if (file.exists()) {
-                    StockRecordParser.importDailyYahooMarketData(file, symbol);
-                    updateCurrentTask("Successfully committed complete Yahoo! records of " + symbol + " to the database!", false, false);
-                }else
-                    updateCurrentTask("No Yahoo history available for " + symbol, true, true);
-            }
-
-            updateProgress(++curr, t, stockFeedProgress);
-        }
-    }
 
     @FXML
     public void initialiseStocks() throws SQLException {
         updateCurrentTask("Initialising stocks", false, false);
         stocks = dh.executeQuery("SELECT Symbol FROM indices");
-    }
-
-    private void buyStock(String stock, int amount, boolean automated) throws SQLException {
-        float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-        float totalCost = cost * amount;
-        float balance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
-        int auto = 0;
-
-        if (automated)
-            auto = 1;
-
-        if (totalCost <= balance) {
-            //TODO: Allocation warning if exceeding allocation but still purchasable
-            String lastUpdated = dh.executeQuery("SELECT MAX(TradeDateTime) FROM intradaystockprices WHERE Symbol = '" + stock + "';").get(0);
-            dh.executeCommand("INSERT INTO portfolio (Symbol, Allocation, Held, Investment, LastUpdated) VALUES ('" + stock + "', " + totalCost + ", " + amount + ", " + totalCost + ", '" + lastUpdated + "') ON DUPLICATE KEY UPDATE Allocation = GREATEST(VALUES(Allocation), (SELECT Allocation FROM (SELECT Allocation FROM portfolio WHERE Symbol='" + stock + "') as t)), Held = Held+ VALUES(Held), Investment = Investment + VALUES(Investment), LastUpdated = VALUES(LastUpdated);");
-            dh.executeCommand("INSERT INTO banktransactions(Amount, Type) VALUES (" + -totalCost + ",'TRADE')");
-            dh.executeCommand("INSERT INTO tradetransactions(Type,Symbol,Volume,Price,Automated) VALUES ('BUY'," +
-                    "'" + stock + "'," +
-                    amount + "," +
-                    cost + "," +
-                    auto +
-                    ");");
-        }
     }
 
     private void updateGUI() throws SQLException, ParseException {
@@ -1278,21 +1166,9 @@ public class Controller {
         for (StockClock clock : clocks) clock.updateTime();
     }
 
-    private float getStockWorth() throws SQLException {
-        float potentialTotal = 0;
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol, Held FROM portfolio WHERE Held > 0");
-
-        for (String stock : heldStocks) {
-            String[] splitStock = stock.split(",");
-            potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-        }
-
-        return potentialTotal;
-    }
-
     private void updateProfitLoss() throws SQLException {
         float investmentCost = Float.parseFloat(dh.executeQuery("SELECT COALESCE(SUM(Investment),0) FROM portfolio").get(0));
-        float potentialTotal = getStockWorth();
+        float potentialTotal = TradingUtils.getStockWorth();
         float total = potentialTotal - investmentCost;
 
         Platform.runLater(() -> profitLossLabel.setText(String.valueOf(Math.round(total * 100.0) / 100.0)));
@@ -1306,38 +1182,9 @@ public class Controller {
 
     }
 
-    private double getTotalWorth() throws SQLException {
-        float bankBalance = Float.parseFloat(dh.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
-        float stockWorth = 0;
-
-        ArrayList<String> heldStocks = dh.executeQuery("SELECT Symbol FROM portfolio WHERE Held > 0;");
-
-        for (String stock : heldStocks) {
-            int volume = getHeldStocks(stock);
-            float currPrice = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-            stockWorth += volume * currPrice;
-        }
-
-        return stockWorth + bankBalance;
-    }
-
     private void updateTotalWorth() throws SQLException {
-        double value = getTotalWorth();
+        double value = TradingUtils.getTotalWorth();
         Platform.runLater(() -> totalBalanceLabel.setText(String.valueOf(Math.round((value) * 100.0) / 100.0)));
-    }
-
-    public boolean canBuyStock(String stock, int amount) throws SQLException {
-        if (amount == 0 || stock.isEmpty())
-            return false;
-
-        double availableFunds = Double.parseDouble(dh.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions;").get(0)),
-                stockCost = Double.parseDouble(dh.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-
-        return (stockCost * amount) <= availableFunds;
-    }
-
-    private int getHeldStocks(String stock) throws SQLException {
-        return Integer.parseInt(dh.executeQuery("SELECT COALESCE(Held,0) FROM Portfolio WHERE Symbol='" + stock + "';").get(0));
     }
 
     private void updateComponentChart() throws SQLException {
@@ -1380,22 +1227,9 @@ public class Controller {
 
         stockAmountField.clear();
 
-        buyStock(stock, amount, false);
+        TradingUtils.buyStock(stock, amount, false);
 
         updateGUI();
-    }
-
-    public boolean canSellStock(String stock, int amount) throws SQLException {
-        if (amount == 0 || stock.isEmpty())
-            return false;
-
-        ArrayList<String> result = dh.executeQuery("SELECT COALESCE(Held,0) FROM portfolio WHERE Symbol = '" + stock + "';");
-
-        if (result.isEmpty()) return false;
-
-        double availableStocks = Double.parseDouble(result.get(0));
-
-        return availableStocks >= amount;
     }
 
     @FXML
@@ -1405,176 +1239,17 @@ public class Controller {
 
         stockAmountField.clear();
 
-        sellStock(stock, amount, false);
+        TradingUtils.sellStock(stock, amount, false);
 
         updateGUI();
     }
 
-    private void sellStock(String stock, int amount, boolean automated) throws SQLException {
-        float cost = Float.parseFloat(dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
-        float totalCost = cost * amount;
-        int available = getHeldStocks(stock);
-        int auto = 0;
-
-        if (automated)
-            auto = 1;
-
-        if (amount <= available) {
-            dh.executeCommand("INSERT INTO banktransactions(Amount, Type) VALUES (" + totalCost + ",'TRADE')");
-            dh.executeCommand("INSERT INTO tradetransactions(Type,Symbol,Volume,Price, Automated) VALUES ('SELL'," +
-                    "'" + stock + "'," +
-                    amount + "," +
-                    cost + "," +
-                    auto +
-                    ");");
-
-            String lastUpdated = dh.executeQuery("SELECT MAX(TradeDateTime) FROM intradaystockprices WHERE Symbol = '" + stock + "';").get(0);
-
-            dh.executeCommand("UPDATE Portfolio SET Held = Held - " + amount + ", Investment = Investment - " + totalCost + ", LastUpdated = '" + lastUpdated + "' WHERE Symbol='" + stock + "';");
-        }
-    }
-
-    private void updateNews() throws SQLException, InterruptedException, IOException {
-        if (newsUpdating) return;
-        newsUpdating = true;
-
-        NewsAPIHandler.getHistoricNews(stocks);
-
+    private void updateNewsGUI(ArrayList<String> results) {
         Platform.runLater(() -> newsBox.getChildren().clear());
-
-        ArrayList<String> results = nddh.executeQuery("SELECT DISTINCT Symbol, Headline, Published FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
-
         for (String result : results) {
             String[] splitString = result.split(",");
             NewsRecord temp = new NewsRecord(splitString[0], splitString[1]);
             Platform.runLater(() -> newsBox.getChildren().add(temp.getNode()));
         }
-
-        newsUpdating = false;
     }
-
-    private void updateDailyStockData() throws InterruptedException {
-        if (priceUpdating) return;
-        priceUpdating = true;
-        ArrayList<Thread> threads = new ArrayList<>();
-        for (LiveStockRecord curr : records) {
-            Thread downloadThread = new Thread(() -> {
-                curr.setUpdating(true);
-                ArrayList<String> temp = null;
-
-                try {
-                    temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.DAILY, StockQuoteDownloader.OutputSize.COMPACT);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                if (temp != null && temp.size() > 1) {
-                    try {
-                        StockRecordParser.importDailyMarketData(temp, curr.getSymbol());
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                    updateCurrentTask("Downloaded " + curr.getSymbol() + " current daily close price: " + temp.get(1), false, false);
-                }
-                curr.setUpdating(false);
-            });
-
-            threads.add(downloadThread);
-            downloadThread.start();
-        }
-
-        for (Thread thread : threads)
-            thread.join();
-
-        priceUpdating = false;
-    }
-
-    private void updateIntradayStockData() throws SQLException, InterruptedException {
-        dh.executeCommand("DELETE FROM intradaystockprices WHERE Temporary = 1");
-
-        if (priceUpdating) return;
-        priceUpdating = true;
-        sqdh.setAutoCommit(false);
-        ArrayList<Thread> threads = new ArrayList<>();
-        for (LiveStockRecord curr : records) {
-            Thread downloadThread = new Thread(() -> {
-                curr.setUpdating(true);
-                ArrayList<String> temp = null;
-
-                try {
-                    switch (useAPI) {
-                        case BarChart:
-                            temp = bch.downloadIntradayHistory(curr.getSymbol());
-                            break;
-                        case AlphaVantage:
-                            temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.INTRADAY, StockQuoteDownloader.OutputSize.COMPACT);
-                            break;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                if (temp != null && temp.size() > 1) {
-                    try {
-                        StockRecordParser.importIntradayMarketData(temp, curr.getSymbol());
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                    updateCurrentTask("Downloaded " + curr.getSymbol() + " 1 minute update: " + temp.get(1), false, false);
-                }
-                curr.setUpdating(false);
-            });
-
-            threads.add(downloadThread);
-            downloadThread.start();
-        }
-
-        for (Thread thread : threads)
-            thread.join();
-
-        sqdh.executeBatch();
-        sqdh.setAutoCommit(true);
-
-        for (LiveStockRecord curr : records) {
-            curr.updateRecord(sqdh);
-            curr.updateChart(sqdh, false);
-        }
-
-        priceUpdating = false;
-    }
-
-    private void updateBatchStockData() throws SQLException, ParseException, IOException {
-        ArrayList<String> temp = null;
-        switch (useAPI) {
-            case AlphaVantage:
-                temp = StockQuoteDownloader.downloadBatchStockData(stocks);
-                break;
-            case BarChart:
-                temp = bch.downloadQuotes(stocks);
-                break;
-        }
-
-        int i = 0;
-
-        for (LiveStockRecord curr : records) {
-            String record = Objects.requireNonNull(temp).get(i++);
-            String[] splitString = record.split(",");
-            record = record.replace(splitString[0] + ",", "");
-
-            ArrayList<String> tempRec = new ArrayList<>();
-            tempRec.add(record);
-
-            if (splitString[0].equals(curr.getSymbol())) {
-                StockRecordParser.importCurrentQuote(tempRec.get(0), curr.getSymbol());
-                updateCurrentTask("Downloaded " + curr.getSymbol() + " current price:" + record, false, false);
-                curr.updateRecord(dh);
-                curr.updateChart(dh, false);
-            } else
-                updateCurrentTask("Batch download mismatch", true, true);
-        }
-
-        updateGUI();
-    }
-
-    private enum STOCK_API {AlphaVantage, BarChart}
 }

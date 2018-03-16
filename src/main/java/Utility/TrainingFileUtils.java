@@ -2,6 +2,7 @@ package Utility;
 
 import Default.Controller;
 import Default.DatabaseHandler;
+import Default.Main;
 import Processing.NaturalLanguageProcessor;
 import Processing.TechnicalAnalyser;
 import javafx.scene.control.ProgressBar;
@@ -80,7 +81,7 @@ public class TrainingFileUtils {
             if(!saveToTraining && counter == testingAmount) {
                 saveToTraining = true;
                 counter = 0;
-               // trainingAmount = (int) Math.floor(stock)
+                // trainingAmount = (int) Math.floor(stock)
             }
 
             if(saveToTraining)
@@ -115,10 +116,10 @@ public class TrainingFileUtils {
         while ((line = br.readLine()) != null){
 
         }
-            //pw.println(convertToLibSVM(line));
+        //pw.println(convertToLibSVM(line));
     }
 
-    static public void exportClassificationCSV(ArrayList<String> stocks, String path, int[] days, ProgressBar pb, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiment) throws FileNotFoundException, SQLException {
+    static public void exportClassificationCSV(ArrayList<String> stocks, String path, int[] days, ProgressBar pb, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiment, boolean includeHeader) throws FileNotFoundException, SQLException {
         final int t = stocks.size() - 1;
         int c = 0;
         File file = new File(path);
@@ -130,7 +131,7 @@ public class TrainingFileUtils {
             String commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ")" ;
             for(int i = 1; i < dbSchema.size(); i++)
                 commandStart += ",COALESCE(" + dbSchema.get(i)+")";
-            for (String value : convertToClassificationTrainingArray(stock, commandStart+" FROM dailystockprices WHERE Symbol='" + stock + "'", " ORDER BY TradeDate ASC;",c, days, smoothPriceAlpha, includeIndicators, includeSentiment, false))
+            for (String value : convertToClassificationTrainingArray(stock, commandStart+" FROM dailystockprices WHERE Symbol='" + stock + "'", " ORDER BY TradeDate ASC;",c, days, smoothPriceAlpha, includeIndicators, includeSentiment, false, includeHeader && stocks.indexOf(stock) == 0))
                 pw.println(value);
 
             Controller.updateProgress(++c, t, pb);
@@ -167,44 +168,46 @@ public class TrainingFileUtils {
         return dp.toString();
     }
 
-    static public void exportAllFiles(ArrayList<String> stocks, ProgressBar pb) throws FileNotFoundException, SQLException {
+    static public void exportAllFiles(ArrayList<String> stocks, ProgressBar pb, int[] dayArray) throws FileNotFoundException, SQLException {
         //No technical indicators, no sentiment, no smoothing
-        exportClassificationCSV(stocks,"res/TrainingFiles/Standard_NASDAQ.csv",new int[]{1,30,200},pb,1,false, false);
+
+        for(Integer day : dayArray)
+            exportClassificationCSV(stocks,"res/TrainingFiles/" + day + "Day_Standard_NASDAQ.csv",new int[]{day},pb,1,false, false,true);
 
         resetPriceValues();
         TechnicalAnalyser.calculateTechnicalIndicators(stocks,false,true);
 
         //Technical indicators, no sentiment, no smoothing
-        exportClassificationCSV(stocks,"res/TrainingFiles/Standard_TA_NASDAQ.csv",new int[]{1,30,200},pb,1,true, false);
+        for(Integer day : dayArray)
+            exportClassificationCSV(stocks,"res/TrainingFiles/" + day + "Day_Standard_TA_NASDAQ.csv",new int[]{day},pb,1,true, false, true);
 
-        //No technical indicators, no sentiment, smoothing
-        for(double i = 0.1; i < 1; i+=0.1) {
-            resetPriceValues();
-            SmoothingUtils.smoothStocks(stocks,i);
-            exportClassificationCSV(stocks, "res/TrainingFiles/" + i + "Smoothed_NASDAQ.csv", new int[]{1, 30, 200}, pb, i, false, false);
-        }
-
-        resetPriceValues();
-        TechnicalAnalyser.calculateTechnicalIndicators(stocks,false, true);
         //Technical indicators, sentiment, no smoothing
-        exportClassificationCSV(stocks,"res/TrainingFiles/Standard_TA_Sentiment_NASDAQ.csv",new int[]{1,30,200},pb,1,true, true);
+        for(Integer day : dayArray)
+            exportClassificationCSV(stocks,"res/TrainingFiles/"+ day + "Day_Standard_TA_Sentiment_NASDAQ.csv",new int[]{day},pb,1,true, true, true);
 
         //No technical indicators, sentiment, no smoothing
-        exportClassificationCSV(stocks,"res/TrainingFiles/Standard_Sentiment_NASDAQ.csv",new int[]{1,30,200},pb,1,false, true);
+        for(Integer day : dayArray)
+            exportClassificationCSV(stocks,"res/TrainingFiles/"+day+"DayStandard_Sentiment_NASDAQ.csv",new int[]{day},pb,1,false, true, true);
 
         for(double i = 0.1; i <= 0.9; i+=0.1) {
             resetPriceValues();
             SmoothingUtils.smoothStocks(stocks,i);
-            TechnicalAnalyser.calculateTechnicalIndicators(stocks,true, true);
-
-            //Technical indicators, smoothing, no sentiment
-            exportClassificationCSV(stocks, "res/TrainingFiles/" + i + "Smoothed_TA_NASDAQ.csv", new int[]{1, 30, 200}, pb, i, true, false);
-            //Technical indicators, smoothing, sentiment
-            exportClassificationCSV(stocks, "res/TrainingFiles/" + i + "Smoothed_TA_Sentiment_NASDAQ.csv", new int[]{1, 30, 200}, pb, i, true, true);
+            //No technical indicators, no sentiment, smoothing
+            for(Integer day : dayArray)
+                exportClassificationCSV(stocks, "res/TrainingFiles/" + day  + "Day_" + i + "Smoothed_NASDAQ.csv", new int[]{day}, pb, i, false, false, true);
             //No Technical indicators, smoothing, sentiment
-            exportClassificationCSV(stocks, "res/TrainingFiles/" + i + "Smoothed_Sentiment_NASDAQ.csv", new int[]{1, 30, 200}, pb, i, false, true);
+            for(Integer day : dayArray)
+                exportClassificationCSV(stocks, "res/TrainingFiles/" + day + "Day_" + i + "Smoothed_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, false, true, true);
+
+            TechnicalAnalyser.calculateTechnicalIndicators(stocks,true, true);
+            //Technical indicators, smoothing, no sentiment
+            for(Integer day : dayArray)
+                exportClassificationCSV(stocks, "res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_NASDAQ.csv", new int[]{day}, pb, i, true, false, true);
+            //Technical indicators, smoothing, sentiment
+            for(Integer day : dayArray)
+                exportClassificationCSV(stocks, "res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, true, true, true);
         }
-        }
+    }
 
     static public void exportSeparateClassificationCSV(ArrayList<String> stocks, String filePath, int[] days, ProgressBar pb) throws FileNotFoundException, SQLException {
         final int t = stocks.size() - 1;
@@ -215,7 +218,7 @@ public class TrainingFileUtils {
         PrintWriter lpw = new PrintWriter(labelFile);
 
         for (String stock : stocks) {
-            for (String value : convertToClassificationTrainingArray(stock, "SELECT * FROM dailystockprices WHERE Symbol='" + stock + "'"," ORDER BY TradeDate ASC;", c, days,0.25,true,true, false)) {
+            for (String value : convertToClassificationTrainingArray(stock, "SELECT * FROM dailystockprices WHERE Symbol='" + stock + "'"," ORDER BY TradeDate ASC;", c, days,0.25,true,true, false, stocks.indexOf(stock) == 0)) {
                 String[] splitString = value.split(",");
                 StringBuilder feature = new StringBuilder(splitString[0]);
                 for(int i = 1; i < splitString.length-1; i++)
@@ -246,19 +249,47 @@ public class TrainingFileUtils {
         databaseHandler.executeCommand(command + ";");
     }
 
-    static public ArrayList<String> convertToClassificationTrainingArray(String stock, String commandStart, String commandEnd, int index, int[] amountOfDaysArray, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiments, boolean ignoreNull) throws SQLException {
+    static public ArrayList<String> convertToClassificationTrainingArray(String stock, String commandStart, String commandEnd, int index, int[] amountOfDaysArray, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiments, boolean ignoreNull, boolean includeHeader) throws SQLException {
+        String[] indicators = new String[]{"SMA5", "SMA20", "SMA200", "EMA5", "EMA10", "EMA20", "EMA200", "MACD", "MACDSig", "MACDHist", "RSI", "ADX10", "CCI", "AD", "OBV", "StoOscSlowK", "StoOscSlowD", "WillR"};
+        String [] stockData = new String[]{"OpenPrice", "HighPrice", "LowPrice", "ClosePrice", "TradeVolume", "PercentChange"};
         ArrayList<String> dataPoints = new ArrayList<>();
 
         ArrayList<String> dbSchema = databaseHandler.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
 
+        String header = null;
+
+        if(includeHeader) {
+            if(amountOfDaysArray.length == 1)
+                header = "Index," + stockData[0];
+            else
+                header = "Index,PredictionPeriod," + stockData[0];
+            for (int i = 1; i < stockData.length; i++)
+                header += "," + stockData[i];
+        }
+
         StringBuilder command = new StringBuilder(commandStart);
 
-        if(!ignoreNull && includeIndicators)
-            for(String column:new String[]{"SMA5", "SMA20", "SMA200", "EMA5", "EMA10", "EMA20", "EMA200", "MACD", "MACDSig", "MACDHist", "RSI", "ADX10", "CCI", "AD", "OBV", "StoOscSlowK", "StoOscSlowD", "WillR"})
-                command.append(" AND ").append(column).append(" IS NOT NULL");
-
-        if(!ignoreNull && smoothPriceAlpha!=1)
+        if(!ignoreNull && smoothPriceAlpha!=1) {
             command.append(" AND SmoothedClosePrice IS NOT NULL");
+            if(includeHeader)
+                header += ",SmoothedClosePrice";
+        }
+
+        if(!ignoreNull && includeIndicators) {
+            for (String column : indicators)
+                command.append(" AND ").append(column).append(" IS NOT NULL");
+            if(includeHeader)
+                for (int i = 0; i < indicators.length; i++)
+                    header += "," + indicators[i];
+        }
+
+        if(includeHeader && includeSentiments)
+            header+=",Sentiment";
+
+        if(includeHeader) {
+            header += ",Prediction";
+            dataPoints.add(header);
+        }
 
         ArrayList<String> priceValues = databaseHandler.executeQuery(command + commandEnd);
 
@@ -277,7 +308,7 @@ public class TrainingFileUtils {
 
         for (int amountOfDays : amountOfDaysArray) {
             if((priceValues.size() - amountOfDays) < 0){
-                System.err.println("Not enough records");
+                Main.getController().updateCurrentTask("Not enough records", true, false);
                 break;
             }
 
@@ -297,32 +328,29 @@ public class TrainingFileUtils {
                 StringBuilder dataPoint = new StringBuilder();
                 if(index >= 0)
                     dataPoint.append(String.valueOf(index) + ",");
-                dataPoint.append(String.valueOf(amountOfDays));
+                if(amountOfDaysArray.length > 1)
+                    dataPoint.append(String.valueOf(amountOfDays) + ",");
                 String[] splitString = priceValues.get(i).split(",");
 
-                for(String priceColumn : new String[]{"OpenPrice", "HighPrice", "LowPrice", "ClosePrice", "TradeVolume", "PercentChange"})
-                    dataPoint.append(",").append(splitString[dbSchema.indexOf(priceColumn)]);
+                dataPoint.append(splitString[dbSchema.indexOf(stockData[0])]);
+                for(int j = 1; j < stockData.length; j++)
+                    dataPoint.append(",").append(splitString[dbSchema.indexOf(stockData[j])]);
 
                 if(smoothPriceAlpha != 1)
                     dataPoint.append(",").append(splitString[dbSchema.indexOf("SmoothedClosePrice")]);
 
                 if(includeIndicators)
-                    for(TechnicalAnalyser.TechnicalIndicator indicator : TechnicalAnalyser.TechnicalIndicator.values()) {
-                        if(indicator.equals(TechnicalAnalyser.TechnicalIndicator.MACD)){
-                            dataPoint.append(",").append(splitString[dbSchema.indexOf("MACD")]);
-                            dataPoint.append(",").append(splitString[dbSchema.indexOf("MACDSig")]);
-                            dataPoint.append(",").append(splitString[dbSchema.indexOf("MACDHist")]);
-                        }else if (indicator.equals(TechnicalAnalyser.TechnicalIndicator.StoOsc)){
-                            dataPoint.append(",").append(splitString[dbSchema.indexOf("StoOscSlowD")]);
-                            dataPoint.append(",").append(splitString[dbSchema.indexOf("StoOscSlowK")]);
-                        }else
-                        dataPoint.append(",").append(splitString[dbSchema.indexOf(indicator.name())]);
-                    }
+                    for(String indicator : indicators)
+                            dataPoint.append(",").append(splitString[dbSchema.indexOf(indicator)]);
 
                 if(includeSentiments)
                     dataPoint.append(",").append(sentiments[i]);
 
                 dataPoint.append(",").append(String.valueOf((futurePrices[i] - currentPrices[i]) >= 0 ? 1 : 0));
+
+                if(includeHeader && dataPoints.size() == 1 && header.split(",").length != dataPoint.toString().split(",").length)
+                    Main.getController().updateCurrentTask("Header/Datapoint Size Mismatch!", true, false);
+
                 dataPoints.add(dataPoint.toString());
             }
         }

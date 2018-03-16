@@ -41,7 +41,7 @@ public class TradingSimulator {
         commandStart += " FROM dailystockprices WHERE Symbol='" + stock + "' AND TradeDate < '" + cutoffDate+"'";
         commandEnd = " ORDER BY TradeDate ASC";
         values.put("TrainingRecords", dh.executeQuery(commandStart + commandEnd));
-        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock,commandStart,commandEnd,index,new int[]{1,5,20,200},0.2,true,true, true));
+        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock,commandStart,commandEnd,index,new int[]{1,30,200},0.2,true,true, true, false));
 
         return values;
     }
@@ -64,7 +64,7 @@ public class TradingSimulator {
                 "ORDER BY TradeDate ASC;";
 
         values.put("TrainingRecords", dh.executeQuery(commandStart + commandEnd));
-        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock,commandStart,commandEnd,0,new int[]{1,5,20,200},0.25,true,true, true));
+        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock,commandStart,commandEnd,0,new int[]{1,30,200},0.25,true,true, true, false));
 
         commandEnd = " ORDER BY TradeDate DESC\n" +
                 ") as t\n" +
@@ -209,7 +209,7 @@ public class TradingSimulator {
             }
 
         }else{
-            FileReader fr = new FileReader("res/Simulator/TrainingRecords.csv");
+            FileReader fr = new FileReader("res/Simulator/MultiStock/TrainingRecords.csv");
             BufferedReader br = new BufferedReader(fr);
 
             while ((line = br.readLine()) != null) {
@@ -224,7 +224,7 @@ public class TradingSimulator {
             br.close();
             fr.close();
 
-            fr = new FileReader("res/Simulator/TestingRecords.csv");
+            fr = new FileReader("res/Simulator/MultiStock/TestingRecords.csv");
             br = new BufferedReader(fr);
 
             while((line = br.readLine()) != null){
@@ -257,7 +257,6 @@ public class TradingSimulator {
         double bought = 0, sold = 0;
         HashMap<String, Boolean> predictions = new HashMap<>();
 
-        //TODO: Simulate buy/sell with test set from here on
         for(Date date : testDates) {
             System.out.println("SIMULATING '" + date.toString() + "':");
             //Predict and Perform 1-day buy/sell
@@ -321,13 +320,9 @@ public class TradingSimulator {
                     Main.getController().addHistoricPrice(stock, index, price);
                 }
             }else
-            {
                 System.err.println("Mismatched Date at " + date);
-            }
+
             System.out.println("\tCurrent Balance: " + currentBalance + ", Stock Worth: "+stockWorth + ", Total: " + (currentBalance+stockWorth) + "(BOUGHT: " + bought + ", SOLD:"+ sold + ")");
-
-
-
 
             //Rebalance portfolio if it goes past cutoff
             balance.put(date, currentBalance+stockWorth);

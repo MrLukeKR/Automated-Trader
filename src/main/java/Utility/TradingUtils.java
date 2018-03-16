@@ -32,7 +32,7 @@ public class TradingUtils {
 
             String lastUpdated = databaseHandler.executeQuery("SELECT MAX(TradeDateTime) FROM intradaystockprices WHERE Symbol = '" + stock + "';").get(0);
 
-            databaseHandler.executeCommand("UPDATE Portfolio SET Held = Held - " + amount + ", Investment = Investment - " + totalCost + ", LastUpdated = '" + lastUpdated + "' WHERE Symbol='" + stock + "';");
+            databaseHandler.executeCommand("UPDATE portfolio SET Held = Held - " + amount + ", Investment = Investment - " + totalCost + ", LastUpdated = '" + lastUpdated + "' WHERE Symbol='" + stock + "';");
         }
     }
 
@@ -60,7 +60,7 @@ public class TradingUtils {
     }
 
     static public int getHeldStocks(String stock) throws SQLException {
-        return Integer.parseInt(databaseHandler.executeQuery("SELECT COALESCE(Held,0) FROM Portfolio WHERE Symbol='" + stock + "';").get(0));
+        return Integer.parseInt(databaseHandler.executeQuery("SELECT COALESCE(Held,0) FROM portfolio WHERE Symbol='" + stock + "';").get(0));
     }
 
     static public double getTotalWorth() throws SQLException {

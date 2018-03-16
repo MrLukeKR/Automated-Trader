@@ -15,7 +15,6 @@ public class NaturalLanguageProcessor {
     private static ProgressBar pb;
 
     static private final Set<String> STOP_WORDS = new HashSet<>();
-    static private final Set<String> USELESS_SENTENCES = new HashSet<>();
 
     static public void initialise(DatabaseHandler dbh, ProgressBar nlpProgress) {
         dh = dbh;
@@ -55,14 +54,14 @@ public class NaturalLanguageProcessor {
         return cleanSentence.toString();
     }
 
-    private static String cleanDocument(String document) {
+    private static String cleanDocument(String document) throws SQLException {
         ArrayList<String> sentences = splitToSentences(document);
 
         StringBuilder cleanDocument = new StringBuilder();
 
         int i = 1;
         for (String sentence : sentences) {
-            if (!USELESS_SENTENCES.contains(cleanSentence(sentence))) {
+            if (!isSentenceBlacklisted(cleanSentence(sentence))) {
                 cleanDocument.append(sentence);
                 if (i++ < sentences.size()) cleanDocument.append(" ");
             }
@@ -139,26 +138,14 @@ public class NaturalLanguageProcessor {
             temporaryDatabase.clear();
         }
 
-        Controller.updateProgress(0, pb);
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         dh.executeBatch();
         dh.setAutoCommit(true);
+        Controller.updateProgress(0, pb);
     }
 
-    static public void determineUselessSentences() throws SQLException {
-        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
-        Main.getController().updateCurrentTask("Filtering Useless/Spam Sentences", false, false);
-        dh.executeCommand("UPDATE sentences SET Blacklisted = 1 WHERE Occurrences > 5 AND Blacklisted = 0;");
-
-        ArrayList<String> uselessSentences = dh.executeQuery("SELECT Sentence FROM sentences WHERE Blacklisted = 1");
-
-        if (!USELESS_SENTENCES.isEmpty())
-            USELESS_SENTENCES.clear();
-
-            for (String sentence : uselessSentences)
-                if (!sentence.isEmpty())
-                    USELESS_SENTENCES.add(sentence);
-
-        Controller.updateProgress(0, pb);
+    static private boolean isSentenceBlacklisted(String sentence) throws SQLException {
+        return dh.executeQuery("SELECT COALESCE(0, Blacklisted) FROM sentences WHERE Hash = MD5('" + sentence + "')").get(0) == "1";
     }
 
     private static double getPriceChangeOnDate(String symbol, String date) throws SQLException {
@@ -192,18 +179,7 @@ public class NaturalLanguageProcessor {
         for (String unprocessedID : unprocessedIDs) {
             String unprocessed = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + unprocessedID).get(0);
             if (unprocessed != null) {
-                ArrayList<String> sentences = splitToSentences(cleanDocument(unprocessed));
-                ArrayList<String> ngrams = new ArrayList<>();
-
-                for (String sentence : sentences) {
-                    String cSentence = cleanSentence(sentence);
-                    if (cSentence != null)
-                        for (int i = 1; i <= n; i++)
-                            if (cSentence.split(" ").length >= n)
-                                ngrams.addAll(Objects.requireNonNull(splitToNGrams(cSentence, Locale.US, i)));
-                }
-
-                sentences.clear();
+                ArrayList<String> ngrams = getNGramsFromSentences(splitToSentences(cleanDocument(unprocessed)),n);
 
                 String[] symbolAndDate = dh.executeQuery("SELECT Symbol, Published FROM newsarticles WHERE ID = " + unprocessedID).get(0).split(",");
 
@@ -411,24 +387,27 @@ public class NaturalLanguageProcessor {
             return Double.parseDouble(result.get(0));
     }
 
+    private static ArrayList<String> getNGramsFromSentences(ArrayList<String> sentences, int ngramSize){
+        ArrayList<String> ngrams = new ArrayList<>();
+
+        for (String sentence : sentences) {
+            String cSentence = cleanSentence(sentence);
+            if (cSentence != null)
+                for (int i = 1; i <= ngramSize; i++)
+                    if (cSentence.split(" ").length >= ngramSize)
+                        ngrams.addAll(Objects.requireNonNull(splitToNGrams(cSentence, Locale.US, i)));
+        }
+
+        return ngrams;
+    }
+
     private static double evaluateArticleSentiment(int articleID, int ngramSize) throws SQLException {
         String article = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + articleID + ";").get(0);
 
         double sentiment = 0.5;
 
         if (article != null) {
-            ArrayList<String> sentences = splitToSentences(cleanDocument(article));
-            ArrayList<String> ngrams = new ArrayList<>();
-
-            for (String sentence : sentences) {
-                String cSentence = cleanSentence(sentence);
-                if (cSentence != null)
-                    for (int i = 1; i <= ngramSize; i++)
-                        if (cSentence.split(" ").length >= ngramSize)
-                            ngrams.addAll(Objects.requireNonNull(splitToNGrams(cSentence, Locale.US, i)));
-            }
-
-            sentences.clear();
+            ArrayList<String> ngrams = getNGramsFromSentences(splitToSentences(cleanDocument(article)),ngramSize);
 
             Set<String> noDuplicateNGrams = new HashSet<>(ngrams);
 
@@ -445,7 +424,7 @@ public class NaturalLanguageProcessor {
             return -1;
 
         for (String word : wordList) {
-            ArrayList<String> results = dh.executeQuery("SELECT Increase, Decrease FROM ngrams WHERE Hash=MD5('" + word + "');"); //TODO: This enumerates beyond tokenised / enumerated articles (i.e. articles that have not yet been analysed)
+            ArrayList<String> results = dh.executeQuery("SELECT Increase, Decrease FROM ngrams WHERE Hash=MD5('" + word + "');");
 
             if (!results.isEmpty()) {
                 String result = results.get(0);

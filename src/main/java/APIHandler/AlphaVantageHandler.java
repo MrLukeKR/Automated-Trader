@@ -28,7 +28,6 @@ public class AlphaVantageHandler {
     private int pausedDownloads = 0;
     private int currentlyDownloading = 0;
     private final int MAX_CONCURRENT_DOWNLOADS = 30;
-    private final int REDUCED_CONCURRENT_DOWNLOADS = 5;
     private int downloadsSinceToggle = 0;
     private int successfulDownloads = 0;
     private final Semaphore availableThreads = new Semaphore(MAX_CONCURRENT_DOWNLOADS, false);

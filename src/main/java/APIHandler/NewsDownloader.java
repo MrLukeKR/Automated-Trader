@@ -24,8 +24,6 @@ public class NewsDownloader {
         newsUpdating = false;
 
         return databaseHandler.executeQuery("SELECT DISTINCT Symbol, Headline, Published FROM newsarticles WHERE DATE(Published) = CURDATE() ORDER BY Published DESC");
-
-
     }
 
     static public boolean getNewsUpdating() {

@@ -2,32 +2,42 @@ package Portfolio;
 
 import Utility.PortfolioUtils;
 
-import static Utility.PortfolioUtils.getRandomWeights;
+import static Utility.PortfolioUtils.getEqualWeights;
 
 /**
  * Simulated Annealing Portfolio Optimiser
  */
-public class SAOptimiser {
+public class SAOptimiser implements Optimiser{
 
-    static public double[] optimise(int noOfStocks, double initialTemperature, double minimumTemperature, double coolRate, int iterations, double[] expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
+    static public double[] optimise(int noOfStocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, double[] expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
         double t = initialTemperature;
-        double[] solution = getRandomWeights(noOfStocks);
-        double bestFitness = EvaluationFunction.getReturnToRiskRatio(solution,expectedReturns,riskCovarianceMatrix);
+        double[] solution = getEqualWeights(noOfStocks);
+        double bestFitness;
+        if(em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
+            bestFitness = EvaluationFunction.getReturnToRiskRatio(solution, expectedReturns, riskCovarianceMatrix);
+        else
+            bestFitness = EvaluationFunction.getReturn(solution,expectedReturns);
+
         double currentFitness = bestFitness;
         double[] currentSolution = solution.clone();
 
         while(t > minimumTemperature){
             for(int i = 0; i < iterations; i++) {
                 double[] candidateSolution = PortfolioUtils.mutate(currentSolution, 1);
-                double fitness = EvaluationFunction.getReturnToRiskRatio(candidateSolution, expectedReturns, riskCovarianceMatrix);
+                double fitness;
+
+                if(em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
+                    fitness = EvaluationFunction.getReturnToRiskRatio(candidateSolution, expectedReturns, riskCovarianceMatrix);
+                else
+                    fitness = EvaluationFunction.getReturn(candidateSolution,expectedReturns);
 
                 if (showDebug)
-                    System.out.println("ITERATION " + i + " - CURRENT FITNESS: " + currentFitness + " CANDIDATE FITNESS: " + fitness + " BEST FITNESS: " + bestFitness);
+                    System.out.println("ITERATION " + i + " - CURRENT FITNESS: " + currentFitness + " (RETURN: " + (EvaluationFunction.getReturn(currentSolution,expectedReturns) * 100.0) + "%) CANDIDATE FITNESS: " + fitness + " (RETURN: " + (EvaluationFunction.getReturn(candidateSolution,expectedReturns) * 100.0) + "%) BEST FITNESS: " + bestFitness + " (RETURN: " + (EvaluationFunction.getReturn(solution,expectedReturns) * 100) + "%)");
 
-                if(fitness > currentFitness){
+                if(fitness >= currentFitness){
                     currentFitness = fitness;
                     currentSolution = candidateSolution.clone();
-                    if (fitness > bestFitness) {
+                    if (fitness >= bestFitness) {
                         bestFitness = fitness;
                         solution = candidateSolution.clone();
                     }

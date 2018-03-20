@@ -13,13 +13,12 @@ public class Main extends Application {
     static FXMLLoader loader;
 
     public static void main(String[] args) {
-        //System.setProperty("hadoop.home.dir", "C:/hadoop");
         launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) throws IOException {
-        loader = new FXMLLoader(getClass().getResource("../view.fxml"));
+        loader = new FXMLLoader(getClass().getResource("/view.fxml"));
         Parent root = loader.load();
 
         primaryStage.setScene(new Scene(root, 1920, 1030));

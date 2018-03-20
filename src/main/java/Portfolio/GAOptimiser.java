@@ -2,46 +2,44 @@ package Portfolio;
 
 import Utility.PortfolioUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 import static Utility.PortfolioUtils.getRandomWeights;
 
-public class GAOptimiser {
-    static private ArrayList<double[]> population;
-    static private double[] returns;
-    static private final Map<Integer, Double> fitnesses = new TreeMap<>();
-    static private int generations;
-    static private double[][] riskCovariance;
+public class GAOptimiser implements Optimiser{
+    static private ArrayList<Genome> selection(ArrayList<Genome> population) {
+        ArrayList<Genome> selectedPopulation = new ArrayList<>();
+        ArrayList<Genome> orderedIndividuals = new ArrayList<>(population);
 
-    static private ArrayList<double[]> selection(ArrayList<double[]> population) {
-        ArrayList<double[]> selectedPopulation = new ArrayList<>();
-        ArrayList<Map.Entry<Integer, Double>> orderedIndividuals = new ArrayList<>(fitnesses.entrySet());
-        orderedIndividuals.sort(Comparator.comparing(Map.Entry::getValue));
+        Collections.sort(orderedIndividuals, Comparator.comparing(Genome::getFitness));
+
         Collections.reverse(orderedIndividuals);
 
         double totalFitness = 0;
 
-        for (int i = 0; i < population.size(); i++)
-            totalFitness += Math.abs(fitnesses.get(i));
+        for (Genome genome : population)
+            totalFitness += genome.getFitness();
 
         for (int i = 0; i < population.size() / 2; i++) {
             double selectionPoint = Math.random() * totalFitness, accumulatedFitnesss = 0;
             int selectInd = 0;
 
-            while ((accumulatedFitnesss += Math.abs(orderedIndividuals.get(selectInd).getValue())) < selectionPoint)
+            while ((accumulatedFitnesss += orderedIndividuals.get(selectInd).getFitness()) < selectionPoint)
                 selectInd++;
 
-            selectedPopulation.add(population.get(orderedIndividuals.get(selectInd).getKey()));
+            selectedPopulation.add(orderedIndividuals.get(selectInd));
         }
 
         return selectedPopulation;
     }
 
-    static private ArrayList<double[]> crossover(ArrayList<double[]> parents1, ArrayList<double[]> parents2, double rate) {
-        ArrayList<double[]> newPopulation = new ArrayList<>();
+    static private ArrayList<Genome> crossover(ArrayList<Genome> parents1, ArrayList<Genome> parents2, double rate) {
+        ArrayList<Genome> newPopulation = new ArrayList<>();
 
         for (int i = 0; i < parents1.size(); i++) {
-            ArrayList<double[]> children = crossover(parents1.get(i), parents2.get(i), rate);
+            ArrayList<Genome> children = crossover(parents1.get(i), parents2.get(i), rate);
 
             newPopulation.addAll(children);
         }
@@ -49,17 +47,14 @@ public class GAOptimiser {
         return newPopulation;
     }
 
-    static private ArrayList<double[]> crossover(double[] parent1, double[] parent2, double rate) {
-        double[] child1 = new double[parent1.length], child2 = new double[parent2.length];
-        ArrayList<double[]> children = new ArrayList<>();
+    static private ArrayList<Genome> crossover(Genome parent1, Genome parent2, double rate) {
+        Genome child1 = new Genome(parent1.getGenes()), child2 = new Genome(parent2.getGenes());
+        ArrayList<Genome> children = new ArrayList<>();
 
-        for (int i = 0; i < child1.length; i++)
+        for (int i = 0; i < child1.getGenes().length; i++)
             if (Math.random() < rate) {
-                child1[i] = parent2[i];
-                child2[i] = parent1[i];
-            } else {
-                child1[i] = parent1[i];
-                child2[i] = parent2[i];
+                child1.setGene(i,parent2.getGene(i));
+                child2.setGene(i,parent1.getGene(i));
             }
 
         children.add(child1);
@@ -68,65 +63,80 @@ public class GAOptimiser {
         return children;
     }
 
-    static private ArrayList<double[]> mutate(ArrayList<double[]> population, double rate) {
-        ArrayList<double[]> mutatedPopulation = new ArrayList<>();
-        for (double[] individual : population)
-            mutatedPopulation.add(PortfolioUtils.mutate(individual, rate));
+    static private ArrayList<Genome> mutate(ArrayList<Genome> population, double rate) {
+        ArrayList<Genome> mutatedPopulation = new ArrayList<>();
+        for (Genome individual : population) {
+            double[] originalValues = individual.getGenes().clone();
+            double[] values = PortfolioUtils.mutate(originalValues, rate).clone();
+         Genome newGenome = new Genome(values);
+            mutatedPopulation.add(newGenome);
+        }
 
         return mutatedPopulation;
     }
 
-    static private double evaluate(int generation, boolean showDebug) {
+    static private double evaluate(int generation, PortfolioManager.EvaluationMethod em, ArrayList<Genome> population, double[] returns, double[][] riskCovariance, boolean showDebug) {
         double sum = 0;
-        double best = Double.MIN_VALUE;
+        double best = 0;
 
         for (int i = 0; i < population.size(); i++) {
-            double[] currentGene = population.get(i);
-            double currFitness = EvaluationFunction.getReturnToRiskRatio(currentGene, returns, riskCovariance);
+            Genome currentGenome = population.get(i);
+            double currFitness = 0;
+
+            if(EvaluationFunction.sumsToOne(currentGenome.getGenes()))
+                if(em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
+                    currFitness = EvaluationFunction.getReturnToRiskRatio(currentGenome.getGenes(), returns, riskCovariance);
+                else
+                    currFitness = EvaluationFunction.getReturn(currentGenome.getGenes(),returns);
 
             sum += currFitness;
-            fitnesses.put(i, currFitness);
-            if (currFitness > best)
+            currentGenome.setFitness(currFitness);
+
+            if (currFitness >= best)
                 best = currFitness;
         }
 
         if (showDebug)
-            System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + "\tBEST FITNESS: " + best);
+            System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + " TOTAL FITNESS: " + sum+ "\tBEST FITNESS: " + best);
 
-        return sum / population.size();
+        return sum;
     }
 
-    static public double[] optimise(int amountOfWeights, int numberOfGenerations, int populationSize, double[] returnsArray, double[][] riskCovarianceMatrix, boolean showDebug) {
+    static public double[] optimise(int amountOfWeights, PortfolioManager.EvaluationMethod em, int numberOfGenerations, int populationSize, double[] returnsArray, double[][] riskCovarianceMatrix, boolean showDebug) {
         System.out.println("Performing Genetic Portfolio Optimisation");
-        double[] bestWeights;
-        population = new ArrayList<>();
-        generations = numberOfGenerations;
-
-        returns = returnsArray;
-        riskCovariance = riskCovarianceMatrix;
+        ArrayList<Genome> population = new ArrayList<>();
+        ArrayList<Genome> bestOfPopulation;
+        Genome bestGenome;
 
         for (int i = 0; i < populationSize; i++)
-            population.add(getRandomWeights(amountOfWeights));
+            population.add(new Genome(getRandomWeights(amountOfWeights)));
 
         double prevFitness = -1, currFitness;
         int convergenceCount = 0;
 
-        double bestFitness = evaluate(0, showDebug); //Evaluate
+        double bestFitness = evaluate(0, em, population, returnsArray, riskCovarianceMatrix, showDebug); //Evaluate
 
-        bestWeights = getBestOfPopulation();
+        bestGenome = getBestOfPopulation(population);
 
-        for (int i = 1; i <= generations; i++) {
-            ArrayList<double[]> parents1 = selection(population); //Selection of parent population 1
-            ArrayList<double[]> parents2 = selection(population); //Selection of parent population 2
+        for (int i = 1; i <= numberOfGenerations; i++) {
+            bestOfPopulation = getBestOfPopulation(Math.round(population.size() / 10), population);
+
+            ArrayList<Genome> parents1 = selection(population); //Selection of parent population 1
+            ArrayList<Genome> parents2 = selection(population); //Selection of parent population 2
 
             population = crossover(parents1, parents2, 0.5);//Crossover
+
             population = mutate(population, 0.1);//Mutation
 
-            currFitness = evaluate(i, showDebug); //Evaluate
+            evaluate(i, em, population, returnsArray, riskCovarianceMatrix, false); //Evaluate
 
-            if (currFitness > bestFitness) {
+            population = replaceWorstOfPopulation(bestOfPopulation, population);
+
+            currFitness = evaluate(i, em, population, returnsArray, riskCovarianceMatrix, showDebug); //Evaluate
+
+            if (currFitness >= bestFitness) {
                 bestFitness = currFitness;
-                bestWeights = getBestOfPopulation();
+                bestGenome = getBestOfPopulation(population);
             }
 
             if (currFitness == prevFitness) convergenceCount++;
@@ -134,20 +144,31 @@ public class GAOptimiser {
 
             prevFitness = currFitness;
         }
-        return bestWeights;
+        return bestGenome.getGenes();
     }
 
-   static private double[] getBestOfPopulation() {
-        double best = 0;
-        int bestInd = 0;
+    static private ArrayList<Genome> replaceWorstOfPopulation(ArrayList<Genome> replacement, ArrayList<Genome> population){
+        ArrayList<Genome> orderedIndividuals = new ArrayList<>(population);
+        Collections.sort(orderedIndividuals, Comparator.comparing(Genome::getFitness));
 
-        for (int i = 0; i < population.size(); i++) {
-            if (fitnesses.get(i) > best) {
-                best = fitnesses.get(i);
-                bestInd = i;
-            }
-        }
+        for(int i = 0; i < replacement.size(); i++)
+            orderedIndividuals.remove(0);
 
-        return population.get(bestInd);
+        orderedIndividuals.addAll(replacement);
+
+        return orderedIndividuals;
+    }
+
+    static private ArrayList<Genome> getBestOfPopulation(int amount, ArrayList<Genome> population) {
+        ArrayList<Genome> orderedIndividuals = new ArrayList<>(population);
+        Collections.sort(orderedIndividuals, Comparator.comparing(Genome::getFitness));
+
+        Collections.reverse(orderedIndividuals);
+
+        return new ArrayList<>(orderedIndividuals.subList(0,amount));
+    }
+
+   static private Genome getBestOfPopulation(ArrayList<Genome> population) {
+        return getBestOfPopulation(1,population).get(0);
     }
 }

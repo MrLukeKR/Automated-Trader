@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
@@ -65,11 +66,16 @@ public class Controller {
     static private ArrayList<StockClock> clocks = new ArrayList<>();
     static private HashMap<String, XYChart.Series<Number, Number>> simulatedHistory = new HashMap<>();
     static private XYChart.Series<Number, Number> simulatedBalance = new XYChart.Series<>();
+    static private XYChart.Series<Number, Number> simulatedIndexPerformance = new XYChart.Series<>();
+    static private XYChart.Series<Number, Number> simulatedRandomPerformance = new XYChart.Series<>();
     static private HashMap<String, LineChart<Number, Number>> simulatorCharts = new HashMap<>();
     static private HashMap<String, NumberAxis> simulatorAxes = new HashMap<>();
 
-    @FXML
-    Button simulateTradingButton;
+    @FXML CheckBox simulationRebalancePortfolio;
+    @FXML TextField simulationPortfolioLookbackPeriod;
+    @FXML TextField simulationPortfolioHoldPeriod;
+    @FXML NumberAxis simulatorPerformanceAxis;
+    @FXML Button simulateTradingButton;
     @FXML CheckBox showRSI;
 
     @FXML VBox priceHistoryChartBox;
@@ -77,6 +83,7 @@ public class Controller {
     //Historic Stock FXML Items
     @FXML ComboBox<String> historicStockDropdown;
     @FXML ComboBox<String> optimisationMethodDropdown;
+    @FXML ComboBox<String> evaluationMethodDropdown;
     @FXML Label historicDateRange;
     @FXML CheckBox showSMA5;
     @FXML CheckBox showSMA10;
@@ -457,14 +464,17 @@ public class Controller {
             try {
                 updateCurrentTask("Generating ML Training File...", false, false);
 
-                TrainingFileUtils.exportClassificationCSV(stocks,"res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress,smoothRate,true,true, false);
+                File newDir = new File(System.getProperty("user.dir") + "/res/TrainingFiles/");
+                if(!newDir.exists())
+                    newDir.mkdirs();
+
+                TrainingFileUtils.exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress,smoothRate,true,true, true);
 
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
 
-                TrainingFileUtils.exportLibSVMFile("res/TrainingFiles/SmoothedNASDAQTraining.csv", "res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt");
+                //TrainingFileUtils.exportLibSVMFile(String.valueOf(getClass().getResource("/TrainingFiles/SmoothedNASDAQTraining.csv")), "res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt");
 
-                StockPredictor.trainRandomForest("res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt", stocks.size());
-
+                StockPredictor.trainRandomForest(System.getProperty("user.dir") +"/res/TrainingFiles/SmoothedNASDAQTraining.csv", stocks.size(), false);
             }catch (Exception e){e.printStackTrace();}
 
             updateProgress(0, stockForecastProgress);
@@ -698,6 +708,7 @@ public class Controller {
         sellAllStock(automated);
 
         PortfolioManager.OptimisationMethod om = null;
+        PortfolioManager.EvaluationMethod em = null;
 
         switch(optimisationMethodDropdown.getSelectionModel().getSelectedItem()){
             case "Simulated Annealing":
@@ -706,14 +717,26 @@ public class Controller {
             case "Genetic Algorithm":
                 om = PortfolioManager.OptimisationMethod.GENETIC_ALGORITHM;
                 break;
+            case "Deterministic Search":
+                om = PortfolioManager.OptimisationMethod.DETERMINISTIC;
+                break;
         }
 
-        TreeMap<String, ArrayList<Double>> prices = new TreeMap<>();
+        switch(evaluationMethodDropdown.getSelectionModel().getSelectedItem()){
+            case "Maximise Return":
+                em = PortfolioManager.EvaluationMethod.MAXIMISE_RETURN;
+                break;
+            case "Balance Return vs. Risk":
+                em = PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK;
+                break;
+        }
+
+        TreeMap<String, TreeMap<Date, Double>> prices = new TreeMap<>();
 
         for(String stock : stocks)
             prices.put(stock, PortfolioManager.getPrices(stock, 20));
 
-        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(om,1,prices, false);
+        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(om, em,1,prices, true);
         double cutoff = portfolio.get("RETURN");
 
         calculateLossCutoff(cutoff);
@@ -785,9 +808,23 @@ public class Controller {
                 } catch (SQLException e) {e.printStackTrace();}
             });
         }));
+
+        simulationPortfolioHoldPeriod.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*\\.?\\d*"))
+                simulationPortfolioHoldPeriod.setText(newValue.replaceAll("[^\\d\\.]", ""));
+
+                simulateTradingButton.setDisable(simulationPortfolioHoldPeriod.getText().isEmpty() || simulationPortfolioLookbackPeriod.getText().isEmpty());
+        });
+
+        simulationPortfolioLookbackPeriod.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*\\.?\\d*"))
+                simulationPortfolioLookbackPeriod.setText(newValue.replaceAll("[^\\d\\.]", ""));
+
+            simulateTradingButton.setDisable(simulationPortfolioHoldPeriod.getText().isEmpty() || simulationPortfolioLookbackPeriod.getText().isEmpty());
+        });
     }
 
-    private void autoTrade() throws SQLException, ParseException {
+    private void autoTrade() throws Exception {
         updateCurrentTask("Auto-Trading...", false, false);
         ArrayList<String> portfolio = dh.executeQuery("SELECT * FROM portfolio ORDER BY Allocation DESC;");
 
@@ -830,12 +867,18 @@ public class Controller {
 
     private void initialiseSimulatorCharts(){
         Platform.runLater(()->simulatorProfitLoss.getData().add(simulatedBalance));
+        Platform.runLater(()->simulatorProfitLoss.getData().add(simulatedIndexPerformance));
+        Platform.runLater(()->simulatorProfitLoss.getData().add(simulatedRandomPerformance));
+
+        simulatedBalance.setName("Automated Trader");
+        simulatedIndexPerformance.setName("NASDAQ 100 Index (^NDX)");
+        simulatedRandomPerformance.setName("Random Buy/Sell");
 
         for(String stock :stocks){
             simulatedHistory.put(stock,new XYChart.Series<>());
             final NumberAxis xAxis = new NumberAxis();
             final NumberAxis yAxis = new NumberAxis();
-            yAxis.setTickUnit(0.1);
+            yAxis.setTickUnit(1);
             xAxis.setTickUnit(1);
             LineChart<Number, Number> priceChart = new LineChart<>(xAxis, yAxis);
             priceChart.setMaxHeight(300);
@@ -854,6 +897,14 @@ public class Controller {
         }
     }
 
+    public void addSimulatorRandomPerformance(int index, double balance){
+        Platform.runLater(()-> simulatedRandomPerformance.getData().add(new XYChart.Data<>(index,balance)));
+    }
+
+    public void addSimulatorIndexPerformance(int index, double balance){
+        Platform.runLater(()-> simulatedIndexPerformance.getData().add(new XYChart.Data<>(index,balance)));
+    }
+
     public void addSimulatorBalance(int index, double balance){
         Platform.runLater(()-> simulatedBalance.getData().add(new XYChart.Data<>(index,balance)));
     }
@@ -863,16 +914,46 @@ public class Controller {
         Platform.runLater(()-> data.add(new XYChart.Data (index, price)));
     }
 
-    @FXML private void simulateTrading() throws InterruptedException, SQLException, IOException {
-        Platform.runLater(() -> simulateTradingButton.setDisable(true));
-        TradingSimulator.simulate(stocks, false);
-        Platform.runLater(() -> simulateTradingButton.setDisable(false));
+    @FXML
+    private void simulateTrading(){
+        new Thread(()-> {
+            Platform.runLater(() -> simulateTradingButton.setDisable(true));
+            try {
+                boolean rebalance = simulationRebalancePortfolio.isSelected();
+                int lookbackPeriod = Integer.parseInt(simulationPortfolioLookbackPeriod.getText());
+                int holdPeriod = Integer.parseInt(simulationPortfolioHoldPeriod.getText());
+                TradingSimulator.simulate(stocks, false, rebalance, lookbackPeriod, holdPeriod);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }finally{
+                Platform.runLater(() -> simulateTradingButton.setDisable(false));
+            }
+        }).start();
     }
 
     public void realignSimulatorCharts(){
+        ArrayList<Double> performance = new ArrayList<>();
+        Platform.runLater(()-> {
+            for (XYChart.Data indexData : simulatedIndexPerformance.getData())
+                if (indexData != null)
+                    performance.add((double) indexData.getYValue());
+            for (XYChart.Data balanceData : simulatedBalance.getData())
+                if (balanceData != null)
+                    performance.add((double) balanceData.getYValue());
+            for (XYChart.Data randomData : simulatedRandomPerformance.getData())
+                if (randomData != null)
+                    performance.add((double) randomData.getYValue());
+
+            simulatorPerformanceAxis.setUpperBound(Collections.max(performance));
+            simulatorPerformanceAxis.setLowerBound(Collections.min(performance));
+            for (XYChart.Series<Number, Number> series : simulatorProfitLoss.getData())
+                series.nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
+        });
+
         for(String stock : stocks){
             ArrayList<Double> prices = new ArrayList<>();
             Platform.runLater(()-> {
+                simulatedHistory.get(stock).nodeProperty().get().setStyle("-fx-stroke-width: 1px;");
                 for (XYChart.Data data : simulatedHistory.get(stock).getData())
                     if (data != null)
                         prices.add((double) data.getYValue());
@@ -887,7 +968,13 @@ public class Controller {
     }
 
     @FXML
-    public void initialize() throws SQLException, IOException {
+    public void initialize() throws Exception {
+        File res = new File("res");
+        if(!res.exists())
+            res.mkdirs();
+
+        System.out.println(res.getPath() + " " + res.getAbsolutePath() + " " + System.getProperty("user.dir"));
+
         mainThread = new Thread(() -> {
             while (!quit) {
                 int s = LocalTime.now().getSecond();
@@ -945,7 +1032,7 @@ public class Controller {
         NewsDownloader.initialise(nddh);
 
         initialiseStocks();
-        StockPredictor.loadLatestRandomForest();
+        //StockPredictor.loadLatestRandomForest();
         initialiseSimulatorCharts();
 
         initialiseClocks();
@@ -957,6 +1044,7 @@ public class Controller {
         Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
         Platform.runLater(()->autonomyLevelDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->optimisationMethodDropdown.getSelectionModel().selectFirst());
+        Platform.runLater(()->evaluationMethodDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->historicStockDropdown.getItems().addAll(stocks));
 
         new Thread(() -> {
@@ -1020,6 +1108,7 @@ public class Controller {
                 StockRecordParser.processYahooHistories(stocks, stockFeedProgress);
                 dh.executeCommand("DELETE FROM intradaystockprices WHERE Temporary = 1;");
 
+                bch.downloadDailyHistory(stocks);
                 bch.downloadIntradayHistory(stocks);
                 StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
 
@@ -1066,7 +1155,6 @@ public class Controller {
                 NaturalLanguageProcessor.processArticlesForSentiment(2);
             } catch (SQLException e) { e.printStackTrace(); }
         });
-
         updateGUI();
         //////////////////////////////////////////////////////////
 
@@ -1101,6 +1189,8 @@ public class Controller {
                     predictionArray = StockPredictor.predictStocks(stocks, dayArray, stockForecastProgress);
                 } catch (SQLException e) {
                     e.printStackTrace();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
                 for (int i = 0; i < stocks.size(); i++) {
@@ -1118,7 +1208,9 @@ public class Controller {
         Platform.runLater(() -> trainMLModelButton.setDisable(false));
         Platform.runLater(() -> controlPanel.setDisable(false));
 
-        mainThread.start();
+        updateGUI();
+
+       // mainThread.start();
     }
 
     private void initialiseClocks() {

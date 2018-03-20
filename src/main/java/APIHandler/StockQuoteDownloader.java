@@ -106,6 +106,10 @@ public class StockQuoteDownloader {
         return true;
     }
 
+    static public ArrayList<String> downloadIndexHistory(String index) throws IOException {
+        return downloadStockData(index,Interval.DAILY,OutputSize.FULL);
+    }
+
     static public void downloadStockHistory(ArrayList<String> stocks, Boolean downloadDaily, Boolean downloadIntraday, Boolean forceCompact) throws InterruptedException {
         int t = stocks.size() - 1;
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockProgressBar);

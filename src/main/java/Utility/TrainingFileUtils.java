@@ -6,6 +6,9 @@ import Default.Main;
 import Processing.NaturalLanguageProcessor;
 import Processing.TechnicalAnalyser;
 import javafx.scene.control.ProgressBar;
+import weka.core.Instances;
+import weka.core.converters.ArffSaver;
+import weka.core.converters.CSVLoader;
 
 import java.io.*;
 import java.sql.SQLException;
@@ -172,40 +175,40 @@ public class TrainingFileUtils {
         //No technical indicators, no sentiment, no smoothing
 
         for(Integer day : dayArray)
-            exportClassificationCSV(stocks,"res/TrainingFiles/" + day + "Day_Standard_NASDAQ.csv",new int[]{day},pb,1,false, false,true);
+            exportClassificationCSV(stocks,System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_Standard_NASDAQ.csv",new int[]{day},pb,1,false, false,true);
 
         resetPriceValues();
         TechnicalAnalyser.calculateTechnicalIndicators(stocks,false,true);
 
         //Technical indicators, no sentiment, no smoothing
         for(Integer day : dayArray)
-            exportClassificationCSV(stocks,"res/TrainingFiles/" + day + "Day_Standard_TA_NASDAQ.csv",new int[]{day},pb,1,true, false, true);
+            exportClassificationCSV(stocks,System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_Standard_TA_NASDAQ.csv",new int[]{day},pb,1,true, false, true);
 
         //Technical indicators, sentiment, no smoothing
         for(Integer day : dayArray)
-            exportClassificationCSV(stocks,"res/TrainingFiles/"+ day + "Day_Standard_TA_Sentiment_NASDAQ.csv",new int[]{day},pb,1,true, true, true);
+            exportClassificationCSV(stocks,System.getProperty("user.dir") + "/res/TrainingFiles/"+ day + "Day_Standard_TA_Sentiment_NASDAQ.csv",new int[]{day},pb,1,true, true, true);
 
         //No technical indicators, sentiment, no smoothing
         for(Integer day : dayArray)
-            exportClassificationCSV(stocks,"res/TrainingFiles/"+day+"DayStandard_Sentiment_NASDAQ.csv",new int[]{day},pb,1,false, true, true);
+            exportClassificationCSV(stocks,System.getProperty("user.dir") + "/res/TrainingFiles/"+day+"DayStandard_Sentiment_NASDAQ.csv",new int[]{day},pb,1,false, true, true);
 
         for(double i = 0.1; i <= 0.9; i+=0.1) {
             resetPriceValues();
             SmoothingUtils.smoothStocks(stocks,i);
             //No technical indicators, no sentiment, smoothing
             for(Integer day : dayArray)
-                exportClassificationCSV(stocks, "res/TrainingFiles/" + day  + "Day_" + i + "Smoothed_NASDAQ.csv", new int[]{day}, pb, i, false, false, true);
+                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day  + "Day_" + i + "Smoothed_NASDAQ.csv", new int[]{day}, pb, i, false, false, true);
             //No Technical indicators, smoothing, sentiment
             for(Integer day : dayArray)
-                exportClassificationCSV(stocks, "res/TrainingFiles/" + day + "Day_" + i + "Smoothed_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, false, true, true);
+                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, false, true, true);
 
             TechnicalAnalyser.calculateTechnicalIndicators(stocks,true, true);
             //Technical indicators, smoothing, no sentiment
             for(Integer day : dayArray)
-                exportClassificationCSV(stocks, "res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_NASDAQ.csv", new int[]{day}, pb, i, true, false, true);
+                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_NASDAQ.csv", new int[]{day}, pb, i, true, false, true);
             //Technical indicators, smoothing, sentiment
             for(Integer day : dayArray)
-                exportClassificationCSV(stocks, "res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, true, true, true);
+                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, true, true, true);
         }
     }
 
@@ -250,7 +253,7 @@ public class TrainingFileUtils {
     }
 
     static public ArrayList<String> convertToClassificationTrainingArray(String stock, String commandStart, String commandEnd, int index, int[] amountOfDaysArray, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiments, boolean ignoreNull, boolean includeHeader) throws SQLException {
-        String[] indicators = new String[]{"SMA5", "SMA20", "SMA200", "EMA5", "EMA10", "EMA20", "EMA200", "MACD", "MACDSig", "MACDHist", "RSI", "ADX10", "CCI", "AD", "OBV", "StoOscSlowK", "StoOscSlowD", "WillR"};
+        String[] indicators = new String[]{"SMA5", "SMA10", "SMA20", "SMA200", "EMA5", "EMA10", "EMA20", "EMA200", "MACD", "MACDSig", "MACDHist", "RSI", "ADX10", "CCI", "AD", "OBV", "StoOscSlowK", "StoOscSlowD", "WillR"};
         String [] stockData = new String[]{"OpenPrice", "HighPrice", "LowPrice", "ClosePrice", "TradeVolume", "PercentChange"};
         ArrayList<String> dataPoints = new ArrayList<>();
 
@@ -269,13 +272,15 @@ public class TrainingFileUtils {
 
         StringBuilder command = new StringBuilder(commandStart);
 
-        if(!ignoreNull && smoothPriceAlpha!=1) {
-            command.append(" AND SmoothedClosePrice IS NOT NULL");
+        if(smoothPriceAlpha!=1) {
+            if(!ignoreNull)
+                command.append(" AND SmoothedClosePrice IS NOT NULL");
             if(includeHeader)
                 header += ",SmoothedClosePrice";
         }
 
-        if(!ignoreNull && includeIndicators) {
+        if(includeIndicators) {
+            if(!ignoreNull)
             for (String column : indicators)
                 command.append(" AND ").append(column).append(" IS NOT NULL");
             if(includeHeader)
@@ -358,5 +363,20 @@ public class TrainingFileUtils {
         System.out.println("Converted data to Classification Training Array for '" + stock + "'");
 
         return dataPoints;
+    }
+
+    static public Instances loadAttributeCSV(String source) throws IOException {
+        CSVLoader csvLoader = new CSVLoader();
+        csvLoader.setSource(new File(source));
+        return csvLoader.getDataSet();
+    }
+
+    static public void exportARFFFile(String source, String destination) throws IOException {
+        Instances dataSet = loadAttributeCSV(source);
+
+        ArffSaver arffSaver = new ArffSaver();
+        arffSaver.setInstances(dataSet);
+        arffSaver.setDestination(new File(destination));
+        arffSaver.writeBatch();
     }
 }

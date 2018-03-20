@@ -23,6 +23,14 @@ public class EvaluationFunction {
         return fitness;
     }
 
+    static public boolean sumsToOne(double[] weights){
+        double sum = 0;
+
+        for(int i = 0 ; i < weights.length; i++)
+            sum+= weights[i];
+
+        return sum == 1;
+    }
 
     static public double getReturnToRiskRatio(double[] weights, double[] expectedReturns, double[][] riskCovarianceMatrix) {
         double expectedReturn = getReturn(weights, expectedReturns), expectedRisk = getVariance(weights, riskCovarianceMatrix);

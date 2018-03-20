@@ -1,22 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import java.lang.String?>
 <?import javafx.collections.FXCollections?>
-<?import javafx.scene.chart.*?>
-<?import javafx.scene.control.*?>
+<?import javafx.scene.chart.AreaChart?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.chart.PieChart?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.control.ToolBar?>
 <?import javafx.scene.effect.SepiaTone?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.shape.*?>
-<?import javafx.scene.text.*?>
-<?import java.lang.*?>
-<AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity" prefHeight="1030.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/9"
-            fx:controller="Default.Controller">
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="1030.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/9" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Default.Controller">
       <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="1030.0" prefWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
           <Tab text="Live Stock">
               <BorderPane maxHeight="1000.0" prefHeight="974.0" prefWidth="1920.0">
                      <right>
                          <VBox maxHeight="750.0" prefHeight="750.0" prefWidth="422.0" BorderPane.alignment="TOP_CENTER">
-                             <TitledPane animated="false" collapsible="false" prefHeight="375.0" prefWidth="422.0" text="Latest Headlines">
+                             <TitledPane animated="false" collapsible="false" prefHeight="320.0" prefWidth="423.0" text="Latest Headlines">
                                  <ScrollPane prefHeight="403.0" prefWidth="420.0">
                                           <VBox fx:id="newsBox" prefHeight="330.0" prefWidth="400.0" />
                                     </ScrollPane>
@@ -24,7 +42,7 @@
                              <TitledPane animated="false" collapsible="false" prefHeight="375.0" prefWidth="422.0" text="Control Panel">
                                  <BorderPane prefHeight="200.0" prefWidth="420.0">
                                      <top>
-                                         <FlowPane fx:id="controlPanel" disable="true" prefHeight="210.0" prefWidth="401.0" BorderPane.alignment="CENTER">
+                                         <FlowPane fx:id="controlPanel" disable="true" prefHeight="260.0" prefWidth="401.0" BorderPane.alignment="CENTER">
                                              <Label prefHeight="17.0" prefWidth="110.0" text="Autonomy Level: " />
                                              <ComboBox fx:id="autonomyLevelDropdown" onAction="#setAutonomyLevel" prefHeight="27.0" prefWidth="290.0" promptText="Select Autonomy Level">
                                                  <effect>
@@ -65,28 +83,37 @@
                                                  <Button fx:id="setProfitTargetButton" disable="true" mnemonicParsing="false" onAction="#setProfitCutoff" prefHeight="27.0" prefWidth="125.0" text="Set Profit Target" />
                                                  <Separator prefHeight="10.0" prefWidth="400.0" />
                                                  <HBox prefHeight="32.0" prefWidth="401.0">
-                                                     <ComboBox fx:id="optimisationMethodDropdown" prefHeight="28.0"
-                                                               prefWidth="220.0"
-                                                               promptText="Select Optimisation Method">
-                                                         <items>
-                                                             <FXCollections fx:factory="observableArrayList">
-                                                                 <String fx:value="Genetic Algorithm"/>
-                                                                 <String fx:value="Simulated Annealing"/>
-                                                             </FXCollections>
-                                                         </items>
-                                                     </ComboBox>
+                                    <VBox>
+                                       <children>
+                                                           <ComboBox fx:id="optimisationMethodDropdown" prefHeight="28.0" prefWidth="220.0" promptText="Select Optimisation Method">
+                                                               <items>
+                                                                   <FXCollections fx:factory="observableArrayList">
+                                                                       <String fx:value="Genetic Algorithm" />
+                                                                       <String fx:value="Simulated Annealing" />
+                                                                       <String fx:value="Deterministic Search" />
+                                                                   </FXCollections>
+                                                               </items>
+                                                           </ComboBox>
+                                          <Separator prefHeight="10.0" prefWidth="220.0" visible="false" />
+                                          <ComboBox fx:id="evaluationMethodDropdown" prefHeight="28.0" prefWidth="220.0" promptText="Select Evaluation Method">
+                                             <items>
+                                                <FXCollections fx:factory="observableArrayList">
+                                                   <String fx:value="Maximise Return" />
+                                                   <String fx:value="Balance Return vs. Risk" />
+                                                </FXCollections>
+                                             </items>
+                                          </ComboBox>
+                                       </children>
+                                    </VBox>
 
-                                                     <Separator orientation="VERTICAL" prefHeight="0.0" prefWidth="5.0"
-                                                                visible="false"/>
-                                                     <Button fx:id="rebalanceButton" mnemonicParsing="false"
-                                                             onAction="#manuallyRebalancePortfolio" prefHeight="28.0"
-                                                             prefWidth="175.0" text="Rebalance Portfolio"/>
+                                                     <Separator orientation="VERTICAL" prefHeight="0.0" prefWidth="5.0" visible="false" />
+                                                     <Button fx:id="rebalanceButton" mnemonicParsing="false" onAction="#manuallyRebalancePortfolio" prefHeight="60.0" prefWidth="175.0" text="Rebalance Portfolio" />
                                                  </HBox>
                                              </FlowPane>
                                          </FlowPane>
                                      </top>
                                      <center>
-                                         <Separator prefHeight="18.0" prefWidth="401.0" BorderPane.alignment="CENTER" />
+                                         <Separator prefHeight="0.0" prefWidth="401.0" BorderPane.alignment="CENTER" />
                                      </center>
                                      <bottom>
                                          <BorderPane prefHeight="95.0" prefWidth="401.0" BorderPane.alignment="CENTER">
@@ -176,10 +203,7 @@
                                          <VBox prefHeight="177.0" prefWidth="200.0" BorderPane.alignment="CENTER">
                                              <Label alignment="TOP_CENTER" contentDisplay="CENTER" prefHeight="17.0" prefWidth="200.0" text="Model Information" textAlignment="CENTER" underline="true" />
                                              <TextArea fx:id="predictionModelInformationBox" editable="false" prefHeight="200.0" prefWidth="200.0" wrapText="true" />
-                                             <Button fx:id="exportToMLFileButton" alignment="CENTER"
-                                                     contentDisplay="CENTER" disable="true" mnemonicParsing="false"
-                                                     onAction="#exportToMLFile" prefHeight="25.0" prefWidth="200.0"
-                                                     text="Train Model"/>
+                                             <Button fx:id="trainMLModelButton" alignment="CENTER" contentDisplay="CENTER" disable="true" mnemonicParsing="false" onAction="#trainMLModel" prefHeight="25.0" prefWidth="200.0" text="Train Model" />
                                          </VBox>
                                      </right>
                                      <center>
@@ -208,8 +232,8 @@
                                      </left>
                                      <center>
                                          <HBox>
-                                             <PieChart fx:id="allocationChart" title="Fund Allocation" BorderPane.alignment="CENTER" />
-                                             <PieChart fx:id="componentChart" title="Portfolio Components" BorderPane.alignment="CENTER" />
+                                             <PieChart fx:id="allocationChart" animated="false" title="Fund Allocation" BorderPane.alignment="CENTER" />
+                                             <PieChart fx:id="componentChart" animated="false" title="Portfolio Components" BorderPane.alignment="CENTER" />
                                          </HBox>
                                      </center>
                                  </BorderPane>
@@ -344,12 +368,19 @@
                                       <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
                                   </yAxis>
                               </LineChart>
+                              <LineChart fx:id="sentimentChart" animated="false" createSymbols="false" legendSide="TOP" maxHeight="200.0" minHeight="200.0" prefHeight="200.0" prefWidth="1905.0" title="News Article Sentiment">
+                                  <xAxis>
+                                      <NumberAxis side="BOTTOM" />
+                                  </xAxis>
+                                  <yAxis>
+                                      <NumberAxis maxWidth="50." minWidth="50." prefWidth="50." side="LEFT" />
+                                  </yAxis>
+                              </LineChart>
                           </VBox>
                       </ScrollPane>
                   </center>
                   <bottom>
-                      <TitledPane animated="false" collapsible="false" prefHeight="150.0" prefWidth="1920.0"
-                                  text="Options" BorderPane.alignment="CENTER">
+                      <TitledPane animated="false" collapsible="false" prefHeight="150.0" prefWidth="1920.0" text="Options" BorderPane.alignment="CENTER">
                           <HBox prefHeight="100.0" prefWidth="200.0">
                               <VBox prefHeight="104.0" prefWidth="220.0">
                                   <HBox>
@@ -393,19 +424,18 @@
           </Tab>
           <Tab text="News Articles">
               <content>
-                  <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0"/>
+                  <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
               </content>
           </Tab>
           <Tab text="Trading Simulator">
               <content>
                   <BorderPane prefHeight="200.0" prefWidth="200.0">
                       <center>
-                          <TitledPane animated="false" collapsible="false" prefHeight="600.0" prefWidth="1920.0"
-                                      text="Stock Prices" BorderPane.alignment="CENTER">
+                          <TitledPane animated="false" collapsible="false" prefHeight="600.0" prefWidth="1920.0" text="Stock Prices" BorderPane.alignment="CENTER">
                               <content>
                                   <ScrollPane>
                                       <content>
-                                          <VBox fx:id="priceHistoryChartBox" prefHeight="200.0" prefWidth="100.0"/>
+                                          <VBox fx:id="priceHistoryChartBox" prefHeight="200.0" prefWidth="100.0" />
                                       </content>
                                   </ScrollPane>
                               </content>
@@ -414,24 +444,51 @@
                       <top>
                           <VBox BorderPane.alignment="CENTER">
                               <children>
-                                  <LineChart fx:id="simulatorProfitLoss" prefHeight="280.0" prefWidth="1920.0"
-                                             title="Profit/Loss">
+                                  <LineChart fx:id="simulatorProfitLoss" prefHeight="280.0" prefWidth="1920.0" title="Performance">
                                       <xAxis>
-                                          <NumberAxis side="BOTTOM"/>
+                                          <NumberAxis side="BOTTOM" />
                                       </xAxis>
                                       <yAxis>
-                                          <NumberAxis side="LEFT"/>
+                                          <NumberAxis fx:id="simulatorPerformanceAxis" autoRanging="false" side="LEFT" />
                                       </yAxis>
                                   </LineChart>
                               </children>
                           </VBox>
                       </top>
                       <bottom>
-                          <TitledPane animated="false" collapsible="false" prefHeight="125.0" prefWidth="1920.0"
-                                      text="Simulator Control Panel" BorderPane.alignment="CENTER">
+                          <TitledPane animated="false" collapsible="false" prefHeight="125.0" prefWidth="1920.0" text="Simulator Control Panel" BorderPane.alignment="CENTER">
                               <content>
-                                  <Button fx:id="simulateTradingButton" mnemonicParsing="false"
-                                          text="Simulate Automated Trading"/>
+                        <BorderPane>
+                           <left>
+                              <HBox BorderPane.alignment="CENTER">
+                                 <children>
+                                    <VBox prefHeight="76.0" prefWidth="300.0">
+                                       <children>
+                                                    <Button fx:id="simulateTradingButton" disable="true" mnemonicParsing="false" onAction="#simulateTrading" prefHeight="28.0" prefWidth="300.0" text="Simulate Automated Trading" />
+                                       </children>
+                                    </VBox>
+                                    <Separator orientation="VERTICAL" prefHeight="76.0" prefWidth="20.0" />
+                                    <VBox prefHeight="76.0" prefWidth="375.0">
+                                       <children>
+                                          <CheckBox fx:id="simulationRebalancePortfolio" mnemonicParsing="false" prefHeight="18.0" prefWidth="375.0" text="Rebalance Portfolio on Expected Return Divergence" />
+                                          <HBox>
+                                             <children>
+                                                <Label prefHeight="30.0" prefWidth="215.0" text="Portfolio Look-back Period (Days):" />
+                                                <TextField fx:id="simulationPortfolioLookbackPeriod" />
+                                             </children>
+                                          </HBox>
+                                          <HBox>
+                                             <children>
+                                                <Label prefHeight="30.0" prefWidth="215.0" text="Portfolio Hold Period (Days):" />
+                                                <TextField fx:id="simulationPortfolioHoldPeriod" />
+                                             </children>
+                                          </HBox>
+                                       </children>
+                                    </VBox>
+                                 </children>
+                              </HBox>
+                           </left>
+                        </BorderPane>
                               </content>
                           </TitledPane>
                       </bottom>

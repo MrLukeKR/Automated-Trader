@@ -45,7 +45,7 @@ public class BarChartHandler {
         return (callsToPerform + getCurrentCalls()) > limit;
     }
 
-    private void sendToDatabase(ArrayList<String> values, String stock) throws SQLException {
+    private void sendToDatabase(ArrayList<String> values, String stock, boolean intraday) throws SQLException {
         ArrayList<String> reducedResult = new ArrayList<>();
         for(String value : values){
             if(value.contains("You have reached the maximum")) return; //TODO: Insert value into API call manager
@@ -63,8 +63,24 @@ public class BarChartHandler {
             }
         }
 
-        StockRecordParser.importIntradayMarketData(reducedResult, stock);
+        if(intraday)
+            StockRecordParser.importIntradayMarketData(reducedResult, stock);
+        else
+            StockRecordParser.importDailyMarketData(reducedResult, stock);
         Main.getController().updateCurrentTask("Successfully committed Intraday history for " + stock + " to the database!", false, false);
+    }
+
+    public void downloadDailyHistory(ArrayList<String> stocks) throws IOException, SQLException {
+        double t = stocks.size() - 1, c = 0;
+        if (isOverLimit(0)) return;
+
+        Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
+        for(String stock:stocks) {
+            Main.getController().updateCurrentTask("Downloading Daily History for " + stock, false, false);
+            sendToDatabase(downloadDailyHistory(stock), stock,false);
+            Controller.updateProgress(++c,t,pb);
+        }
+        Controller.updateProgress(0, pb);
     }
 
     public void downloadIntradayHistory(ArrayList<String> stocks) throws IOException, SQLException {
@@ -74,7 +90,7 @@ public class BarChartHandler {
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
         for(String stock:stocks) {
             Main.getController().updateCurrentTask("Downloading Intraday History for " + stock, false, false);
-            sendToDatabase(downloadIntradayHistory(stock), stock);
+            sendToDatabase(downloadIntradayHistory(stock), stock, true);
             Controller.updateProgress(++c,t,pb);
         }
         Controller.updateProgress(0, pb);
@@ -117,6 +133,13 @@ public class BarChartHandler {
         }
 
         return fixedResults;
+    }
+
+    public ArrayList<String> downloadDailyHistory(String stock) throws IOException, SQLException {
+        String dateFrom = dh.executeQuery("SELECT COALESCE(MAX(TradeDate),'1900-01-01') FROM dailystockprices WHERE Symbol='" +  stock+ "'").get(0).replace("-","").replace(" ","").replace(":","");
+        String url = "https://marketdata.websol.barchart.com/getHistory.csv?apikey=" + apiKey + "&symbol=" + stock + "&startDate=" + dateFrom + "&endDate=21000101&type=daily&order=asc";
+
+        return submitRequest(url);
     }
 
     public ArrayList<String> downloadIntradayHistory(String stock) throws IOException, SQLException {

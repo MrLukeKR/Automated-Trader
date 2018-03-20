@@ -220,7 +220,7 @@ public class StockRecordParser {
             if (results.isEmpty() || Integer.parseInt(results.get(0)) == 0) {
                 Main.getController().updateCurrentTask("Importing Yahoo! records for: " + symbol, false, false);
 
-                File file = new File("res/historicstocks/" + symbol + ".csv");
+                File file = new File(System.getProperty("user.dir") + "/res/historicstocks/" + symbol + ".csv");
 
                 if (file.exists()) {
                     StockRecordParser.importDailyYahooMarketData(file, symbol);

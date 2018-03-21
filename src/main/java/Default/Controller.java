@@ -1213,7 +1213,8 @@ public class Controller {
 
         updateGUI();
 
-       // mainThread.start();
+        if (!Arrays.asList(Main.getArguments()).contains("-DMT")) ;
+        mainThread.start();
     }
 
     private void initialiseClocks() {

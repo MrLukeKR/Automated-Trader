@@ -11,10 +11,11 @@ import java.io.IOException;
 
 public class Main extends Application {
     static FXMLLoader loader;
+    static private String[] arguments;
 
-    public static void main(String[] args) {
-        launch(args);
-    }
+    public static void main(String[] args) { launch(arguments = args); }
+
+    public static String[] getArguments(){return arguments;}
 
     @Override
     public void start(Stage primaryStage) throws IOException {

@@ -151,26 +151,24 @@ public class StockPredictor {
         Instances dataSet = new Instances(TrainingFileUtils.loadAttributeCSV(filePath));
 
         NumericToNominal ntn = new NumericToNominal();
-        String[] opt = new String[2];
-        opt[0] = "-R";
-        opt[1] = "last";
-        ntn.setOptions(opt);
+        ntn.setOptions(new String[]{"-R","last"});
         ntn.setInputFormat(dataSet);
         Instances fixedDataSet = Filter.useFilter(dataSet, ntn);
         dataSet.delete();
         fixedDataSet.setClassIndex(fixedDataSet.numAttributes() - 1);
 
-        double splitPercent = 0.7;
+        double splitPercent = 0.95;
         int trainingAmount = (int)Math.round(fixedDataSet.numInstances() * splitPercent);
 
         Instances trainingSet = new Instances(fixedDataSet, 0,trainingAmount);
         Instances testingSet = new Instances(fixedDataSet, trainingAmount, fixedDataSet.numInstances() - trainingAmount);
 
-        System.out.println("Training Random Forest for evaluation...");
+        System.out.println("Training Random Forest...");
         RandomForest randomForest = new RandomForest();
 
-        randomForest.setNumIterations(200);
-        randomForest.setMaxDepth(10);
+        randomForest.setNumIterations(10);
+        randomForest.setMaxDepth(5);
+        randomForest.setOptions(new String[]{"-num-slots","0"});
 
         randomForest.buildClassifier(trainingSet);
 
@@ -187,14 +185,6 @@ public class StockPredictor {
         System.out.println(evaluation.toMatrixString());
         System.out.println(evaluation.toClassDetailsString());
         System.out.println("Accuracy: " + evaluation.pctCorrect());
-
-        randomForest = new RandomForest();
-
-        System.gc();
-
-        System.out.println("Training Full Random Forest...");
-
-        randomForest.buildClassifier(fixedDataSet);
 
         String scope = "MultiStock";
         if(simulation) scope += "_SIMULATION";
@@ -292,5 +282,4 @@ public class StockPredictor {
 
         return StockPredictor.predictDirection(fixedDataSet.instance(0));
     }
-
 }

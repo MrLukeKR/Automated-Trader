@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Controller {
     static final private double smoothRate = 0.1;
-    static final private boolean DISABLE_SYSTEM_UPDATE = true;
+    static private boolean DISABLE_SYSTEM_UPDATE;
     static private DatabaseHandler dh = new DatabaseHandler();
     static private DatabaseHandler sqdh = new DatabaseHandler();
     static private DatabaseHandler nlpdh = new DatabaseHandler();
@@ -475,6 +475,7 @@ public class Controller {
                 //TrainingFileUtils.exportLibSVMFile(String.valueOf(getClass().getResource("/TrainingFiles/SmoothedNASDAQTraining.csv")), "res/TrainingFiles/SmoothedNASDAQTrainingLibSVM.txt");
 
                 StockPredictor.trainRandomForest(System.getProperty("user.dir") +"/res/TrainingFiles/SmoothedNASDAQTraining.csv", stocks.size(), false);
+                StockPredictor.loadLatestRandomForest();
             }catch (Exception e){e.printStackTrace();}
 
             updateProgress(0, stockForecastProgress);
@@ -969,6 +970,8 @@ public class Controller {
 
     @FXML
     public void initialize() throws Exception {
+         DISABLE_SYSTEM_UPDATE = Arrays.asList(Main.getArguments()).contains("-DSU");
+
         File res = new File("res");
         if(!res.exists())
             res.mkdirs();

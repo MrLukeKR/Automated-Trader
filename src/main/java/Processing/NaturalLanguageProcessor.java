@@ -145,7 +145,12 @@ public class NaturalLanguageProcessor {
     }
 
     static private boolean isSentenceBlacklisted(String sentence) throws SQLException {
-        return dh.executeQuery("SELECT COALESCE(0, Blacklisted) FROM sentences WHERE Hash = MD5('" + sentence + "')").get(0) == "1";
+        ArrayList<String> result = dh.executeQuery("SELECT COALESCE(Blacklisted, 0) FROM sentences WHERE Hash = MD5('" + sentence + "')");
+
+        if (result.isEmpty())
+            return false;
+
+        return result.get(0) == "1";
     }
 
     private static double getPriceChangeOnDate(String symbol, String date) throws SQLException {

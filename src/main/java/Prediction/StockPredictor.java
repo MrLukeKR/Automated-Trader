@@ -94,10 +94,19 @@ public class StockPredictor {
         System.out.println("Loaded Machine Learning Model: " + singleModels.get(stock).toString()) ;
     }
 
-    private static void loadRandomForest(String modelFile) throws Exception {
-        System.out.println("Loading Machine Learning Model '" + modelFile + "'...");
-        model = (RandomForest) SerializationHelper.read(modelFile);
-        System.out.println("Loaded Machine Learning Model: " + model.toString()) ;
+    static public boolean isModelLoaded() {
+        return model != null;
+    }
+
+    private static void loadRandomForest(String modelFile) {
+        Main.getController().updateCurrentTask("Loading Machine Learning Model '" + modelFile + "'...", false, false);
+        try {
+            model = (RandomForest) SerializationHelper.read(modelFile);
+            Main.getController().updateCurrentTask("Loaded Machine Learning Model: " + model.toString(), false, false);
+        } catch (Exception e) {
+            Main.getController().updateCurrentTask("Couldn't load ML Model: " + e.getMessage(), true, true);
+        }
+
     }
 
     /*
@@ -163,11 +172,13 @@ public class StockPredictor {
         Instances trainingSet = new Instances(fixedDataSet, 0,trainingAmount);
         Instances testingSet = new Instances(fixedDataSet, trainingAmount, fixedDataSet.numInstances() - trainingAmount);
 
+        fixedDataSet.delete();
+
         System.out.println("Training Random Forest...");
         RandomForest randomForest = new RandomForest();
 
-        randomForest.setNumIterations(10);
-        randomForest.setMaxDepth(5);
+        randomForest.setNumIterations(100);
+        randomForest.setMaxDepth(6);
         randomForest.setOptions(new String[]{"-num-slots","0"});
 
         randomForest.buildClassifier(trainingSet);
@@ -242,8 +253,6 @@ public class StockPredictor {
 
         features[features.length - 1] = newsSentiment;
 
-        Instance dataPoint = new DenseInstance(features.length, features);
-
         String[] values = new String[]{"Index","Days","OpenPrice","HighPrice","LowPrice","ClosePrice","TradeVolume","PercentChange","SmoothedClosePrice","SMA5","SMA10","SMA20","SMA200","EMA5","EMA10","EMA20","EMA200","MACD","MACDSig","MACDHist","RSI","ADX10","CCI","AD","OBV","StoOscSlowK","StoOscSlowD","WillR","Sentiment"};
 
         ArrayList<Attribute> attributes = new ArrayList<>();
@@ -266,15 +275,13 @@ public class StockPredictor {
 
         unlabelledData[unlabelledData.length-1] = -1;
 
+        Instance dataPoint = new DenseInstance(unlabelledData.length, unlabelledData);
         Instances dataSet = new Instances("ToPredict",attributes,0);
         dataSet.add(dataPoint);
-        dataPoint.setMissing(dataSet.numAttributes()-1);
+        dataPoint.setMissing(dataSet.numAttributes() - 1);
 
         NumericToNominal ntn = new NumericToNominal();
-        String[] opt = new String[2];
-        opt[0] = "-R";
-        opt[1] = "last";
-        ntn.setOptions(opt);
+        ntn.setOptions(new String[]{"-R", "last"});
         ntn.setInputFormat(dataSet);
         Instances fixedDataSet = Filter.useFilter(dataSet, ntn);
         dataSet.delete();

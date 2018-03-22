@@ -122,7 +122,7 @@ public class TrainingFileUtils {
         //pw.println(convertToLibSVM(line));
     }
 
-    static public void exportClassificationCSV(ArrayList<String> stocks, String path, int[] days, ProgressBar pb, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiment, boolean includeHeader) throws FileNotFoundException, SQLException {
+    static public void exportClassificationCSV(ArrayList<String> stocks, String path, int[] days, ProgressBar pb, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiment, boolean includeHeader, boolean ignoreNull) throws FileNotFoundException, SQLException {
         final int t = stocks.size() - 1;
         int c = 0;
         File file = new File(path);
@@ -134,7 +134,7 @@ public class TrainingFileUtils {
             String commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ")" ;
             for(int i = 1; i < dbSchema.size(); i++)
                 commandStart += ",COALESCE(" + dbSchema.get(i)+")";
-            for (String value : convertToClassificationTrainingArray(stock, commandStart+" FROM dailystockprices WHERE Symbol='" + stock + "'", " ORDER BY TradeDate ASC;",c, days, smoothPriceAlpha, includeIndicators, includeSentiment, false, includeHeader && stocks.indexOf(stock) == 0))
+            for (String value : convertToClassificationTrainingArray(stock, commandStart + " FROM dailystockprices WHERE Symbol='" + stock + "'", " ORDER BY TradeDate ASC;", c, days, smoothPriceAlpha, includeIndicators, includeSentiment, ignoreNull, includeHeader && stocks.indexOf(stock) == 0))
                 pw.println(value);
 
             Controller.updateProgress(++c, t, pb);
@@ -175,40 +175,40 @@ public class TrainingFileUtils {
         //No technical indicators, no sentiment, no smoothing
 
         for(Integer day : dayArray)
-            exportClassificationCSV(stocks,System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_Standard_NASDAQ.csv",new int[]{day},pb,1,false, false,true);
+            exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_Standard_NASDAQ.csv", new int[]{day}, pb, 1, false, false, true, false);
 
         resetPriceValues();
         TechnicalAnalyser.calculateTechnicalIndicators(stocks,false,true);
 
         //Technical indicators, no sentiment, no smoothing
         for(Integer day : dayArray)
-            exportClassificationCSV(stocks,System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_Standard_TA_NASDAQ.csv",new int[]{day},pb,1,true, false, true);
+            exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_Standard_TA_NASDAQ.csv", new int[]{day}, pb, 1, true, false, true, false);
 
         //Technical indicators, sentiment, no smoothing
         for(Integer day : dayArray)
-            exportClassificationCSV(stocks,System.getProperty("user.dir") + "/res/TrainingFiles/"+ day + "Day_Standard_TA_Sentiment_NASDAQ.csv",new int[]{day},pb,1,true, true, true);
+            exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_Standard_TA_Sentiment_NASDAQ.csv", new int[]{day}, pb, 1, true, true, true, false);
 
         //No technical indicators, sentiment, no smoothing
         for(Integer day : dayArray)
-            exportClassificationCSV(stocks,System.getProperty("user.dir") + "/res/TrainingFiles/"+day+"DayStandard_Sentiment_NASDAQ.csv",new int[]{day},pb,1,false, true, true);
+            exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "DayStandard_Sentiment_NASDAQ.csv", new int[]{day}, pb, 1, false, true, true, false);
 
         for(double i = 0.1; i <= 0.9; i+=0.1) {
             resetPriceValues();
             SmoothingUtils.smoothStocks(stocks,i);
             //No technical indicators, no sentiment, smoothing
             for(Integer day : dayArray)
-                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day  + "Day_" + i + "Smoothed_NASDAQ.csv", new int[]{day}, pb, i, false, false, true);
+                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_NASDAQ.csv", new int[]{day}, pb, i, false, false, true, false);
             //No Technical indicators, smoothing, sentiment
             for(Integer day : dayArray)
-                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, false, true, true);
+                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, false, true, true, false);
 
             TechnicalAnalyser.calculateTechnicalIndicators(stocks,true, true);
             //Technical indicators, smoothing, no sentiment
             for(Integer day : dayArray)
-                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_NASDAQ.csv", new int[]{day}, pb, i, true, false, true);
+                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_NASDAQ.csv", new int[]{day}, pb, i, true, false, true, false);
             //Technical indicators, smoothing, sentiment
             for(Integer day : dayArray)
-                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, true, true, true);
+                exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_" + i + "Smoothed_TA_Sentiment_NASDAQ.csv", new int[]{day}, pb, i, true, true, true, false);
         }
     }
 
@@ -273,14 +273,14 @@ public class TrainingFileUtils {
         StringBuilder command = new StringBuilder(commandStart);
 
         if(smoothPriceAlpha!=1) {
-            if(!ignoreNull)
+            if (ignoreNull)
                 command.append(" AND SmoothedClosePrice IS NOT NULL");
             if(includeHeader)
                 header += ",SmoothedClosePrice";
         }
 
         if(includeIndicators) {
-            if(!ignoreNull)
+            if (ignoreNull)
             for (String column : indicators)
                 command.append(" AND ").append(column).append(" IS NOT NULL");
             if(includeHeader)

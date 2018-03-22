@@ -24,7 +24,7 @@ public class TradingSimulator {
 
     static public void initialise(DatabaseHandler tsdh){dh = tsdh;}
 
-    static public HashMap<String, ArrayList<String>> getSplit(String stock, int testingTimeFrame, int index) throws SQLException {
+    static private HashMap<String, ArrayList<String>> getSplit(String stock, int testingTimeFrame, int index) throws SQLException {
         HashMap<String, ArrayList<String>> values = new HashMap<>();
 
         ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
@@ -115,7 +115,7 @@ public class TradingSimulator {
         }
     }
 
-    static private void generateMultistockTrainingFiles(ArrayList<String> stocks, int timeFrame) throws FileNotFoundException, SQLException {
+    static public void generateMultistockTrainingFiles(ArrayList<String> stocks, int timeFrame) throws FileNotFoundException, SQLException {
         File dir = new File(System.getProperty("user.dir") + "/res/Simulator/MultiStock");
         if(!dir.exists())
             dir.mkdirs();
@@ -140,7 +140,6 @@ public class TradingSimulator {
                 pwTrainRec.println(record);
             for (String record : values.get("TestingRecords"))
                 pwTestRec.println(record);
-
         }
 
         pwTrain.close();
@@ -155,7 +154,7 @@ public class TradingSimulator {
         }
     }
 
-    static private void trainMultiStock(ArrayList<String> stocks) throws Exception {
+    static public void trainMultiStock(ArrayList<String> stocks) throws Exception {
         StockPredictor.trainRandomForest(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingFile.csv",stocks.size(), true);
     }
 
@@ -231,11 +230,8 @@ public class TradingSimulator {
             for (Thread thread : threads)
                 thread.join();
 
-        } else {
-            generateMultistockTrainingFiles(stocksToSimulate, 200);
-            trainMultiStock(stocksToSimulate); //TODO: Make into a button
+        } else
             StockPredictor.loadLatestSimulationRandomForest();
-        }
 
         TreeMap<String, TreeMap<Date, Double>> prices = new TreeMap<>();
         TreeMap<String, TreeMap<Date, Double>> reducedPrices = new TreeMap<>();

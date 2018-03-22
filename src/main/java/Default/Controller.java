@@ -27,6 +27,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
 import javafx.util.Pair;
 
 import java.io.File;
@@ -162,6 +163,8 @@ public class Controller {
     @FXML MenuItem exportAllTrainingFilesButton;
     @FXML MenuItem smoothPriceDataButton;
     @FXML MenuItem resetPriceDataButton;
+    @FXML
+    Button trainSimulationModelButton;
 
     private boolean automated = false;
 
@@ -178,6 +181,21 @@ public class Controller {
         sqdh.close();
         pmdh.close();
         spdh.close();
+    }
+
+    @FXML
+    private void trainSimulationModel() {
+        new Thread(() -> {
+            Platform.runLater(() -> trainSimulationModelButton.setDisable(true));
+            try {
+                TradingSimulator.generateMultistockTrainingFiles(stocks, 200);
+                TradingSimulator.trainMultiStock(stocks);
+            } catch (Exception e) {
+                Main.getController().updateCurrentTask("Could not train simulation model: " + e.getMessage(), true, true);
+            } finally {
+                Platform.runLater(() -> trainSimulationModelButton.setDisable(false));
+            }
+        }).start();
     }
 
     static public void updateProgress(double value, ProgressBar pb) {
@@ -468,7 +486,7 @@ public class Controller {
                 if(!newDir.exists())
                     newDir.mkdirs();
 
-                TrainingFileUtils.exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress,smoothRate,true,true, true);
+                TrainingFileUtils.exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress, smoothRate, true, true, true, false);
 
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
 
@@ -622,7 +640,6 @@ public class Controller {
 
     private void updateProfitLossChart() throws SQLException, ParseException {
         Platform.runLater(() -> portfolioChart.getData().clear());
-        //TODO: Refactor this to not regather all data each iteration
         ArrayList<String> portfolioRecords = dh.executeQuery("SELECT Symbol, Held, Investment, LastUpdated FROM portfolio WHERE Held > 0 ORDER BY LastUpdated ASC;");
 
         Map<Long, Double> timeAndPrice = new TreeMap<>();
@@ -996,10 +1013,11 @@ public class Controller {
                                 sellAllStock(false);
                             SmoothingUtils.smoothStocks(stocks, smoothRate);
                             TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
-                            updatePredictions(StockPredictor.predictStocks(stocks, dayArray, stockForecastProgress));
+                            if (StockPredictor.isModelLoaded())
+                                updatePredictions(StockPredictor.predictStocks(stocks, dayArray, stockForecastProgress));
                         }
 
-                        if (automated) autoTrade();
+                        if (automated && StockPredictor.isModelLoaded()) autoTrade();
 
                         if(automated || (h < 21 && h >= 14)) {
                             checkServices();
@@ -1035,13 +1053,13 @@ public class Controller {
         NewsDownloader.initialise(nddh);
 
         initialiseStocks();
-        //StockPredictor.loadLatestRandomForest();
+        if (!Arrays.asList(Main.getArguments()).contains("-DLM"))
+            StockPredictor.loadLatestRandomForest();
         initialiseSimulatorCharts();
 
         initialiseClocks();
         initialiseDisplay();
         startClocks();
-
 
         Platform.runLater(()->stockDropdown.getItems().addAll(stocks));
         Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
@@ -1185,7 +1203,7 @@ public class Controller {
             }
         }).start();
 
-        if(!StockPredictor.getModelInformation().equals("No model loaded"))
+        if (StockPredictor.isModelLoaded())
             new Thread(() -> {
                 boolean[] predictionArray = new boolean[0];
                 try {
@@ -1194,6 +1212,23 @@ public class Controller {
                     e.printStackTrace();
                 } catch (Exception e) {
                     e.printStackTrace();
+                }
+
+                Label spacer = new Label();
+                spacer.setMinSize(80, 20);
+
+                Label[] predictionLabels = new Label[dayArray.length];
+
+                for (int i = 0; i < predictionLabels.length; i++) {
+                    predictionLabels[i] = new Label();
+                    predictionLabels[i].setFont(Font.font(null, 14));
+                    predictionLabels[i].setMinSize(120, 20);
+                    predictionLabels[i].setTextFill(Color.BLACK);
+
+                    if (dayArray[i] == 1)
+                        predictionLabels[i].setText(dayArray[i] + " day");
+                    else
+                        predictionLabels[i].setText(dayArray[i] + " days");
                 }
 
                 for (int i = 0; i < stocks.size(); i++) {
@@ -1213,8 +1248,8 @@ public class Controller {
 
         updateGUI();
 
-        if (!Arrays.asList(Main.getArguments()).contains("-DMT")) ;
-        mainThread.start();
+        if (!Arrays.asList(Main.getArguments()).contains("-DMT"))
+            mainThread.start();
     }
 
     private void initialiseClocks() {

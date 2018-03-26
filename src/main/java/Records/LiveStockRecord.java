@@ -110,13 +110,13 @@ public class LiveStockRecord {
 
             if (percentChange < 0) {
                 stockChange.setTextFill(Color.RED);
-                stockChange.setText("▼ ");
+                stockChange.setText("\u25BC ");
             } else if (percentChange == 0) {
                 stockChange.setTextFill(Color.BLACK);
-                stockChange.setText("► ");
+                stockChange.setText("\u25B6 ");
             } else {
                 stockChange.setTextFill(Color.GREEN);
-                stockChange.setText("▲ ");
+                stockChange.setText("\u25B2 ");
             }
 
             stockChange.setText(stockChange.getText() + String.format("%.02f",change) + " (" + String.format("%.02f", percentChange) + "%)");

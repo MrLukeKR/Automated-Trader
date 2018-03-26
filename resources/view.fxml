@@ -541,7 +541,42 @@
                 </Tab>
                 <Tab text="News Articles">
                     <content>
-                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0"/>
+                        <BorderPane prefHeight="200.0" prefWidth="200.0">
+                            <left>
+                                <TitledPane animated="false" collapsible="false" prefHeight="956.0" prefWidth="400.0"
+                                            text="News Article Toolbox" BorderPane.alignment="CENTER">
+                                    <content>
+                                        <VBox prefWidth="321.0">
+                                            <children>
+                                                <HBox>
+                                                    <children>
+                                                        <Label prefHeight="25.0" prefWidth="45.0" text="Stock:"/>
+                                                        <ComboBox fx:id="newsStockCombobox" prefHeight="28.0"
+                                                                  prefWidth="335.0" promptText="Select a stock"/>
+                                                    </children>
+                                                </HBox>
+                                                <Separator prefWidth="200.0" visible="false"/>
+                                                <HBox>
+                                                    <children>
+                                                        <Label prefHeight="25.0" prefWidth="45.0" text="Date:"/>
+                                                        <ComboBox fx:id="newsDateCombobox" disable="true"
+                                                                  prefHeight="28.0" prefWidth="340.0"
+                                                                  promptText="Select a date"/>
+                                                    </children>
+                                                </HBox>
+                                                <Separator prefHeight="11.0" prefWidth="253.0" visible="false"/>
+                                                <ListView fx:id="newsArticleList" prefHeight="200.0" prefWidth="200.0"/>
+                                                <Separator prefHeight="11.0" prefWidth="253.0"/>
+                                            </children>
+                                        </VBox>
+                                    </content>
+                                </TitledPane>
+                            </left>
+                            <center>
+                                <TextArea fx:id="newsArticleArea" prefHeight="200.0" prefWidth="200.0" wrapText="true"
+                                          BorderPane.alignment="CENTER"/>
+                            </center>
+                        </BorderPane>
                     </content>
                 </Tab>
                 <Tab text="Trading Simulator">

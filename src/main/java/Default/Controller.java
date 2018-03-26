@@ -23,6 +23,7 @@ import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -165,6 +166,17 @@ public class Controller {
     @FXML MenuItem resetPriceDataButton;
     @FXML
     Button trainSimulationModelButton;
+
+    @FXML
+    ComboBox<String> newsStockCombobox;
+    @FXML
+    ComboBox<String> newsDateCombobox;
+    @FXML
+    TextArea newsArticleArea;
+    @FXML
+    Button newsSearchButton;
+    @FXML
+    ListView<String> newsArticleList;
 
     private boolean automated = false;
 
@@ -784,6 +796,41 @@ public class Controller {
     }
 
     private void initialiseListeners() {
+        newsArticleList.getSelectionModel().selectedItemProperty().addListener((observableValue, s, t1) -> {
+            if (newsArticleList.getSelectionModel().getSelectedItems().size() > 1)
+                newsArticleList.getSelectionModel().clearSelection();
+
+            if (newsArticleList.getSelectionModel().getSelectedItem() != null) {
+                try {
+                    newsArticleArea.setText(dh.executeQuery("SELECT DISTINCT(Content) FROM newsarticles WHERE Symbol='" + newsStockCombobox.getValue() + "' AND PublishedDate = '" + newsDateCombobox.getValue() + "' AND Headline = '" + newsArticleList.getSelectionModel().getSelectedItem() + "' AND Content IS NOT NULL LIMIT 1;").get(0));
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        newsDateCombobox.valueProperty().addListener((observableValue, s, t1) -> {
+            newsArticleList.getItems().clear();
+            try {
+                newsArticleList.getItems().addAll(dh.executeQuery("SELECT DISTINCT(Headline) FROM newsarticles WHERE Symbol='" + newsStockCombobox.getValue() + "' AND PublishedDate = '" + newsDateCombobox.getValue() + "' AND Content IS NOT NULL ORDER BY PublishedDate DESC;"));
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+
+        newsStockCombobox.valueProperty().addListener((observableValue, s, t1) -> {
+            newsDateCombobox.getItems().clear();
+
+            if (newsDateCombobox.isDisabled())
+                newsDateCombobox.setDisable(false);
+
+            try {
+                newsDateCombobox.getItems().addAll(dh.executeQuery("SELECT DISTINCT(PublishedDate) FROM newsarticles WHERE Symbol='" + newsStockCombobox.getValue() + "' AND Content IS NOT NULL ORDER BY PublishedDate DESC;"));
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+
         lossCutoffField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.matches("\\d*\\.?\\d*"))
                 lossCutoffField.setText(newValue.replaceAll("[^\\d\\.]", ""));
@@ -1062,11 +1109,12 @@ public class Controller {
         startClocks();
 
         Platform.runLater(()->stockDropdown.getItems().addAll(stocks));
+        Platform.runLater(() -> newsStockCombobox.getItems().addAll(stocks));
+        Platform.runLater(() -> historicStockDropdown.getItems().addAll(stocks));
         Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
         Platform.runLater(()->autonomyLevelDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->optimisationMethodDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->evaluationMethodDropdown.getSelectionModel().selectFirst());
-        Platform.runLater(()->historicStockDropdown.getItems().addAll(stocks));
 
         new Thread(() -> {
             try {
@@ -1230,6 +1278,10 @@ public class Controller {
                     else
                         predictionLabels[i].setText(dayArray[i] + " days");
                 }
+
+                HBox header = new HBox(spacer);
+                header.getChildren().addAll(predictionLabels);
+                Platform.runLater(() -> stockPredictionsBox.getChildren().add(header));
 
                 for (int i = 0; i < stocks.size(); i++) {
                     boolean[] currentPredictions = new boolean[dayArray.length];

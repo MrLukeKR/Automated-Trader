@@ -53,7 +53,7 @@ public class DatabaseHandler {
 
     public static void initialiseDatabase(String adminUser, String adminPass) throws SQLException {
         if (initialised) return;
-        Connection conn = DriverManager.getConnection("jdbc:mysql://localhost", adminUser, adminPass);
+        Connection conn = DriverManager.getConnection("jdbc:mysql://localhost?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC", adminUser, adminPass);
 
         Main.getController().updateCurrentTask("Initialising Database...", false, false);
 
@@ -82,13 +82,13 @@ public class DatabaseHandler {
         statement.addBatch("CREATE TRIGGER blacklisted_insert_trigger BEFORE INSERT ON sentences FOR EACH ROW SET NEW.Blacklisted = NEW.Occurrences >= 5;");
         statement.addBatch("CREATE TRIGGER blacklisted_update_trigger BEFORE UPDATE ON sentences FOR EACH ROW SET NEW.Blacklisted = NEW.Occurrences >= 5;");
         statement.addBatch("CREATE TABLE IF NOT EXISTS tradetransactions (ID INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY, TradeDateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, Type VARCHAR(4), Symbol VARCHAR(7) NOT NULL, Volume INT UNSIGNED NOT NULL DEFAULT 0, Price DOUBLE UNSIGNED NOT NULL, Automated BIT NOT NULL DEFAULT 0, FOREIGN KEY (Symbol) REFERENCES indices(Symbol));");
-        statement.addBatch("CREATE TABLE IF NOT EXISTS predictors (ID INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY, Model TEXT NOT NULL, Type TEXT NOT NULL, Scope VARCHAR(30) NOT NULL, ModelNumber INT UNSIGNED NOT NULL, Accuracy DOUBLE UNSIGNED NOT NULL, Description TEXT NOT NULL, Filepath TEXT NOT NULL);");
-        statement.addBatch("CREATE TABLE IF NOT EXISTS investments (ID INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY, Symbol VARCHAR(7) NOT NULL, Amount INT UNSIGNED NOT NULL, SellDate DATE NOT NULL, FOREIGN KEY (Symbol) REFERENCES indices(Symbol) ON UPDATE CASCADE ON DELETE CASCADE)");
+        statement.addBatch("CREATE TABLE IF NOT EXISTS predictors (ID INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY, Model TEXT NOT NULL, Type TEXT NOT NULL, Scope TEXT NOT NULL, ModelNumber INT UNSIGNED NOT NULL, Accuracy DOUBLE UNSIGNED NOT NULL, Description TEXT NOT NULL, Filepath TEXT NOT NULL);");
+        statement.addBatch("CREATE TABLE IF NOT EXISTS investments (ID INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY, Symbol VARCHAR(7) NOT NULL, Amount INT UNSIGNED NOT NULL, EndDate DATE NOT NULL, Period INT UNSIGNED NOT NULL, FOREIGN KEY (Symbol) REFERENCES indices(Symbol) ON UPDATE CASCADE ON DELETE CASCADE)");
 
         //Insert initial values into relevant databases
         statement.addBatch("INSERT INTO banktransactions(Amount, Type) SELECT 10000, 'DEPOSIT' WHERE NOT EXISTS (SELECT 1 FROM banktransactions WHERE Amount = 10000 AND Type='DEPOSIT');");
         statement.addBatch("INSERT INTO apimanagement VALUES ('INTRINIO',500,0),('AlphaVantage',0,1667),('BarChart', 2100,0) ON DUPLICATE KEY UPDATE DailyLimit=VALUES(DailyLimit), Delay=VALUES(Delay);");
-        statement.addBatch("INSERT IGNORE INTO settings VALUES('PROFIT_CUTOFF', '11000'), ('LOSS_CUTOFF','9000'), ('BARCHART_API_KEY', 'NULL'), ('INTRINIO_API_KEY', 'NULL'), ('ALPHAVANTAGE_API_KEY','NULL');");
+        statement.addBatch("INSERT IGNORE INTO settings VALUES('PROFIT_CUTOFF', '11000'), ('LOSS_CUTOFF','9000'), ('BARCHART_API_KEY', 'NULL'), ('INTRINIO_API_KEY', 'NULL'), ('ALPHAVANTAGE_API_KEY','NULL'), ('PREDICTION_MODE','SINGLE');");
 
         //Create users
         statement.addBatch("CREATE USER IF NOT EXISTS 'Agent'@'localhost' IDENTIFIED BY '0Y5q0m28pSB9jj2O';");
@@ -211,7 +211,7 @@ public class DatabaseHandler {
         user = username;
 
         try {
-            connection = DriverManager.getConnection("jdbc:mysql://localhost", username, password);
+            connection = DriverManager.getConnection("jdbc:mysql://localhost?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC", username, password);
         } catch (SQLException e) {
             System.err.println(e.getMessage());
             if (e.getErrorCode() == 1045) {

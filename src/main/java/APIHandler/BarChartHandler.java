@@ -177,6 +177,7 @@ public class BarChartHandler {
 
                 temp.addAll(Arrays.asList(sTemp.split("\r\n")));
             }catch (Exception e){
+                e.printStackTrace();
                 exceeded++;
             }finally {
                 if(is!=null) is.close();

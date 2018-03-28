@@ -13,7 +13,11 @@ public class Main extends Application {
     static FXMLLoader loader;
     static private String[] arguments;
 
-    public static void main(String[] args) { launch(arguments = args); }
+    public static void main(String[] args) {
+        if (System.getProperty("os.name").toLowerCase().contains("win"))
+            System.setProperty("hadoop.home.dir", "c:/hadoop");
+        launch(arguments = args);
+    }
 
     public static String[] getArguments(){return arguments;}
 

@@ -93,6 +93,7 @@ public class AlphaVantageHandler {
 
         do {
             availableThreads.acquireUninterruptibly();
+            incrementCurrentlyDownloading();
             //try { TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
             HttpURLConnection connection = null;
             Reader reader = null;
@@ -114,21 +115,22 @@ public class AlphaVantageHandler {
                     //    while(getPausedDownloads() > 0)
                     //       try{TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
 
-                    if(getAllPaused() && getPausedDownloads() == 0)
+                    if (getAllPaused() && getPausedDownloads() == 0) {
                         unpauseAll();
+                    }
                 }
 
-                if (getPausedDownloads() >= Math.min(MAX_CONCURRENT_DOWNLOADS, getCurrentlyDownloading()) && !allPaused)
+                if (getPausedDownloads() >= Math.min(MAX_CONCURRENT_DOWNLOADS, getCurrentlyDownloading()) && !allPaused) {
                     pauseAll();
+                }
 
                 try { TimeUnit.SECONDS.sleep(exceeded ); } catch (Exception e) { e.printStackTrace(); }
             }
 
 
-            if(!downloadInitiated) {
-                incrementCurrentlyDownloading();
+            if (!downloadInitiated || downloadInitiated)
                 downloadInitiated=true;
-            }
+
 
             try {
 
@@ -189,9 +191,11 @@ public class AlphaVantageHandler {
             }
 
             availableThreads.release();
+            decrementCurrentlyDownloading();
         } while (exceeded > 1 && exceeded < 10);
 
-        decrementCurrentlyDownloading();
+        if (paused) decrementPause();
+
 
         if (getCurrentlyDownloading() == 0 && availableThreads.availablePermits() == MAX_CONCURRENT_DOWNLOADS) {
             resetFailedDownloads();

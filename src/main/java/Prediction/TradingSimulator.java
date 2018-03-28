@@ -6,18 +6,12 @@ import Default.Main;
 import Portfolio.PortfolioManager;
 import Processing.NaturalLanguageProcessor;
 import Utility.TrainingFileUtils;
-import weka.core.Attribute;
-import weka.core.DenseInstance;
-import weka.core.Instance;
-import weka.core.Instances;
-import weka.filters.Filter;
-import weka.filters.unsupervised.attribute.NumericToNominal;
+import org.apache.spark.mllib.linalg.DenseVector;
 
 import java.io.*;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.util.*;
-
 
 public class TradingSimulator {
     static private DatabaseHandler dh;
@@ -50,38 +44,16 @@ public class TradingSimulator {
         return values;
     }
 
-    static public HashMap<String, ArrayList<String>> getSplit(String stock, double split) throws SQLException {
-        HashMap<String, ArrayList<String>> values = new HashMap<>();
-
-        ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
-
-        String commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ",0)";
-        for(int i = 1; i < dbSchema.size(); i++)
-            commandStart += ",COALESCE(" + dbSchema.get(i)+", 0)";
-        commandStart += " FROM(\n" +
-                "SELECT dailystockprices.*, @rowno := @rowno + 1 as rowno\n" +
-                "FROM (SELECT @rowno := 0)  AS init, dailystockprices WHERE Symbol = '" + stock + "'";
-
-        String commandEnd = " ORDER BY TradeDate DESC\n" +
-                ") as t\n" +
-                "WHERE rowno > (" + (1-split) + " * @rowno) " +
-                "ORDER BY TradeDate ASC;";
-
-        values.put("TrainingRecords", dh.executeQuery(commandStart + commandEnd));
-        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock,commandStart,commandEnd,0,new int[]{1,30,200},0.25,true,true, true, false));
-
-        commandEnd = " ORDER BY TradeDate DESC\n" +
-                ") as t\n" +
-                "WHERE rowno <= (" + (1-split) + " * @rowno) " +
-                "ORDER BY TradeDate ASC;";
-
-        values.put("TestingRecords", dh.executeQuery(commandStart + commandEnd));
-
-        return values;
+    static public void trainSingleStocks(ArrayList<String> stocks) throws SQLException {
+        for (String stock : stocks)
+            StockPredictor.trainRandomForest(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingFile.libsvm", stock, true);
     }
 
-    static private void trainSingleStocks(ArrayList<String> stocks) throws IOException, SQLException {
+    static public void trainMultiStock(ArrayList<String> stocks) throws Exception {
+        StockPredictor.trainRandomForest(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingFile.libsvm", stocks.size(), true);
+    }
 
+    static public void generateSingleStockTrainingFiles(ArrayList<String> stocks, int timeFrame, boolean includeHeader) throws IOException, SQLException {
         for(String stock : stocks) {
             File dir = new File(System.getProperty("user.dir") + "/res/Simulator/" + stock);
             if(!dir.exists())
@@ -95,9 +67,10 @@ public class TradingSimulator {
             PrintWriter pwTestRec = new PrintWriter(testRecs);
             PrintWriter pwTrain = new PrintWriter(trainFile);
 
-            pwTrain.println("Days,OpenPrice,HighPrice,LowPrice,ClosePrice,TradeVolume,PercentChange,SmoothedClosePrice,SMA5,SMA10,SMA20,SMA200,EMA5,EMA10,EMA20,EMA200,MACD,MACDSig,MACDHist,RSI,ADX10,CCI,AD,OBV,StoOscSlowK,StoOscSlowD,WillR,Sentiment,Prediction");
+            if (includeHeader)
+                pwTrain.println("Days,OpenPrice,HighPrice,LowPrice,ClosePrice,TradeVolume,PercentChange,SmoothedClosePrice,SMA5,SMA10,SMA20,SMA200,EMA5,EMA10,EMA20,EMA200,MACD,MACDSig,MACDHist,RSI,ADX10,CCI,AD,OBV,StoOscSlowK,StoOscSlowD,WillR,Sentiment,Prediction");
 
-            HashMap<String, ArrayList<String>> values = getSplit(stock, 200,-1);
+            HashMap<String, ArrayList<String>> values = getSplit(stock, timeFrame, -1);
             for (String record : values.get("TrainingSet"))
                 pwTrain.println(record);
             for (String record : values.get("TrainingRecords"))
@@ -109,13 +82,11 @@ public class TradingSimulator {
             pwTestRec.close();
             pwTrainRec.close();
 
-            if(dh.executeQuery("SELECT COUNT(*) FROM predictors WHERE Scope = '" + stock + "_SIMULATION';").get(0).equals("0")) {
-                //StockPredictor.trainRandomForest(String.valueOf(StockPredictor.class.getClassLoader().getResource("/Simulator/" + stock + "/TrainingFile.csv")), stock, true);
-            }
+            TrainingFileUtils.exportLibSVMFile(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingFile.csv", System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingFile.libsvm");
         }
     }
 
-    static public void generateMultistockTrainingFiles(ArrayList<String> stocks, int timeFrame) throws FileNotFoundException, SQLException {
+    static public void generateMultistockTrainingFiles(ArrayList<String> stocks, int timeFrame, boolean includeHeader) throws IOException, SQLException {
         File dir = new File(System.getProperty("user.dir") + "/res/Simulator/MultiStock");
         if(!dir.exists())
             dir.mkdirs();
@@ -127,7 +98,8 @@ public class TradingSimulator {
         PrintWriter pwTrain = new PrintWriter(trainFile);
         PrintWriter pwTrainRec = new PrintWriter(trainRecs);
 
-        pwTrain.println("Index,Days,OpenPrice,HighPrice,LowPrice,ClosePrice,TradeVolume,PercentChange,SmoothedClosePrice,SMA5,SMA10,SMA20,SMA200,EMA5,EMA10,EMA20,EMA200,MACD,MACDSig,MACDHist,RSI,ADX10,CCI,AD,OBV,StoOscSlowK,StoOscSlowD,WillR,Sentiment,Prediction");
+        if (includeHeader)
+            pwTrain.println("Index,Days,OpenPrice,HighPrice,LowPrice,ClosePrice,TradeVolume,PercentChange,SmoothedClosePrice,SMA5,SMA10,SMA20,SMA200,EMA5,EMA10,EMA20,EMA200,MACD,MACDSig,MACDHist,RSI,ADX10,CCI,AD,OBV,StoOscSlowK,StoOscSlowD,WillR,Sentiment,Prediction");
         HashMap<String, HashMap<String, ArrayList<String>>> allValues = new HashMap<>();
 
         for(String stock : stocks) {
@@ -148,14 +120,12 @@ public class TradingSimulator {
 
         String date = allValues.get(stocks.get(0)).get("TestingRecords").get(0).split(",")[1];
 
+        TrainingFileUtils.exportLibSVMFile(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingFile.csv", System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingFile.libsvm");
+
         for(String stock : stocks){
             if(!allValues.get(stock).get("TestingRecords").get(0).split(",")[1].equals(date))
                 System.err.println(stock + " MISMATCH - Check Stock History (Potentially Due to De-listing or Trade-Day Halting)");
         }
-    }
-
-    static public void trainMultiStock(ArrayList<String> stocks) throws Exception {
-        StockPredictor.trainRandomForest(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingFile.csv",stocks.size(), true);
     }
 
     static private TreeMap<String, TreeMap<Date, Double>> fileToPriceTreeMap(String filePath) throws IOException {
@@ -198,9 +168,11 @@ public class TradingSimulator {
         return records;
     }
 
-    static public void simulate(ArrayList<String> stocksToSimulate, boolean singleStock, boolean rebalancePortfolio, int lookback, int holdPeriod) throws Exception {
+    static public void simulate(ArrayList<String> stocksToSimulate, boolean singleStock, int lookback, int holdPeriod, int[] dayArray) throws Exception {
         Main.getController().updateCurrentTask("Starting Simulation", false, false);
         TreeMap<Date, Double> indexPerformance = new TreeMap<>();
+
+        Main.getController().clearSimulation();
 
         ArrayList<String> indexRecords = StockQuoteDownloader.downloadIndexHistory("^NDX");
         indexRecords.remove(0);
@@ -211,8 +183,6 @@ public class TradingSimulator {
         }
 
         if (singleStock) {
-            //trainSingleStocks(stocksToSimulate);
-
             ArrayList<Thread> threads = new ArrayList<>();
 
             for (String stock : stocksToSimulate) {
@@ -231,7 +201,7 @@ public class TradingSimulator {
                 thread.join();
 
         } else
-            StockPredictor.loadLatestSimulationRandomForest();
+            StockPredictor.loadLatestRandomForest("MultiStock_SIMULATION");
 
         TreeMap<String, TreeMap<Date, Double>> prices = new TreeMap<>();
         TreeMap<String, TreeMap<Date, Double>> reducedPrices = new TreeMap<>();
@@ -246,7 +216,7 @@ public class TradingSimulator {
                 prices.putAll(fileToPriceTreeMap(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingRecords.csv"));
                 trainingRecords.putAll(fileToRecordArray(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingRecords.csv"));
                 testingRecords.putAll(fileToRecordArray(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TestingRecords.csv"));
-                for(Date date: trainingRecords.get(stock).keySet())
+                for (Date date : testingRecords.get(stock).keySet())
                     testDates.add(date);
                 for (Date date : trainingRecords.get(stock).keySet())
                     trainDates.add(date);
@@ -283,7 +253,7 @@ public class TradingSimulator {
 
         int portfolioTimeFrame = lookback;
 
-            ArrayList<Date> dates = new ArrayList<>(trainDates);
+        ArrayList<Date> dates = new ArrayList<>(trainDates);
 
         for(String stock : prices.keySet()) {
             Collections.reverse(dates);
@@ -294,45 +264,50 @@ public class TradingSimulator {
                 reducedPrices.get(stock).put(dates.get(i), prices.get(stock).get(dates.get(i)));
         }
 
-        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.GENETIC_ALGORITHM, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK,30,reducedPrices, false);
-        Map<String, Integer> heldStocks = new HashMap<>();
-        Map<String, Integer> randomHeldStocks = new HashMap<>();
+        SimulationModel automatedTrader = new SimulationModel("Automated Trader (Initial Portfolio Optimisation only)");
+        SimulationModel automatedTraderWithRebalancing = new SimulationModel("Automated Trader (with Portfolio Rebalancing)");
+        SimulationModel automatedTraderEqualAllocation = new SimulationModel("Automated Trader (with Equal Allocation)");
+        SimulationModel randomTrader = new SimulationModel("Random Trader");
+
+        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.SIMULATED_ANNEALING, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, reducedPrices, false);
+        Main.getController().updateSimulatedComponentChart("REBALANCED_ALLOC", portfolio);
+        Main.getController().updateSimulatedComponentChart("INITIAL_ALLOC", portfolio);
+        Map<String, Double> equalPortfolio = new HashMap<>();
+
+        for (String stock : stocksToSimulate)
+            equalPortfolio.put(stock, 1.0 / stocksToSimulate.size());
+
+        automatedTrader.setPortfolio(new HashMap<>(portfolio));
+        automatedTraderWithRebalancing.setPortfolio(new HashMap<>(portfolio));
+        automatedTraderEqualAllocation.setPortfolio(equalPortfolio);
+        randomTrader.setPortfolio(new HashMap<>(portfolio));
+
+        ArrayList<SimulationModel> simulations = new ArrayList<>();
+        simulations.add(automatedTrader);
+        simulations.add(automatedTraderEqualAllocation);
+        simulations.add(automatedTraderWithRebalancing);
+        simulations.add(randomTrader);
 
         double cutoff = portfolio.get("RETURN");
         portfolio.remove("RETURN");
 
+        Random rng = new Random();
         TreeMap<Date, Double> balance = new TreeMap<>();
         TreeMap<Date, ArrayList<String>> actions = new TreeMap<>();
-
-
-        Random rng = new Random();
-        double currentBalance = -1;
-        double initialBalance = -1;
-        double randomBalance = -1;
-        double stockWorth = 0;
-        double randomStockWorth = 0;
-        double balanceMin = -1;
-        double balanceMax = -1;
-        double randomBalanceMin = -1;
-        double randomBalanceMax = -1;
+        ArrayList<String> investmentRecords = new ArrayList<>();
 
         int index = 0;
-        double bought = 0, sold = 0;
-        double randomBought = 0, randomSold = 0;
-        HashMap<String, Boolean> predictions = new HashMap<>();
+        double initialBalance = -1;
+        HashMap<String, HashMap<Integer, Boolean>> predictions = new HashMap<>();
 
-            for(Date date : testDates) {
-            System.out.println("SIMULATING '" + date.toString() + "':");
-            //Predict and Perform 1-day buy/sell
+        for (String stock : stocksToSimulate)
+            predictions.put(stock, new HashMap<>());
+
+        for (Date date : testDates) {
+            System.out.println("\r\nSIMULATING '" + date.toString() + "':");
 
             boolean equal = true;
-            stockWorth = 0;
-            bought = 0;
-            sold = 0;
-
-            randomStockWorth = 0;
-            randomBought = 0;
-            randomSold = 0;
+            for (SimulationModel model : simulations) model.initialiseIteration();
 
             for (String s : stocksToSimulate) {
                 String rec = testingRecords.get(s).get(date);
@@ -341,108 +316,78 @@ public class TradingSimulator {
                     break;
                 }
             }
+
             if (equal){
+                for (String stock : stocksToSimulate) {
+                    String rec = testingRecords.get(stock).get(date);
+                    for (int day : dayArray)
+                        predictions.get(stock).put(day, predictStock(stock, day, stocksToSimulate.indexOf(stock), date, rec, singleStock));
+                }
+
                 if(initialBalance == -1) {
                     initialBalance = indexPerformance.get(date);
-                    currentBalance = initialBalance;
-                    randomBalance = initialBalance;
-                    balanceMin = currentBalance * (1 - cutoff);
-                    balanceMax = currentBalance * (1 + cutoff);
-                    randomBalanceMin = randomBalance * (1-cutoff);
-                    randomBalanceMax = randomBalance * (1+cutoff);
-
+                    for (SimulationModel model : simulations) model.setBalance(initialBalance);
+                    automatedTrader.updateCutoff(cutoff);
+                    randomTrader.updateCutoff(cutoff);
+                    Main.getController().initialiseSimulatorPredictions(predictions);
                 }
 
-                if(rebalancePortfolio)
-                if (currentBalance + stockWorth <= balanceMin || currentBalance + stockWorth >= balanceMax) {
-                    portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.GENETIC_ALGORITHM, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, reducedPrices, false);
-                    cutoff = portfolio.get("RETURN");
-                    portfolio.remove("RETURN");
-                    for (String symbol : heldStocks.keySet()) {
-                        double worth = Double.parseDouble(testingRecords.get(symbol).get(date).split(",")[5]) * heldStocks.get(symbol);
-                        currentBalance += worth;
-                        sold += worth;
-                        heldStocks.put(symbol, 0);
-                    }
+                //automatedTraderWithRebalancing.rebalancePortfolio(testingRecords,date,holdPeriod,reducedPrices);
+                // randomTrader.rebalancePortfolio(testingRecords,date,holdPeriod,reducedPrices);
 
-                    balanceMin = currentBalance * (1 - cutoff);
-                    balanceMax = currentBalance * (1 + cutoff);
-                    randomBalanceMin = randomBalance * (1 - cutoff);
-                    randomBalanceMax = randomBalance * (1 + cutoff);
-                }
+                Main.getController().updateSimulatedComponentChart("REBALANCED_ALLOC", automatedTraderWithRebalancing.getPortfolio());
+
+                Main.getController().updateSimulationPredictions(predictions);
 
                 for (String stock : stocksToSimulate) {
-
-                    String rec = testingRecords.get(stock).get(date);
-                    predictions.put(stock, predictStock(stock, 1, stocksToSimulate.indexOf(stock), date, rec,singleStock));
-                    reducedPrices.get(stock).remove(reducedPrices.get(stock).firstKey());
+                    reducedPrices.get(stock).remove(Collections.min(reducedPrices.get(stock).keySet()));
                     double price = Double.parseDouble(testingRecords.get(stock).get(date).split(",")[5]);
 
                     reducedPrices.get(stock).put(date, price);
+                    //    for(int day : dayArray) {
+                    if (rng.nextBoolean())
+                        randomTrader.buyStock(stock, price);
+                    else
+                        randomTrader.sellStock(stock, price);
 
-                    if (portfolio.get(stock) != null) {
-                        double allocation = portfolio.get(stock) * currentBalance;
-                        double randomAllocation = portfolio.get(stock) * randomBalance;
-
-                        if (predictions.get(stock) && (price <= allocation)) {
-                            int amount = (int) Math.floor(allocation / price);
-                            if (currentBalance - (amount * price) >= 0) {
-                                currentBalance -= amount * price;
-                                bought += amount * price;
-                                heldStocks.put(stock, heldStocks.getOrDefault(stock, 0) + amount);
-                            }
-                        }
-
-                        if (rng.nextBoolean() && (price <= randomAllocation)) {
-                            int amount = (int) Math.floor(randomAllocation / price);
-                            if (randomBalance - (amount * price) >= 0) {
-                                randomBalance -= amount * price;
-                                randomBought += amount * price;
-                                randomHeldStocks.put(stock, randomHeldStocks.getOrDefault(stock, 0) + amount);
-                            }
-                        }
+                    if (predictions.get(stock).get(1)) {
+                        automatedTrader.buyStock(stock, price);
+                        automatedTraderEqualAllocation.buyStock(stock, price);
+                        automatedTraderWithRebalancing.buyStock(stock, price);
+                    } else {
+                        automatedTrader.sellStock(stock, price);
+                        automatedTraderEqualAllocation.sellStock(stock, price);
+                        automatedTraderWithRebalancing.sellStock(stock, price);
                     }
 
-                    if (!predictions.get(stock) && heldStocks.get(stock) != null && heldStocks.get(stock) > 0) {
-                        currentBalance += heldStocks.get(stock) * price;
-                        sold += heldStocks.get(stock) * price;
-                        heldStocks.replace(stock, 0);
-                    }
-
-                    if (rng.nextBoolean() && randomHeldStocks.get(stock) != null && randomHeldStocks.get(stock) > 0) {
-                        randomBalance += randomHeldStocks.get(stock) * price;
-                        randomSold += randomHeldStocks.get(stock) * price;
-                        randomHeldStocks.replace(stock, 0);
-                    }
-
-                    if (heldStocks.get(stock) != null && heldStocks.get(stock) > 0)
-                        stockWorth += heldStocks.get(stock) * price;
-                    if (randomHeldStocks.get(stock) != null && randomHeldStocks.get(stock) > 0)
-                        randomStockWorth += randomHeldStocks.get(stock) * price;
-
+                    // }
+                    for (SimulationModel model : simulations) model.updateStockWorth(stock, price);
                     Main.getController().addHistoricPrice(stock, index, price);
                 }
+                automatedTrader.updateInvestments();
+                automatedTraderEqualAllocation.updateInvestments();
+                automatedTraderWithRebalancing.updateInvestments();
             }else
                 System.err.println("Mismatched Date at " + date);
 
-            System.out.println("\tCurrent Balance: " + currentBalance + ", Stock Worth: "+stockWorth + ", Total: " + (currentBalance+stockWorth) + "(BOUGHT: " + bought + ", SOLD:"+ sold + ")");
-            System.out.println("\tRandom Balance: " + randomBalance + ", Random Stock Worth: "+randomStockWorth + ", Random Total: " + (randomBalance+randomStockWorth) + "(BOUGHT: " + randomBought + ", SOLD:"+ randomSold + ")");
+            for (SimulationModel model : simulations) model.printStatus();
 
             //Rebalance portfolio if it goes past cutoff
-            balance.put(date, currentBalance);
 
             if(equal) {
-                Main.getController().addSimulatorBalance(index, currentBalance + stockWorth);
-                Main.getController().addSimulatorRandomPerformance(index, randomBalance + randomStockWorth);
                 Main.getController().addSimulatorIndexPerformance(index, indexPerformance.get(date));
+
+                Main.getController().addSimulatorPortfolioInitialBalance(index, automatedTrader.getTotal());
+                Main.getController().addSimulatorBalance(index, automatedTraderWithRebalancing.getTotal());
+                Main.getController().addSimulatorEqualAllocationBalance(index, automatedTraderEqualAllocation.getTotal());
+                Main.getController().addSimulatorRandomPerformance(index, randomTrader.getTotal());
                 Main.getController().realignSimulatorCharts();
                 index++;
             }
         }
 
-        currentBalance += stockWorth;
-
-        System.out.println("Finished Simulation with: " + currentBalance + " -> " + ((currentBalance - initialBalance )/ initialBalance * 100) + "% return");
+        System.out.println("\r\n");
+        for (SimulationModel model : simulations) model.finalise(initialBalance);
     }
 
     static private boolean predictStock(String stock, int numberOfDays, int stockIndex, Date date, String record, boolean singleStock) throws Exception {
@@ -459,7 +404,9 @@ public class TradingSimulator {
             for (int i = 2; i < splitString.length; i++)
                 features[i-1] = Double.parseDouble(splitString[i]);
 
+
             features[features.length - 1] = newsSentiment;
+            return StockPredictor.predictDirection(new DenseVector(features), stock);
         }else {
             features = new double[splitString.length+1];
 
@@ -470,45 +417,8 @@ public class TradingSimulator {
                 features[i] = Double.parseDouble(splitString[i]);
 
             features[features.length - 1] = newsSentiment;
+
+            return StockPredictor.predictDirection(new DenseVector(features));
         }
-
-        String[] values = new String[]{"Index","Days","OpenPrice","HighPrice","LowPrice","ClosePrice","TradeVolume","PercentChange","SmoothedClosePrice","SMA5","SMA10","SMA20","SMA200","EMA5","EMA10","EMA20","EMA200","MACD","MACDSig","MACDHist","RSI","ADX10","CCI","AD","OBV","StoOscSlowK","StoOscSlowD","WillR","Sentiment"};
-
-        ArrayList<Attribute> attributes = new ArrayList<>();
-
-        for(String value : values)
-            attributes.add(new Attribute(value));
-
-        ArrayList<String> predictions = new ArrayList<>();
-        predictions.add ("0");
-        predictions.add("1");
-
-        Attribute classes = new Attribute("Predictions", predictions);
-
-        attributes.add(classes);
-
-        double[] unlabelledData = new double[features.length+1];
-
-        for(int i = 0; i < features.length; i++)
-            unlabelledData[i] = features[i];
-
-        unlabelledData[unlabelledData.length-1] = -1;
-
-        Instance dataPoint = new DenseInstance(unlabelledData.length, unlabelledData);
-        Instances dataSet = new Instances("ToPredict",attributes,0);
-        dataSet.add(dataPoint);
-        dataPoint.setMissing(dataSet.numAttributes()-1);
-
-        NumericToNominal ntn = new NumericToNominal();
-        String[] opt = new String[2];
-        opt[0] = "-R";
-        opt[1] = "last";
-        ntn.setOptions(opt);
-        ntn.setInputFormat(dataSet);
-        Instances fixedDataSet = Filter.useFilter(dataSet, ntn);
-        dataSet.delete();
-        fixedDataSet.setClassIndex(fixedDataSet.numAttributes() - 1);
-
-        return StockPredictor.predictDirection(fixedDataSet.instance(0));
     }
 }

@@ -9,7 +9,7 @@
 <?import javafx.scene.text.*?>
 <?import java.lang.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
-            minWidth="-Infinity" prefHeight="1020.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/9"
+            minWidth="-Infinity" prefHeight="1020.0" prefWidth="1920.0" xmlns="http://javafx.com/javafx/9.0.1"
             fx:controller="Default.Controller">
     <BorderPane>
         <center>
@@ -603,10 +603,6 @@
                                                                    prefWidth="20.0"/>
                                                         <VBox prefHeight="76.0" prefWidth="375.0">
                                                             <children>
-                                                                <CheckBox fx:id="simulationRebalancePortfolio"
-                                                                          mnemonicParsing="false" prefHeight="18.0"
-                                                                          prefWidth="375.0"
-                                                                          text="Rebalance Portfolio on Expected Return Divergence"/>
                                                                 <HBox>
                                                                     <children>
                                                                         <Label prefHeight="30.0" prefWidth="215.0"
@@ -628,10 +624,37 @@
                                                     </children>
                                                 </HBox>
                                             </left>
+                                            <right>
+                                                <HBox prefHeight="151.0" prefWidth="1196.0"
+                                                      BorderPane.alignment="CENTER">
+                                                    <children>
+                                                        <Separator orientation="VERTICAL" prefHeight="200.0"/>
+                                                        <PieChart fx:id="simulatorInitialPortfolioChart"
+                                                                  animated="false" legendSide="RIGHT" prefHeight="64.0"
+                                                                  prefWidth="308.0" title="Initial Allocation"/>
+                                                        <PieChart fx:id="simulatorRebalancedPortfolioChart"
+                                                                  animated="false" legendSide="RIGHT" prefHeight="151.0"
+                                                                  prefWidth="319.0" title="Rebalanced Allocation"/>
+                                                    </children>
+                                                </HBox>
+                                            </right>
                                         </BorderPane>
                                     </content>
                                 </TitledPane>
                             </bottom>
+                            <right>
+                                <TitledPane animated="false" collapsible="false" prefHeight="562.0" prefWidth="200.0"
+                                            text="Predictions" BorderPane.alignment="CENTER">
+                                    <content>
+                                        <ScrollPane prefWidth="238.0">
+                                            <content>
+                                                <VBox fx:id="simulatorPredictionBox" prefHeight="530.0"
+                                                      prefWidth="180.0"/>
+                                            </content>
+                                        </ScrollPane>
+                                    </content>
+                                </TitledPane>
+                            </right>
                         </BorderPane>
                     </content>
                 </Tab>

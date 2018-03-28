@@ -6,9 +6,6 @@ import Default.Main;
 import Processing.NaturalLanguageProcessor;
 import Processing.TechnicalAnalyser;
 import javafx.scene.control.ProgressBar;
-import weka.core.Instances;
-import weka.core.converters.ArffSaver;
-import weka.core.converters.CSVLoader;
 
 import java.io.*;
 import java.sql.SQLException;
@@ -122,6 +119,21 @@ public class TrainingFileUtils {
         //pw.println(convertToLibSVM(line));
     }
 
+    static public void exportClassificationCSV(String stock, String path, int[] days, ProgressBar pb, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiment, boolean includeHeader, boolean ignoreNull) throws FileNotFoundException, SQLException {
+        File file = new File(path);
+        PrintWriter pw = new PrintWriter(file);
+
+        ArrayList<String> dbSchema = databaseHandler.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
+
+        String commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ", 0)";
+        for (int i = 1; i < dbSchema.size(); i++)
+            commandStart += ",COALESCE(" + dbSchema.get(i) + ", 0)";
+        for (String value : convertToClassificationTrainingArray(stock, commandStart + " FROM dailystockprices WHERE Symbol='" + stock + "'", " ORDER BY TradeDate ASC;", -1, days, smoothPriceAlpha, includeIndicators, includeSentiment, ignoreNull, includeHeader))
+            pw.println(value);
+
+        pw.close();
+    }
+
     static public void exportClassificationCSV(ArrayList<String> stocks, String path, int[] days, ProgressBar pb, double smoothPriceAlpha, boolean includeIndicators, boolean includeSentiment, boolean includeHeader, boolean ignoreNull) throws FileNotFoundException, SQLException {
         final int t = stocks.size() - 1;
         int c = 0;
@@ -131,9 +143,9 @@ public class TrainingFileUtils {
         ArrayList<String> dbSchema = databaseHandler.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
 
         for (String stock : stocks) {
-            String commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ")" ;
+            String commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ", 0)";
             for(int i = 1; i < dbSchema.size(); i++)
-                commandStart += ",COALESCE(" + dbSchema.get(i)+")";
+                commandStart += ",COALESCE(" + dbSchema.get(i) + ", 0)";
             for (String value : convertToClassificationTrainingArray(stock, commandStart + " FROM dailystockprices WHERE Symbol='" + stock + "'", " ORDER BY TradeDate ASC;", c, days, smoothPriceAlpha, includeIndicators, includeSentiment, ignoreNull, includeHeader && stocks.indexOf(stock) == 0))
                 pw.println(value);
 
@@ -144,6 +156,7 @@ public class TrainingFileUtils {
     }
 
     static public void exportLibSVMFile(String csvPath, String libSVMPath) throws IOException {
+        Main.getController().updateCurrentTask("Converting CSV to LIBSVM file", false, false);
         FileReader fr = new FileReader(csvPath);
         BufferedReader br = new BufferedReader(fr);
 
@@ -173,7 +186,6 @@ public class TrainingFileUtils {
 
     static public void exportAllFiles(ArrayList<String> stocks, ProgressBar pb, int[] dayArray) throws FileNotFoundException, SQLException {
         //No technical indicators, no sentiment, no smoothing
-
         for(Integer day : dayArray)
             exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/" + day + "Day_Standard_NASDAQ.csv", new int[]{day}, pb, 1, false, false, true, false);
 
@@ -363,20 +375,5 @@ public class TrainingFileUtils {
         System.out.println("Converted data to Classification Training Array for '" + stock + "'");
 
         return dataPoints;
-    }
-
-    static public Instances loadAttributeCSV(String source) throws IOException {
-        CSVLoader csvLoader = new CSVLoader();
-        csvLoader.setSource(new File(source));
-        return csvLoader.getDataSet();
-    }
-
-    static public void exportARFFFile(String source, String destination) throws IOException {
-        Instances dataSet = loadAttributeCSV(source);
-
-        ArffSaver arffSaver = new ArffSaver();
-        arffSaver.setInstances(dataSet);
-        arffSaver.setDestination(new File(destination));
-        arffSaver.writeBatch();
     }
 }

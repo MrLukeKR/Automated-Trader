@@ -67,9 +67,8 @@ public class INTRINIOHandler {
 
         int i = 1;
 
-        while (i <= values[PAGES] && missingArticles > 0) {
+        while (i <= values[PAGES] && missingArticles > 0)
             missingArticles -= getCSVNews(stock, i++, missingArticles);
-        }
 
         if (missingArticles > 0)
             Main.getController().updateCurrentTask("DID NOT DOWNLOAD ALL ARTICLES", true, false);

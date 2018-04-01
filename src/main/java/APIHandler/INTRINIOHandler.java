@@ -280,7 +280,7 @@ public class INTRINIOHandler {
             return;
         }
 
-        Semaphore availableThreads = new Semaphore(30, false);
+        Semaphore availableThreads = new Semaphore(20, false);
 
         double t = undownloadedArticles.size() - 1;
         progress = 0;
@@ -296,10 +296,11 @@ public class INTRINIOHandler {
                 Main.getController().updateCurrentTask("Downloading news article " + splitArticle[0] + ": " + splitArticle[1], false, false);
 
                 String site = null;
+                int nullTimeout = 0;
 
-                while (site == null)
+                while (site == null && nullTimeout++ < 10)
                     try {
-                        site = INTRINIOHandler.downloadArticle(splitArticle[1]);
+                        site = downloadArticle(splitArticle[1]);
                         break;
                     } catch (FileNotFoundException e) {
                         Main.getController().updateCurrentTask("Article is no longer available!", true, false);
@@ -311,8 +312,7 @@ public class INTRINIOHandler {
                     } catch (ConnectException e) {
                         Main.getController().updateCurrentTask("Connection error (Timed Out)", true, false);
                     } catch (Exception e) {
-                        e.printStackTrace();
-                        break;
+                        Main.getController().updateCurrentTask(e.getMessage(), true, false);
                     }
 
                 try {
@@ -348,9 +348,10 @@ public class INTRINIOHandler {
         HttpURLConnection conn = (HttpURLConnection) site.openConnection(); //Written by https://stackoverflow.com/questions/15057329/how-to-get-redirected-url-and-content-using-httpurlconnection
         conn.setInstanceFollowRedirects(true);
         conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000);
 
         conn.connect();
-
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
         String input;

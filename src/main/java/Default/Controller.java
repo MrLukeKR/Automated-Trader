@@ -28,9 +28,7 @@ import javafx.scene.text.Font;
 import javafx.util.Pair;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -171,7 +169,6 @@ public class Controller {
     @FXML MenuItem resetPriceDataButton;
     @FXML
     Button trainSimulationModelButton;
-
     @FXML
     ComboBox<String> newsStockCombobox;
     @FXML
@@ -483,12 +480,6 @@ public class Controller {
         stockAmountField.setDisable(false);
     }
 
-    private void exportToFile(ArrayList<String> values, String path) throws FileNotFoundException {
-        File file = new File(path);
-        PrintWriter pw = new PrintWriter(file);
-        pw.close();
-    }
-
     @FXML private void exportAllTrainingFiles(){
         new Thread(()-> {
             Platform.runLater(()->exportAllTrainingFilesButton.setDisable(true));
@@ -539,7 +530,13 @@ public class Controller {
             }catch (Exception e){e.printStackTrace();}
 
             updateProgress(0, stockForecastProgress);
-            Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
+            Platform.runLater(() -> {
+                try {
+                    predictionModelInformationBox.setText(StockPredictor.getModelInformation(stocks));
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            });
             Platform.runLater(() -> trainMLModelButton.setDisable(false));
         }).start();
     }
@@ -640,6 +637,7 @@ public class Controller {
         sqdh.init("StockQuoteDownloader", "j2wbvx19Gg1Be22J");
         pmdh.init("PortfolioManager", "mAjwa22NdsrRihi4");
         spdh.init("StockPredictor", "wfN1XLoW810diEhR");
+        ArrayList<String> alphavantagePassword = dh.executeQuery("SELECT value FROM settings WHERE ID='ALPHAVANTAGE_KEY';");
         avh.init("UFKUIPVK2VFA83U0"); //PBATJ7L9N8SNK835
         bch.init("07467da3de1195c974b66c46b8523e23", sqdh, stockFeedProgress);
         INTRINIOHandler.authenticate("be7afde61f5e10bb20393025c35e50c7", "1ff9ab03aa8e5bd073345d70d588abde");
@@ -1190,7 +1188,13 @@ public class Controller {
         Platform.runLater(()->stockDropdown.getItems().addAll(stocks));
         Platform.runLater(() -> newsStockCombobox.getItems().addAll(stocks));
         Platform.runLater(() -> historicStockDropdown.getItems().addAll(stocks));
-        Platform.runLater(()->predictionModelInformationBox.setText(StockPredictor.getModelInformation()));
+        Platform.runLater(() -> {
+            try {
+                predictionModelInformationBox.setText(StockPredictor.getModelInformation(stocks));
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
         Platform.runLater(()->autonomyLevelDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->optimisationMethodDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->evaluationMethodDropdown.getSelectionModel().selectFirst());
@@ -1367,7 +1371,7 @@ public class Controller {
                     for (int days : dayArray)
                         currentPredictions[i++] = predictionArray.get(stock).get(days);
 
-                    predictions.put(stock, new PredictionBox(stocks.get(i), dayArray, currentPredictions));
+                    predictions.put(stock, new PredictionBox(stock, dayArray, currentPredictions));
                 }
 
                 for (String pb : predictions.keySet())

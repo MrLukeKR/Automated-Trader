@@ -19,7 +19,6 @@ import java.util.Arrays;
 public class BarChartHandler {
     private String apiKey;
 
-    private final int CALL_LIMIT = 1;
     private DatabaseHandler dh;
     private ProgressBar pb;
     private static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
@@ -33,8 +32,7 @@ public class BarChartHandler {
     private int getCurrentCalls() throws SQLException {
         ArrayList<String> sCalls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Date = CURDATE() AND Name='INTRINIO';");
 
-        if(!sCalls.isEmpty())
-            return Integer.parseInt(sCalls.get(0));
+        if (!sCalls.isEmpty()) return Integer.parseInt(sCalls.get(0));
 
         return 0;
     }
@@ -50,7 +48,6 @@ public class BarChartHandler {
         for(String value : values){
             if(value.contains("You have reached the maximum")) return; //TODO: Insert value into API call manager
             String[] splitString = value.replace("\"","").split(",");
-
 
             if(splitString.length < 8) {
                 Main.getController().updateCurrentTask("Erroneous quote: " + value, true, false);
@@ -154,15 +151,12 @@ public class BarChartHandler {
         ArrayList<String> temp = new ArrayList<>();
 
         do {
-            //TimeUnit.SECONDS.sleep(CALL_LIMIT);
-
             HttpURLConnection connection = null;
             Reader reader= null;
-            URL url;
             InputStream is = null;
 
             try {
-                url = new URL(request);
+                URL url = new URL(request);
                 connection = (HttpURLConnection) url.openConnection();
                 is = connection.getInputStream();
                 reader = new InputStreamReader(is);
@@ -186,16 +180,10 @@ public class BarChartHandler {
             }
 
             dh.executeCommand("INSERT INTO apicalls VALUES('BarChart', CURDATE(), 1) ON DUPLICATE KEY UPDATE Calls = Calls +1;");
-            //dh.executeCommand("INSERT INTO apicalls VALUES ('BarChart', CURDATE(), 500) ON DUPLICATE KEY UPDATE Calls = 500;"); //Incase another system uses this program, this database value doesn't get updated, in which case if an error occurs, mark the api as "limit reached"
         } while (exceeded > 1 && exceeded < 10);
 
-        if (temp.size() <= 1)
-            Main.getController().updateCurrentTask("Error with quote download", true, false);
+        if (temp.size() <= 1) Main.getController().updateCurrentTask("Error with quote download", true, false);
 
         return temp;
-    }
-
-    public String getApiKey(){
-        return apiKey;
     }
 }

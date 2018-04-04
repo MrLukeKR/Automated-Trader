@@ -24,7 +24,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class INTRINIOHandler {
-    private static final String INTRINIO_API_CALL = "https://api.intrinio.com/news?ticker=";
     private static final String INTRINIO_CSV_CALL = "https://api.intrinio.com/news.csv?page_size=10000&ticker=";
     static private String INTRINIO_USERNAME;
     static private String INTRINIO_PASSWORD;
@@ -49,29 +48,20 @@ public class INTRINIOHandler {
         if (isOverLimit(0)) return;
 
         int values[] = getCSVMetaData(stock);
-
         int storedArticles = Integer.parseInt(dh.executeQuery("SELECT COUNT(*) FROM newsarticles WHERE Symbol='" + stock + "';").get(0));
-
-
         int missingArticles = values[ARTICLES] - storedArticles;
 
         Main.getController().updateCurrentTask("MISSING ARTICLES FOR '" + stock + "': " + missingArticles, false, false);
 
-        if (missingArticles == 0)
-            return;
-
-        if (missingArticles < 0) {
+        if (missingArticles < 0)
             Main.getController().updateCurrentTask("NEGATIVE MISSING ARTICLE VALUE - May be due to API inaccessibility", true, false);
-            return;
-        }
+        if (missingArticles <= 0) return;
 
         int i = 1;
 
-        while (i <= values[PAGES] && missingArticles > 0)
-            missingArticles -= getCSVNews(stock, i++, missingArticles);
+        while (i <= values[PAGES] && missingArticles > 0) missingArticles -= getCSVNews(stock, i++, missingArticles);
 
-        if (missingArticles > 0)
-            Main.getController().updateCurrentTask("DID NOT DOWNLOAD ALL ARTICLES", true, false);
+        if (missingArticles > 0) Main.getController().updateCurrentTask("DID NOT DOWNLOAD ALL ARTICLES", true, false);
     }
 
     static public void initialise(DatabaseHandler nddh, ProgressBar pb) {
@@ -84,8 +74,7 @@ public class INTRINIOHandler {
     private static int getCurrentCalls() throws SQLException {
         ArrayList<String> sCalls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Date = CURDATE() AND Name='INTRINIO';");
 
-        if(!sCalls.isEmpty())
-            return Integer.parseInt(sCalls.get(0));
+        if (!sCalls.isEmpty()) return Integer.parseInt(sCalls.get(0));
 
         return 0;
     }
@@ -108,23 +97,18 @@ public class INTRINIOHandler {
             isr = new InputStreamReader(url.openStream());
         } catch (IOException e) {
             HttpURLConnection http = (HttpURLConnection) connect;
-            if (http.getResponseCode() == 429)
-                Main.getController().updateCurrentTask("Too many requests", true, false);
+            if (http.getResponseCode() == 429) Main.getController().updateCurrentTask("Too many requests", true, false);
 
             ((HttpURLConnection) connect).disconnect();
 
             dh.executeCommand("INSERT INTO apicalls VALUES ('INTRINIO', CURDATE(), 500) ON DUPLICATE KEY UPDATE Calls = 500;"); //Incase another system uses this program, this database value doesn't get updated, in which case if an error occurs, mark the api as "limit reached"
         }
 
-        if (isr == null)
-            return new int[]{0, 0};
+        if (isr == null) return new int[]{0, 0};
 
         BufferedReader br = new BufferedReader(isr);
-
         String curr;
-
         curr=br.readLine();
-
         String[] splitString = curr.split(",");
 
         dh.executeCommand("INSERT INTO apicalls VALUES('INTRINIO', CURDATE(), 1) ON DUPLICATE KEY UPDATE Calls = Calls +1;");
@@ -167,11 +151,9 @@ public class INTRINIOHandler {
 
         Main.getController().updateCurrentTask("Downloading & Reading '" + stock + "' PAGE " + page + " news file...", false, false);
 
-        for (int i = 0; i < 2; i++)  //Remove preamble
-            br.readLine();
+        for (int i = 0; i < 2; i++) br.readLine(); //Remove preamble
 
-        while((curr = br.readLine())!=null)
-            newsArray.add(curr.replace("'", "").replace("`", "").replace("\"", ""));
+        while ((curr = br.readLine()) != null) newsArray.add(curr.replace("'", "").replace("`", "").replace("\"", ""));
 
         br.close();
 
@@ -179,7 +161,6 @@ public class INTRINIOHandler {
 
         //Preprocess news data to remove corrupted entries
         Set<String> newsSet = new LinkedHashSet<>(); //Linked hashset retains insertion order and removes duplicates
-
         Main.getController().updateCurrentTask("Cleaning '" + stock + "' PAGE " + page + " news file...", false, false);
 
         for (String news : newsArray) {
@@ -193,9 +174,8 @@ public class INTRINIOHandler {
                 String date;
                 String link;
 
-                while (i < splitString.length && !(splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}\\s.\\d{4}") || splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}"))) {
+                while (i < splitString.length && !(splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}\\s.\\d{4}") || splitString[i].matches("\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}")))
                     headline.append(splitString[i++].replace(",", ""));
-                }
 
                 if (i < splitString.length) {
                     date = splitString[i++];
@@ -244,7 +224,6 @@ public class INTRINIOHandler {
                 Main.getController().updateCurrentTask("NO DATE FOUND IN: " + news, false, false);
 
             String data = "'" + stock + "','" + title + "','" + summary + "','" + date + "','" + link + "'";
-
             String query = "SELECT 1 FROM newsarticles WHERE Symbol='" + stock + "' AND Headline='" + title + "' AND Published='" + date + "' AND URL ='" + link + "';";
             ArrayList<String> result = dh.executeQuery(query);
 
@@ -254,16 +233,15 @@ public class INTRINIOHandler {
 
                 command = "INSERT INTO newsarticles (Symbol, Headline,Description,Published,URL,Duplicate) VALUES (" + data + ", (SELECT COALESCE((SELECT * FROM (SELECT 1 FROM newsarticles WHERE Symbol='" + stock + "' AND (Headline='" + title + "' OR URL='" + link + "') LIMIT 1) as t),0)));";
 
-
                 dh.addBatchCommand(command);
 
                 missingArticles--;
                 downloaded++;
 
-                if (missingArticles == 0)
-                    return downloaded;
+                if (missingArticles == 0) return downloaded;
             }
         }
+
         dh.executeBatch();
         dh.setAutoCommit(true);
 
@@ -284,8 +262,6 @@ public class INTRINIOHandler {
 
         double t = undownloadedArticles.size() - 1;
         progress = 0;
-
-        ArrayList<Thread> threads = new ArrayList<>();
 
         for (String article : undownloadedArticles) {
             availableThreads.acquireUninterruptibly();
@@ -357,8 +333,7 @@ public class INTRINIOHandler {
         String input;
         StringBuilder html = new StringBuilder();
 
-        while ((input = br.readLine()) != null)
-            html.append(input);
+        while ((input = br.readLine()) != null) html.append(input);
 
         conn.disconnect();
         br.close();
@@ -369,23 +344,20 @@ public class INTRINIOHandler {
             Document doc = Jsoup.parse(html.toString());
             Elements p = doc.getElementsByTag("p");
 
-
             int i = 0;
             for (Element el : p) {
                 strippedHTML.append(el.text());
                 if (i++ < p.size()) strippedHTML.append(" ");
             }
 
-            if (Objects.equals(html.toString().toLowerCase(), "redirect"))
-                return "redirect";
+            if (Objects.equals(html.toString().toLowerCase(), "redirect")) return "redirect";
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         String cleanHTML = Jsoup.clean(strippedHTML.toString(), Whitelist.basic()).replaceAll("'", "").trim();
 
-        if (cleanHTML.isEmpty())
-            return null;
+        if (cleanHTML.isEmpty()) return null;
 
         return cleanHTML;
     }

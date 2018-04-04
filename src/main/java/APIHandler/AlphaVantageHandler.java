@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 
 public class AlphaVantageHandler {
     private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9050));
-
     private final boolean USE_PROXY = false;
 
     private String apiKey;
@@ -29,58 +28,33 @@ public class AlphaVantageHandler {
     private int currentlyDownloading = 0;
     private final int MAX_CONCURRENT_DOWNLOADS = 30;
     private int downloadsSinceToggle = 0;
-    private int successfulDownloads = 0;
     private final Semaphore availableThreads = new Semaphore(MAX_CONCURRENT_DOWNLOADS, false);
 
     public void init(String apiKey){
         this.apiKey = apiKey;
     }
 
-    public synchronized void setPauseDownloadThreads(boolean pause){ allPaused = pause;}
-
     private synchronized int getDownloadsSinceToggle() {return downloadsSinceToggle;}
-
     private synchronized void incrementDownloadsSinceToggle(){downloadsSinceToggle++;}
-
     private synchronized void resetDownloadsSinceToggle(){downloadsSinceToggle = 0;}
-
     private synchronized boolean getUseProxy() {return useProxy;}
-
     private synchronized void toggleProxy() {useProxy = !useProxy;}
-
     private synchronized void decrementPause() {
         pausedDownloads--;
     }
-
     private synchronized void incrementPause() {
         pausedDownloads++;
     }
-
     private synchronized int getPausedDownloads() {return pausedDownloads;}
-
     private synchronized void decrementCurrentlyDownloading(){ currentlyDownloading--;}
-
     private synchronized void incrementCurrentlyDownloading(){ currentlyDownloading++;}
-
     private synchronized int getCurrentlyDownloading() {return currentlyDownloading;}
-
     private synchronized void unpauseAll(){ allPaused = false; pausedDownloads = 0;}
-
     private synchronized void pauseAll(){allPaused = true;}
-
     private synchronized boolean getAllPaused() {return allPaused;}
-
-    private synchronized void resetPaused() {pausedDownloads = 0;}
-
     private synchronized int getFailedDownloads() { return failedDownloads;}
-
     private synchronized void incrementFailedDownloads(){ failedDownloads++;}
-
     private synchronized void resetFailedDownloads(){failedDownloads = 0;}
-
-    private synchronized void incrementSuccessfulDownloads(){successfulDownloads++;}
-
-    private synchronized int getSuccessfulDownloads(){return successfulDownloads;}
 
     public ArrayList<String> submitRequest(String request) throws IOException {
         int exceeded = 1;
@@ -94,7 +68,6 @@ public class AlphaVantageHandler {
         do {
             availableThreads.acquireUninterruptibly();
             incrementCurrentlyDownloading();
-            //try { TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
             HttpURLConnection connection = null;
             Reader reader = null;
             URL url;
@@ -112,28 +85,17 @@ public class AlphaVantageHandler {
                     decrementPause();
                     paused = false;
 
-                    //    while(getPausedDownloads() > 0)
-                    //       try{TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
-
-                    if (getAllPaused() && getPausedDownloads() == 0) {
-                        unpauseAll();
-                    }
+                    if (getAllPaused() && getPausedDownloads() == 0) unpauseAll();
                 }
 
-                if (getPausedDownloads() >= Math.min(MAX_CONCURRENT_DOWNLOADS, getCurrentlyDownloading()) && !allPaused) {
+                if (getPausedDownloads() >= Math.min(MAX_CONCURRENT_DOWNLOADS, getCurrentlyDownloading()) && !allPaused)
                     pauseAll();
-                }
-
                 try { TimeUnit.SECONDS.sleep(exceeded ); } catch (Exception e) { e.printStackTrace(); }
             }
 
-
-            if (!downloadInitiated || downloadInitiated)
-                downloadInitiated=true;
-
+            if (!downloadInitiated || downloadInitiated) downloadInitiated = true;
 
             try {
-
                 try { TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
 
                 url = new URL(request);
@@ -150,8 +112,7 @@ public class AlphaVantageHandler {
                 final char[] buf = new char[10240];
                 int read;
                 final StringBuilder sb = new StringBuilder();
-                while ((read = reader.read(buf,0,buf.length)) > 0)
-                    sb.append(buf, 0, read);
+                while ((read = reader.read(buf, 0, buf.length)) > 0) sb.append(buf, 0, read);
 
                 String sTemp = sb.toString();
 
@@ -178,12 +139,8 @@ public class AlphaVantageHandler {
                 if(fails == 0)
                     incrementFailedDownloads();
                 fails++;
-
-                //if(failedDownloads >= getCurrentlyDownloading()) {
-                //setPauseDownloadThreads(true);
                 paused = true;
                 incrementPause();
-                //}
 
                 exceeded++;
                 failed = false;
@@ -196,17 +153,10 @@ public class AlphaVantageHandler {
 
         if (paused) decrementPause();
 
-
-        if (getCurrentlyDownloading() == 0 && availableThreads.availablePermits() == MAX_CONCURRENT_DOWNLOADS) {
+        if (getCurrentlyDownloading() == 0 && availableThreads.availablePermits() == MAX_CONCURRENT_DOWNLOADS)
             resetFailedDownloads();
-        }
+        if (temp.size() < 100) Main.getController().updateCurrentTask("Error with quote download", true, false);
 
-        if (temp.size() < 100) //Minimum size of a download is 100 records
-        {
-            Main.getController().updateCurrentTask("Error with quote download", true, false);
-        }
-
-        incrementSuccessfulDownloads();
         incrementDownloadsSinceToggle();
 
         Main.getController().updateCurrentTask("COMPLETED! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading(), false, false);
@@ -214,7 +164,7 @@ public class AlphaVantageHandler {
         return temp;
     }
 
-    public String getApiKey(){
+    public String getApiKey() {
         return apiKey;
     }
 }

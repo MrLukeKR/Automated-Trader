@@ -38,11 +38,8 @@ public class GAOptimiser implements Optimiser{
     static private ArrayList<Genome> crossover(ArrayList<Genome> parents1, ArrayList<Genome> parents2, double rate) {
         ArrayList<Genome> newPopulation = new ArrayList<>();
 
-        for (int i = 0; i < parents1.size(); i++) {
-            ArrayList<Genome> children = crossover(parents1.get(i), parents2.get(i), rate);
-
-            newPopulation.addAll(children);
-        }
+        for (int i = 0; i < parents1.size(); i++)
+            newPopulation.addAll(crossover(parents1.get(i), parents2.get(i), rate));
 
         return newPopulation;
     }
@@ -97,7 +94,7 @@ public class GAOptimiser implements Optimiser{
         }
 
         if (showDebug)
-            System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + " TOTAL FITNESS: " + sum+ "\tBEST FITNESS: " + best);
+            System.out.println("GENERATION " + generation + " AVERAGE FITNESS: " + sum / population.size() + " TOTAL FITNESS: " + sum + "\tBEST FITNESS: " + best);
 
         return sum;
     }
@@ -108,8 +105,7 @@ public class GAOptimiser implements Optimiser{
         ArrayList<Genome> bestOfPopulation;
         Genome bestGenome;
 
-        for (int i = 0; i < populationSize; i++)
-            population.add(new Genome(getRandomWeights(amountOfWeights)));
+        for (int i = 0; i < populationSize; i++) population.add(new Genome(getRandomWeights(amountOfWeights)));
 
         double prevFitness = -1, currFitness;
         int convergenceCount = 0;
@@ -124,14 +120,9 @@ public class GAOptimiser implements Optimiser{
             ArrayList<Genome> parents1 = selection(population); //Selection of parent population 1
             ArrayList<Genome> parents2 = selection(population); //Selection of parent population 2
 
-            population = crossover(parents1, parents2, 0.5);//Crossover
-
-            population = mutate(population, 0.1);//Mutation
-
+            population = mutate(crossover(parents1, parents2, 0.5), 0.1);
             evaluate(i, em, population, returnsArray, riskCovarianceMatrix, false); //Evaluate
-
             population = replaceWorstOfPopulation(bestOfPopulation, population);
-
             currFitness = evaluate(i, em, population, returnsArray, riskCovarianceMatrix, showDebug); //Evaluate
 
             if (currFitness >= bestFitness) {
@@ -151,8 +142,7 @@ public class GAOptimiser implements Optimiser{
         ArrayList<Genome> orderedIndividuals = new ArrayList<>(population);
         Collections.sort(orderedIndividuals, Comparator.comparing(Genome::getFitness));
 
-        for(int i = 0; i < replacement.size(); i++)
-            orderedIndividuals.remove(0);
+        for (int i = 0; i < replacement.size(); i++) orderedIndividuals.remove(0);
 
         orderedIndividuals.addAll(replacement);
 
@@ -168,7 +158,7 @@ public class GAOptimiser implements Optimiser{
         return new ArrayList<>(orderedIndividuals.subList(0,amount));
     }
 
-   static private Genome getBestOfPopulation(ArrayList<Genome> population) {
-        return getBestOfPopulation(1,population).get(0);
+    static private Genome getBestOfPopulation(ArrayList<Genome> population) {
+        return getBestOfPopulation(1, population).get(0);
     }
 }

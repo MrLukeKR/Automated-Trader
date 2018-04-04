@@ -5,6 +5,7 @@ import Default.Main;
 import Prediction.StockPredictor;
 
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.ArrayList;
 
 public class TradingUtils {
@@ -166,6 +167,18 @@ public class TradingUtils {
             //TODO: Rebalance portfolio and cutoff reassignment
         }
 
+        Main.getController().updateGUI();
+    }
+
+    static public void sellAllStock(boolean automated) throws SQLException, ParseException {
+        ArrayList<String> stocks = databaseHandler.executeQuery("SELECT Symbol, Held FROM portfolio WHERE Held > 0");
+
+        for (String stock : stocks) {
+            String[] splitStock = stock.split(",");
+            TradingUtils.sellStock(splitStock[0], Integer.parseInt(splitStock[1]), automated);
+        }
+
+        databaseHandler.executeCommand("DELETE FROM portfolio;");
         Main.getController().updateGUI();
     }
 

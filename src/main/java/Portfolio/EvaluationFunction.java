@@ -14,11 +14,9 @@ public class EvaluationFunction {
     static public double getReturn(double[] weights, double[] expectedReturns) {
         double fitness = 0;
 
-        if (weights.length != expectedReturns.length)
-            return 0;
+        if (weights.length != expectedReturns.length) return 0;
 
-        for (int i = 0; i < weights.length; i++)
-            fitness += weights[i] * expectedReturns[i];
+        for (int i = 0; i < weights.length; i++) fitness += weights[i] * expectedReturns[i];
 
         return fitness;
     }
@@ -26,8 +24,7 @@ public class EvaluationFunction {
     static public boolean sumsToOne(double[] weights){
         double sum = 0;
 
-        for(int i = 0 ; i < weights.length; i++)
-            sum+= weights[i];
+        for (int i = 0; i < weights.length; i++) sum += weights[i];
 
         return sum == 1;
     }
@@ -35,8 +32,7 @@ public class EvaluationFunction {
     static public double getReturnToRiskRatio(double[] weights, double[] expectedReturns, double[][] riskCovarianceMatrix) {
         double expectedReturn = getReturn(weights, expectedReturns), expectedRisk = getVariance(weights, riskCovarianceMatrix);
 
-        if (expectedReturn == 0 || expectedRisk == 0)
-            return 0;
+        if (expectedReturn == 0 || expectedRisk == 0) return 0;
 
         return expectedReturn / expectedRisk;
     }

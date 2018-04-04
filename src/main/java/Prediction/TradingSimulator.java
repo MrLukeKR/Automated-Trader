@@ -39,7 +39,7 @@ public class TradingSimulator {
         commandStart += " FROM dailystockprices WHERE Symbol='" + stock + "' AND TradeDate < '" + cutoffDate+"'";
         commandEnd = " ORDER BY TradeDate ASC";
         values.put("TrainingRecords", dh.executeQuery(commandStart + commandEnd));
-        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock,commandStart,commandEnd,index,new int[]{1,30,200},0.1,true,true, true, false));
+        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock, commandStart, commandEnd, index, new int[]{1, 30, 200}, 0.1, true, true, false, false));
 
         return values;
     }
@@ -168,7 +168,7 @@ public class TradingSimulator {
         return records;
     }
 
-    static public void simulate(ArrayList<String> stocksToSimulate, boolean singleStock, int lookback, int holdPeriod, int[] dayArray) throws Exception {
+    static public void simulate(ArrayList<String> stocksToSimulate, boolean singleStock, int lookback, int holdPeriod, Integer[] dayArray) throws Exception {
         Main.getController().updateCurrentTask("Starting Simulation", false, false);
         TreeMap<Date, Double> indexPerformance = new TreeMap<>();
 
@@ -264,10 +264,10 @@ public class TradingSimulator {
                 reducedPrices.get(stock).put(dates.get(i), prices.get(stock).get(dates.get(i)));
         }
 
-        SimulationModel automatedTrader = new SimulationModel("Automated Trader (Initial Portfolio Optimisation only)");
-        SimulationModel automatedTraderWithRebalancing = new SimulationModel("Automated Trader (with Portfolio Rebalancing)");
-        SimulationModel automatedTraderEqualAllocation = new SimulationModel("Automated Trader (with Equal Allocation)");
-        SimulationModel randomTrader = new SimulationModel("Random Trader");
+        SimulationModel automatedTrader = new SimulationModel("Automated Trader (Initial Portfolio Optimisation only)", stocksToSimulate, new HashSet<>(Arrays.asList(dayArray)));
+        SimulationModel automatedTraderWithRebalancing = new SimulationModel("Automated Trader (with Portfolio Rebalancing)", stocksToSimulate, new HashSet(Arrays.asList(dayArray)));
+        SimulationModel automatedTraderEqualAllocation = new SimulationModel("Automated Trader (with Equal Allocation)", stocksToSimulate, new HashSet(Arrays.asList(dayArray)));
+        SimulationModel randomTrader = new SimulationModel("Random Trader", stocksToSimulate, new HashSet(Arrays.asList(dayArray)));
 
         Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.SIMULATED_ANNEALING, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, reducedPrices, false);
         Main.getController().updateSimulatedComponentChart("REBALANCED_ALLOC", portfolio);
@@ -332,7 +332,7 @@ public class TradingSimulator {
                     Main.getController().initialiseSimulatorPredictions(predictions);
                 }
 
-                //automatedTraderWithRebalancing.rebalancePortfolio(testingRecords,date,holdPeriod,reducedPrices);
+                automatedTraderWithRebalancing.rebalancePortfolio(testingRecords, date, holdPeriod, reducedPrices);
                 // randomTrader.rebalancePortfolio(testingRecords,date,holdPeriod,reducedPrices);
 
                 Main.getController().updateSimulatedComponentChart("REBALANCED_ALLOC", automatedTraderWithRebalancing.getPortfolio());
@@ -346,27 +346,18 @@ public class TradingSimulator {
                     reducedPrices.get(stock).put(date, price);
                     //    for(int day : dayArray) {
                     if (rng.nextBoolean())
-                        randomTrader.buyStock(stock, price);
+                        randomTrader.buyStock(stock, price, 1);
                     else
-                        randomTrader.sellStock(stock, price);
+                        randomTrader.sellAllStock(stock, price);
 
-                    if (predictions.get(stock).get(1)) {
-                        automatedTrader.buyStock(stock, price);
-                        automatedTraderEqualAllocation.buyStock(stock, price);
-                        automatedTraderWithRebalancing.buyStock(stock, price);
-                    } else {
-                        automatedTrader.sellStock(stock, price);
-                        automatedTraderEqualAllocation.sellStock(stock, price);
-                        automatedTraderWithRebalancing.sellStock(stock, price);
-                    }
+                    automatedTrader.tradeStock(stock, price, predictions.get(stock));
+                    automatedTraderEqualAllocation.tradeStock(stock, price, predictions.get(stock));
+                    automatedTraderWithRebalancing.tradeStock(stock, price, predictions.get(stock));
 
                     // }
                     for (SimulationModel model : simulations) model.updateStockWorth(stock, price);
                     Main.getController().addHistoricPrice(stock, index, price);
                 }
-                automatedTrader.updateInvestments();
-                automatedTraderEqualAllocation.updateInvestments();
-                automatedTraderWithRebalancing.updateInvestments();
             }else
                 System.err.println("Mismatched Date at " + date);
 

@@ -45,10 +45,12 @@ public class StockPredictor {
         pb=sppb;
     }
 
-    static public String getModelInformation(){
+    static public String getModelInformation(ArrayList<String> stocks) throws SQLException {
+        if (!isModelLoaded()) return "No model loaded";
+        if (dh.executeQuery("SELECT value FROM settings WHERE ID='PREDICTION_MODE';").get(0).equals("MULTI"))
         try {
             ArrayList<String> results = dh.executeQuery("SELECT Description, Accuracy FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION' AND Scope='MultiStock' ORDER BY ModelNumber DESC LIMIT 1;");
-            if(!results.isEmpty()) {
+            if (!results.isEmpty()) {
                 String[] splitString = results.get(0).split(",");
                 StringBuilder finalString = new StringBuilder();
                 for (int i = 0; i < splitString.length - 1; i++)
@@ -60,8 +62,32 @@ public class StockPredictor {
 
                 return finalString.toString();
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        else {
+            StringBuilder finalString = new StringBuilder();
+            finalString.append("Single stock model collection, containing " + stocks.size() + " models.\r\n");
+            double totalAccuracy = 0;
+            try {
+                for (String stock : stocks) {
+                    ArrayList<String> results = dh.executeQuery("SELECT Description, Accuracy FROM predictors WHERE Model = 'Random Forest' AND Type = 'CLASSIFICATION' AND Scope='" + stock + "' ORDER BY ModelNumber DESC LIMIT 1;");
+                    if (!results.isEmpty()) {
+                        String[] splitString = results.get(0).split(",");
+                        if (stocks.indexOf(stock) == 0)
+                            finalString.append(splitString[0] + "\r\n");
+                        double accuracy = Math.floor(Double.valueOf(splitString[splitString.length - 1]));
+                        totalAccuracy += accuracy;
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
 
+            finalString.append("Average Accuracy: ").append((totalAccuracy / stocks.size())).append("%");
+
+            return finalString.toString();
+        }
         return "No model loaded";
     }
 
@@ -72,9 +98,17 @@ public class StockPredictor {
     }
 
     static public boolean predictDirection(Vector data, String stock) {
-        double value = singleModels.get(stock.split("_")[0]).predict(data);
+        double value;
+        if (stock.contains("_"))
+            value = singleModels.get(stock.split("_")[0]).predict(data);
+        else
+            value = singleModels.get(stock).predict(data);
 
         return value == 1;
+    }
+
+    static public void loadLatestRandomForest(ArrayList<String> stocks) throws SQLException {
+        for (String stock : stocks) loadLatestRandomForest(stock);
     }
 
     static public void loadLatestRandomForest(String stock) throws SQLException {
@@ -110,8 +144,16 @@ public class StockPredictor {
         System.out.println("Loaded Machine Learning Model: " + model.toString());
     }
 
-    static public boolean isModelLoaded() {
-        return model != null;
+    static public boolean isModelLoaded() throws SQLException {
+        if (dh.executeQuery("SELECT value FROM settings WHERE ID = 'PREDICTION_MODE'").get(0).equals("MULTI"))
+            return model != null;
+        else {
+            for (String model : singleModels.keySet())
+                if (singleModels.get(model) == null)
+                    return false;
+            return true;
+        }
+
     }
 
     static public void trainRandomForest(String libSVMFilePath, String stock, boolean isSimulation) throws SQLException {
@@ -253,16 +295,30 @@ public class StockPredictor {
         String results = dh.executeQuery("SELECT * FROM dailystockprices WHERE Symbol='" + stock + "' AND SmoothedClosePrice is not null AND SMA10 is not null AND EMA10 is not null AND MACD is not null AND MACDSig is not null AND MACDHist is not null AND RSI is not null AND ADX10 is not null AND CCI is not null AND AD is not null AND OBV is not null AND StoOscSlowK is not null AND StoOscSlowD is not null AND SMA20 is not null AND SMA200 is not null AND EMA5 IS NOT NULL AND EMA20 IS NOT NULL AND EMA200 IS NOT NULL AND SMA5 is not null AND WillR is not null ORDER BY TradeDate DESC LIMIT 1").get(0);
         String[] splitString = results.split(",");
         double newsSentiment = NaturalLanguageProcessor.getTodaysAverageSentiment(stock, 2);
-        double features[] = new double[splitString.length + 1];
 
-        features[0] = stocks.indexOf(stock);
-        features[1] = numberOfDays;
+        if (dh.executeQuery("SELECT value FROM settings WHERE ID = 'PREDICTION_MODE'").get(0).equals("MULTI")) {
+            double features[] = new double[splitString.length + 1];
 
-        for (int i = 2; i < splitString.length; i++)
-            features[i] = Double.parseDouble(splitString[i]);
+            features[0] = stocks.indexOf(stock);
+            features[1] = numberOfDays;
 
-        features[features.length - 1] = newsSentiment;
+            for (int i = 2; i < splitString.length; i++)
+                features[i] = Double.parseDouble(splitString[i]);
 
-        return StockPredictor.predictDirection(new DenseVector(features));
+            features[features.length - 1] = newsSentiment;
+
+            return StockPredictor.predictDirection(new DenseVector(features));
+        } else {
+            double features[] = new double[splitString.length];
+
+            features[0] = numberOfDays;
+
+            for (int i = 2; i < splitString.length; i++)
+                features[i - 1] = Double.parseDouble(splitString[i]);
+
+            features[features.length - 1] = newsSentiment;
+
+            return StockPredictor.predictDirection(new DenseVector(features), stock);
+        }
     }
 }

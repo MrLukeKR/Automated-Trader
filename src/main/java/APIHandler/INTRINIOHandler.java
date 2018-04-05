@@ -23,6 +23,12 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
+
 public class INTRINIOHandler {
     private static final String INTRINIO_CSV_CALL = "https://api.intrinio.com/news.csv?page_size=10000&ticker=";
     static private String INTRINIO_USERNAME;
@@ -32,6 +38,13 @@ public class INTRINIOHandler {
     static private ProgressBar pb;
     static private double progress = 0;
 
+    /**
+     * Authenticates the application with the INTRINIO server using the user's username and password, to access news records
+     *
+     * @param username INTRINIO account username
+     * @param password INTRINIO account password
+     * @see <a href="https://intrinio.com/signup">Sign up for a free API account</a>
+     */
     static public void authenticate(String username, String password){
         INTRINIO_USERNAME = username;
         INTRINIO_PASSWORD = password;
@@ -44,7 +57,15 @@ public class INTRINIOHandler {
         });
     }
 
-    private static void getHistoricNews(String stock) throws IOException, SQLException, InterruptedException {
+    /**
+     * Downloads all news articles available for a given stock and saves it to the database
+     *
+     * @param stock Stock to download news for
+     * @throws IOException          Throws IOException if the API request fails due to server unavailability or connection refusal
+     * @throws SQLException         Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws InterruptedException Throws InterruptedException if the sleep function is interrupted by another process
+     */
+    public static void getHistoricNews(String stock) throws IOException, SQLException, InterruptedException {
         if (isOverLimit(0)) return;
 
         int values[] = getCSVMetaData(stock);
@@ -64,6 +85,12 @@ public class INTRINIOHandler {
         if (missingArticles > 0) Main.getController().updateCurrentTask("DID NOT DOWNLOAD ALL ARTICLES", true, false);
     }
 
+    /**
+     * Initialises the INTRINIOHandler class by setting the necessary DatabaseHandler and ProgressBar
+     *
+     * @param nddh News Downloader {@link DatabaseHandler} required to access the database without causing a deadlock
+     * @param pb   {@link ProgressBar} to show the progress of new downloads
+     */
     static public void initialise(DatabaseHandler nddh, ProgressBar pb) {
         dh = nddh;
         INTRINIOHandler.pb = pb;
@@ -71,6 +98,12 @@ public class INTRINIOHandler {
         Main.getController().updateCurrentTask("Initialised News API Handler", false, false);
     }
 
+    /**
+     * Retrieves the current amount of calls used for the INTRINIO API from the database Today
+     *
+     * @return The amount of calls made to the INTRINIO API Today
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static int getCurrentCalls() throws SQLException {
         ArrayList<String> sCalls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Date = CURDATE() AND Name='INTRINIO';");
 
@@ -79,12 +112,28 @@ public class INTRINIOHandler {
         return 0;
     }
 
+    /**
+     * Determines if any more API calls can be made Today
+     *
+     * @param callsToPerform The amount of calls that need to be made (usually 1 if accessing the API serially)
+     * @return True if the API limit has been exceeded for Today, false otherwise
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static boolean isOverLimit(int callsToPerform) throws SQLException {
         int limit = Integer.parseInt(dh.executeQuery("SELECT DailyLimit FROM apimanagement WHERE Name='INTRINIO';").get(0));
 
         return (callsToPerform + getCurrentCalls()) >= limit;
     }
 
+    /**
+     * Downloads the news statistics related to the given stock, including amount of articles available
+     *
+     * @param stock Stock ticker to download the metadata for (e.g. AAPL for Apple Inc.)
+     * @return Integer array containing number of articles available and the amount of pages the articles are split across (with 10,000 articles per page)
+     * @throws IOException          Throws IOException if the API request fails due to server unavailability or connection refusal
+     * @throws SQLException         Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws InterruptedException Throws InterruptedException if the sleep function is interrupted by another process
+     */
     private static int[] getCSVMetaData(String stock) throws IOException, SQLException, InterruptedException {
         URL url = new URL(INTRINIO_CSV_CALL + stock);
 
@@ -116,9 +165,20 @@ public class INTRINIOHandler {
         int pages = Integer.parseInt(splitString[3].split(":")[1].trim());
         int articles = Integer.parseInt(splitString[0].split(":")[1].trim());
 
-        return new int[]{pages,articles};
+        return new int[]{pages, articles};
     }
 
+    /**
+     * Downloads the news articles for a given stock in Comma Separated Value (CSV) file format
+     *
+     * @param stock           Stock ticker to download news articles for (e.g. AAPL for Apple Inc.)
+     * @param page            The page number to access
+     * @param missingArticles The number of articles to download from the API
+     * @return The remaining number articles to download after this API call
+     * @throws IOException          Throws IOException if the API request fails due to server unavailability or connection refusal
+     * @throws SQLException         Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws InterruptedException Throws InterruptedException if the sleep function is interrupted by another process
+     */
     private static int getCSVNews(String stock, int page, int missingArticles) throws IOException, SQLException, InterruptedException {
         Main.getController().updateCurrentTask("Getting headlines for " + stock + " (Page " + page + ")", false, false);
         URL url = new URL(INTRINIO_CSV_CALL + stock + "&page_number=" + page);
@@ -248,6 +308,12 @@ public class INTRINIOHandler {
         return downloaded;
     }
 
+    /**
+     * Downloads the content of news articles for all articles that are missing their main body from the database, given the URL retrieved from {@link APIHandler.INTRINIOHandler#getCSVNews(String, int, int)}
+     *
+     * @throws SQLException         Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws InterruptedException Throws InterruptedException if the sleep function is interrupted by another process
+     */
     public static void downloadArticles() throws SQLException, InterruptedException {
         Main.getController().updateCurrentTask("Downloading missing news article content...", false, false);
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, pb);
@@ -318,6 +384,12 @@ public class INTRINIOHandler {
         Controller.updateProgress(0, pb);
     }
 
+    /**
+     * Scrapes the main content of a news article, given its URL
+     * @param url The URL of the news article to download
+     * @return The news article content
+     * @throws IOException Throws IOException if the request fails due to server unavailability or connection refusal
+     */
     private static String downloadArticle(String url) throws IOException {
         URL site = new URL(url);
         HttpURLConnection.setFollowRedirects(true);
@@ -362,6 +434,13 @@ public class INTRINIOHandler {
         return cleanHTML;
     }
 
+    /**
+     * Downloads news article history for a list of stock tickers
+     * @param stockList List of stock tickers to download news for (e.g. AAPL, AAL, BIIB etc.)
+     * @throws IOException Throws IOException if the request fails due to server unavailability or connection refusal
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws InterruptedException Throws InterruptedException if the sleep function is interrupted by another process
+     */
     static public void getHistoricNews(ArrayList<String> stockList) throws IOException, SQLException, InterruptedException {
         double t = stockList.size() - 1;
         progress = 0;

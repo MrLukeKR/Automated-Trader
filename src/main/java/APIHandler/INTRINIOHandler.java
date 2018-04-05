@@ -65,7 +65,7 @@ public class INTRINIOHandler {
      * @throws SQLException         Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      * @throws InterruptedException Throws InterruptedException if the sleep function is interrupted by another process
      */
-    public static void getHistoricNews(String stock) throws IOException, SQLException, InterruptedException {
+    private static void getHistoricNews(String stock) throws IOException, SQLException, InterruptedException {
         if (isOverLimit(0)) return;
 
         int values[] = getCSVMetaData(stock);
@@ -343,7 +343,6 @@ public class INTRINIOHandler {
                 while (site == null && nullTimeout++ < 10)
                     try {
                         site = downloadArticle(splitArticle[1]);
-                        break;
                     } catch (FileNotFoundException e) {
                         Main.getController().updateCurrentTask("Article is no longer available!", true, false);
                         break;
@@ -441,13 +440,13 @@ public class INTRINIOHandler {
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      * @throws InterruptedException Throws InterruptedException if the sleep function is interrupted by another process
      */
-    static public void getHistoricNews(ArrayList<String> stockList) throws IOException, SQLException, InterruptedException {
+    static void getHistoricNews(ArrayList<String> stockList) throws IOException, SQLException, InterruptedException {
         double t = stockList.size() - 1;
         progress = 0;
         for (String symbol : stockList) {
             getHistoricNews(symbol);
             Controller.updateProgress(++progress, t, pb);
-            dh.sendSQLFileToDatabase(false);
+            dh.sendSQLFileToDatabase(true);
         }
     }
 }

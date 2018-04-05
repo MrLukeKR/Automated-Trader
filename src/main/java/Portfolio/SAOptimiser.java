@@ -10,9 +10,23 @@ import static Utility.PortfolioUtils.getEqualWeights;
  * @since 0.3
  */
 
-public class SAOptimiser {
+class SAOptimiser {
 
-    static public double[] optimise(int noOfStocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, double[] expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
+    /**
+     * Optimises portfolio asset weighting, based on the Simulated Annealing method
+     *
+     * @param noOfStocks           Number of stocks involved in the optimisation
+     * @param em                   Evaluation Method to use (e.g. Maximise Return, Balance Risk and Return)
+     * @param initialTemperature   Starting "temperature" value use in Simulated Annealing
+     * @param minimumTemperature   Final "temperature" value to end the algorithm
+     * @param coolRate             Rate at which the current temperature is decreased (higher values slow the process down)
+     * @param iterations           Number of iterations to run at each temperature
+     * @param expectedReturns      List of average (mean) returns, one for each stock
+     * @param riskCovarianceMatrix Covariance matrix of covariance between the various stocks
+     * @param showDebug            True if debug information is to be printed, False if otherwise
+     * @return An optimal portfolio, containing asset weightings
+     */
+    static double[] optimise(int noOfStocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, double[] expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
         double t = initialTemperature;
         double[] solution = getEqualWeights(noOfStocks);
         double bestFitness;

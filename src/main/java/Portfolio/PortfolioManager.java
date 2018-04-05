@@ -4,7 +4,9 @@ import Default.DatabaseHandler;
 
 import java.sql.Date;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * @author Luke K. Rose <psylr5@nottingham.ac.uk>
@@ -114,12 +116,16 @@ public class PortfolioManager {
      * @param stocksToCalculate Stocks to calculate the covariance for
      * @return A covariance matrix based on the given list of stocks
      */
-    private static double[][] calculateCovarianceMatrix(ArrayList<Stock> stocksToCalculate) {
+    private static double[][] calculateCovarianceMatrix(Map<String, Stock> stocksToCalculate) {
         double[][] covarianceMatrix = new double[stocksToCalculate.size()][stocksToCalculate.size()];
 
-        for(Stock stock1 : stocksToCalculate)
-            for (Stock stock2 : stocksToCalculate)
-                covarianceMatrix[stocksToCalculate.indexOf(stock1)][stocksToCalculate.indexOf(stock2)] = calculateCovariance(stock1.getReturns(), stock2.getReturns());
+        int i = 0;
+        for (String stock1 : stocksToCalculate.keySet()) {
+            int j = 0;
+            for (String stock2 : stocksToCalculate.keySet())
+                covarianceMatrix[i][j++] = calculateCovariance(stocksToCalculate.get(stock1).getReturns(), stocksToCalculate.get(stock2).getReturns());
+            i++;
+        }
 
         return covarianceMatrix;
     }
@@ -136,59 +142,50 @@ public class PortfolioManager {
      */
     static public Map<String, Double> optimisePortfolio(OptimisationMethod method, EvaluationMethod em, int holdPeriod, TreeMap<String, TreeMap<Date, Double>> prices, boolean showDebug) throws SQLException {
         ArrayList<String> stocks = dh.executeQuery("SELECT Symbol FROM indices ORDER BY Symbol ASC;");
-        ArrayList<Stock> calcStocks = new ArrayList<>();
+        Map<String, Stock> calcStocks = new TreeMap<>();
 
-        TreeMap<String, ArrayList<Double>> returns = new TreeMap<>();
-        double[] expectedReturns = new double[stocks.size()];
+        Map<String, Double> expectedReturns = new TreeMap<>();
 
 
         for (String stock : stocks) {
             Stock currStock = new Stock(stock);
             currStock.setPrices(prices.get(stock));
             currStock.setReturns(calculateReturns(prices.get(stock), holdPeriod));
-            returns.put(stock, currStock.getReturns());
             currStock.setExpectedReturn(calculateAverage(currStock.getReturns()));
             currStock.setReturnsVariance(calculateVariance(currStock.getReturns()));
             currStock.setReturnsStandardDeviation(Math.sqrt(currStock.getReturnsVariance()));
 
-            calcStocks.add(currStock);
+            calcStocks.put(stock, currStock);
         }
 
-        calcStocks.sort(Comparator.comparing(Stock::getName));
-
-        int i = 0;
-        for (Stock currStock : calcStocks) expectedReturns[i++] = currStock.getExpectedReturn();
+        for (String currStock : calcStocks.keySet())
+            expectedReturns.put(currStock, calcStocks.get(currStock).getExpectedReturn());
 
         double[][] covarianceMatrix = calculateCovarianceMatrix(calcStocks);
-        double[] best = null;
+        Map<String, Double> portfolio = null;
 
         switch(method) {
             case GENETIC_ALGORITHM:
-                best = GAOptimiser.optimise(stocks.size(), em, 1000, 500, expectedReturns, covarianceMatrix, showDebug);
+                portfolio = GAOptimiser.optimise(stocks, em, 1000, 500, expectedReturns, covarianceMatrix, showDebug);
                 break;
             case SIMULATED_ANNEALING:
-                best = SAOptimiser.optimise(stocks.size(), em, 1, 0.0001, 0.99, 100, expectedReturns, covarianceMatrix, showDebug);
+                portfolio = SAOptimiser.optimise(stocks, em, 1, 0.0001, 0.99, 100, expectedReturns, covarianceMatrix, showDebug);
                 break;
             case DETERMINISTIC:
-                best = DeterministicOptimiser.optimise(stocks.size(), em, expectedReturns, covarianceMatrix);
+                portfolio = DeterministicOptimiser.optimise(stocks, em, expectedReturns, covarianceMatrix);
                 break;
         }
 
-        Map<String, Double> portfolio = new HashMap<>();
-
-        for (int j = 0; j < Objects.requireNonNull(best).length; j++) {
-            double val = best[j] * 10000;
+        for (String stock : stocks) {
+            double val = portfolio.get(stock) * 10000;
             int newVal = (int) Math.round(val);
             double percentage = newVal / 100.0;
 
-            if (percentage > 0)
-                portfolio.put(stocks.get(j), percentage / 100.0);
-
             if(showDebug)
-                System.out.println(stocks.get(j) + " weight: " + percentage + " (Expected Return: " + (Math.round(expectedReturns[j] * 10000.0) / 100.0) + "\tRisk: " + (calculateVariance(returns.get(stocks.get(j))) + "\tRatio: " + (expectedReturns[j] / calculateVariance(returns.get(stocks.get(j)))) + ")"));
+                System.out.println(stock + " weight: " + percentage + " (Expected Return: " + (Math.round(calcStocks.get(stock).getExpectedReturn() * 10000.0) / 100.0) + "\tRisk: " + (calculateVariance(calcStocks.get(stock).getReturns()) + "\tRatio: " + (calcStocks.get(stock).getExpectedReturn() / calculateVariance(calcStocks.get(stock).getReturns())) + ")"));
         }
 
-        double expectedReturn = EvaluationFunction.getReturn(best, expectedReturns);
+        double expectedReturn = EvaluationFunction.getReturn(portfolio, expectedReturns);
 
         int eRInt = (int) Math.round(expectedReturn * 10000);
 
@@ -197,9 +194,10 @@ public class PortfolioManager {
             for (String stock : portfolio.keySet())
                 System.out.println(stock + " " + portfolio.get(stock) * 100.0 + "%");
             System.out.println("Expected Return of Portfolio: " + expectedReturn + " (" + eRInt / 100.0 + "%)");
-            System.out.println("Risk of Portfolio: " + EvaluationFunction.getRisk(best, covarianceMatrix));
-            System.out.println("Expected Return to Risk Ratio: " + EvaluationFunction.getReturnToRiskRatio(best, expectedReturns, covarianceMatrix));
+            System.out.println("Risk of Portfolio: " + EvaluationFunction.getRisk(portfolio, covarianceMatrix));
+            System.out.println("Expected Return to Risk Ratio: " + EvaluationFunction.getReturnToRiskRatio(portfolio, expectedReturns, covarianceMatrix));
         }
+
         portfolio.put("RETURN", expectedReturn);
 
         return portfolio;

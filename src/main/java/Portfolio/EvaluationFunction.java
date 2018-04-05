@@ -1,5 +1,7 @@
 package Portfolio;
 
+import java.util.Map;
+
 /**
  * @author Luke K. Rose <psylr5@nottingham.ac.uk>
  * @version 1.0
@@ -15,12 +17,17 @@ class EvaluationFunction {
      * @param riskCovarianceMatrix Covariance matrix between stocks
      * @return Risk value (variance)
      */
-    static double getRisk(double[] weights, double[][] riskCovarianceMatrix) {
+    static double getRisk(Map<String, Double> weights, double[][] riskCovarianceMatrix) {
         double risk = 0;
 
-        for (int i = 0; i < weights.length; i++)
-            for (int j = 0; j < weights.length; j++)
-                risk += weights[i] * weights[j] * riskCovarianceMatrix[i][j];
+        int i = 0;
+
+        for (String stock1 : weights.keySet()) {
+            int j = 0;
+            for (String stock2 : weights.keySet())
+                risk += weights.get(stock1) * weights.get(stock2) * riskCovarianceMatrix[i][j++];
+            i++;
+        }
 
         return risk;
     }
@@ -32,12 +39,13 @@ class EvaluationFunction {
      * @param expectedReturns Array of mean returns (one per stock)
      * @return Expected return of the portfolio
      */
-    static double getReturn(double[] weights, double[] expectedReturns) {
+    static double getReturn(Map<String, Double> weights, Map<String, Double> expectedReturns) {
         double portfolioReturn = 0;
 
-        if (weights.length != expectedReturns.length) return 0;
+        if (weights.size() != expectedReturns.size()) return 0;
 
-        for (int i = 0; i < weights.length; i++) portfolioReturn += weights[i] * expectedReturns[i];
+        for (String stock : expectedReturns.keySet())
+            portfolioReturn += weights.get(stock) * expectedReturns.get(stock);
 
         return portfolioReturn;
     }
@@ -48,10 +56,10 @@ class EvaluationFunction {
      * @param weights Array of portfolio asset weightings (one per stock)
      * @return True if weights sum to 1, False otherwise
      */
-    static boolean sumsToOne(double[] weights) {
+    static boolean sumsToOne(Map<String, Double> weights) {
         double sum = 0;
 
-        for (double weight : weights) sum += weight;
+        for (String stock : weights.keySet()) sum += weights.get(stock);
 
         return sum == 1;
     }
@@ -64,7 +72,7 @@ class EvaluationFunction {
      * @param riskCovarianceMatrix Covariance matrix between stocks
      * @return Ratio of Return/Risk
      */
-    static double getReturnToRiskRatio(double[] weights, double[] expectedReturns, double[][] riskCovarianceMatrix) {
+    static double getReturnToRiskRatio(Map<String, Double> weights, Map<String, Double> expectedReturns, double[][] riskCovarianceMatrix) {
         double expectedReturn = getReturn(weights, expectedReturns), expectedRisk = getRisk(weights, riskCovarianceMatrix);
 
         if (expectedReturn == 0 || expectedRisk == 0) return 0;

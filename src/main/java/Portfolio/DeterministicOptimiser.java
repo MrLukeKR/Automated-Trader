@@ -3,6 +3,9 @@ package Portfolio;
 import Utility.MathUtils;
 import Utility.PortfolioUtils;
 
+import java.util.ArrayList;
+import java.util.Map;
+
 /**
  * @author Luke K. Rose <psylr5@nottingham.ac.uk>
  * @version 1.0
@@ -10,13 +13,13 @@ import Utility.PortfolioUtils;
  */
 
 public class DeterministicOptimiser {
-    static public double[] optimise(int amountOfWeights, PortfolioManager.EvaluationMethod em, double[] returnsArray, double[][] riskCovarianceMatrix){
-        double[] weights = PortfolioUtils.getEqualWeights(amountOfWeights);
+    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, Map<String, Double> returnsArray, double[][] riskCovarianceMatrix) {
+        Map<String, Double> weights = PortfolioUtils.getEqualWeights(stocks);
 
 
 
      //   MultivariateVectorOptimizer mvo = new MultivariateVectorOptimizer();
-    return null;
+        return weights;
     }
 
     static public double target(double[] weights, double[] returns, double[][] covarianceMatrix){

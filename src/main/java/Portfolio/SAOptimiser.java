@@ -2,7 +2,11 @@ package Portfolio;
 
 import Utility.PortfolioUtils;
 
-import static Utility.PortfolioUtils.getEqualWeights;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
+
+import static Utility.PortfolioUtils.getRandomWeights;
 
 /**
  * @author Luke K. Rose <psylr5@nottingham.ac.uk>
@@ -15,7 +19,6 @@ class SAOptimiser {
     /**
      * Optimises portfolio asset weighting, based on the Simulated Annealing method
      *
-     * @param noOfStocks           Number of stocks involved in the optimisation
      * @param em                   Evaluation Method to use (e.g. Maximise Return, Balance Risk and Return)
      * @param initialTemperature   Starting "temperature" value use in Simulated Annealing
      * @param minimumTemperature   Final "temperature" value to end the algorithm
@@ -26,9 +29,11 @@ class SAOptimiser {
      * @param showDebug            True if debug information is to be printed, False if otherwise
      * @return An optimal portfolio, containing asset weightings
      */
-    static double[] optimise(int noOfStocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, double[] expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
+    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, Map<String, Double> expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
         double t = initialTemperature;
-        double[] solution = getEqualWeights(noOfStocks);
+
+        Map<String, Double> solution = getRandomWeights(stocks);
+
         double bestFitness;
         if(em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
             bestFitness = EvaluationFunction.getReturnToRiskRatio(solution, expectedReturns, riskCovarianceMatrix);
@@ -36,11 +41,11 @@ class SAOptimiser {
             bestFitness = EvaluationFunction.getReturn(solution,expectedReturns);
 
         double currentFitness = bestFitness;
-        double[] currentSolution = solution.clone();
+        Map<String, Double> currentSolution = new TreeMap<>(solution);
 
         while(t > minimumTemperature){
             for(int i = 0; i < iterations; i++) {
-                double[] candidateSolution = PortfolioUtils.mutate(currentSolution, 1);
+                Map<String, Double> candidateSolution = PortfolioUtils.mutate(currentSolution, 1);
                 double fitness;
 
                 if(em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
@@ -53,14 +58,14 @@ class SAOptimiser {
 
                 if(fitness >= currentFitness){
                     currentFitness = fitness;
-                    currentSolution = candidateSolution.clone();
+                    currentSolution = new TreeMap<>(candidateSolution);
                     if (fitness >= bestFitness) {
                         bestFitness = fitness;
-                        solution = candidateSolution.clone();
+                        solution = new TreeMap<>(candidateSolution);
                     }
                 }else if((Math.exp((currentFitness - fitness) / t) > Math.random())) {
                     currentFitness = fitness;
-                    currentSolution = candidateSolution.clone();
+                    currentSolution = new TreeMap<>(candidateSolution);
                 }
             }
             t *= coolRate;

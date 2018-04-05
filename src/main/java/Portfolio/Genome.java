@@ -1,5 +1,7 @@
 package Portfolio;
 
+import java.util.Map;
+
 /**
  * @author Luke K. Rose <psylr5@nottingham.ac.uk>
  * @version 1.0
@@ -7,26 +9,26 @@ package Portfolio;
  */
 
 class Genome {
-    private double[] genes;
+    private Map<String, Double> genes;
     private Double fitness;
 
     /**
      * Initialises the Genome with an array of gene values
      *
-     * @param genes Double array of asset weight values
+     * @param genes Map of asset weight/stock pair values
      */
-    Genome(double[] genes) {
-        this.genes = genes.clone();
+    Genome(Map<String, Double> genes) {
+        this.genes = genes;
     }
 
     /**
      * Replaces a gene (asset weight) with a given value
      *
-     * @param index Index of gene to replace
+     * @param stock Stock ticker to replace the weight of
      * @param gene  Value of gene to use as replacement
      */
-    void setGene(int index, double gene) {
-        genes[index] = gene;
+    void setGene(String stock, double gene) {
+        genes.put(stock, gene);
     }
 
     /**
@@ -34,18 +36,18 @@ class Genome {
      *
      * @return Gene array, representing the weights of assets in a portfolio
      */
-    double[] getGenes() {
+    Map<String, Double> getGenes() {
         return genes;
     }
 
     /**
      * Access a single gene value from the gene array
      *
-     * @param index Index of the gene to retrieve the value from
+     * @param stock Stock ticker of the weight to retrieve
      * @return An asset weight (gene)
      */
-    double getGene(int index) {
-        return genes[index];
+    double getGene(String stock) {
+        return genes.get(stock);
     }
 
     /**

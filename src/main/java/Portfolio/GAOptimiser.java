@@ -5,6 +5,7 @@ import Utility.PortfolioUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Map;
 
 import static Utility.PortfolioUtils.getRandomWeights;
 
@@ -70,13 +71,13 @@ class GAOptimiser {
      * @return Resulting child genome from crossover between parents
      */
     static private ArrayList<Genome> crossover(Genome parent1, Genome parent2, double rate) {
-        Genome child1 = new Genome(parent1.getGenes().clone()), child2 = new Genome(parent2.getGenes().clone());
+        Genome child1 = new Genome(parent1.getGenes()), child2 = new Genome(parent2.getGenes());
         ArrayList<Genome> children = new ArrayList<>();
 
-        for (int i = 0; i < child1.getGenes().length; i++)
+        for (String stock : parent1.getGenes().keySet())
             if (Math.random() < rate) {
-                child1.setGene(i,parent2.getGene(i));
-                child2.setGene(i,parent1.getGene(i));
+                child1.setGene(stock, parent2.getGene(stock));
+                child2.setGene(stock, parent1.getGene(stock));
             }
 
         children.add(child1);
@@ -94,9 +95,7 @@ class GAOptimiser {
     static private ArrayList<Genome> mutate(ArrayList<Genome> population, double rate) {
         ArrayList<Genome> mutatedPopulation = new ArrayList<>();
         for (Genome individual : population) {
-            double[] originalValues = individual.getGenes().clone();
-            double[] values = PortfolioUtils.mutate(originalValues, rate).clone();
-            Genome newGenome = new Genome(values);
+            Genome newGenome = new Genome(PortfolioUtils.mutate(individual.getGenes(), rate));
             mutatedPopulation.add(newGenome);
         }
 
@@ -114,7 +113,7 @@ class GAOptimiser {
      * @param showDebug       True if debug information should be printed, false otherwise
      * @return Total sum of fitness over all Genomes
      */
-    static private double evaluate(int generation, PortfolioManager.EvaluationMethod em, ArrayList<Genome> population, double[] expectedReturns, double[][] riskCovariance, boolean showDebug) {
+    static private double evaluate(int generation, PortfolioManager.EvaluationMethod em, ArrayList<Genome> population, Map<String, Double> expectedReturns, double[][] riskCovariance, boolean showDebug) {
         double sum = 0;
         double best = 0;
 
@@ -142,7 +141,6 @@ class GAOptimiser {
     /**
      * Performs Genetic Algorithm optimisation on the portfolio
      *
-     * @param amountOfWeights      Number of stocks to calculate weights for
      * @param em                   Evaluation method (Maximise Return, Balance Risk and Return)
      * @param numberOfGenerations  Number of iterations to perform optimisation
      * @param populationSize       Amount of Genomes in a population
@@ -151,13 +149,13 @@ class GAOptimiser {
      * @param showDebug            True if debug information should be printed, False otherwise
      * @return Array of stock weights (the portfolio)
      */
-    static double[] optimise(int amountOfWeights, PortfolioManager.EvaluationMethod em, int numberOfGenerations, int populationSize, double[] expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
+    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, int numberOfGenerations, int populationSize, Map<String, Double> expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
         System.out.println("Performing Genetic Portfolio Optimisation");
         ArrayList<Genome> population = new ArrayList<>();
         ArrayList<Genome> bestOfPopulation;
         Genome bestGenome;
 
-        for (int i = 0; i < populationSize; i++) population.add(new Genome(getRandomWeights(amountOfWeights)));
+        for (int i = 0; i < populationSize; i++) population.add(new Genome(getRandomWeights(stocks)));
 
         double prevFitness = -1, currFitness;
         int convergenceCount = 0;

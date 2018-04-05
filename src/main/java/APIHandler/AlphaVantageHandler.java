@@ -15,8 +15,16 @@ import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
 
 public class AlphaVantageHandler {
+    /**
+     * TOR proxy connection, used to bypass IP-based API limits, for example if behind a network where multiple AlphaVantage calls are being made by different users/API keys
+     */
     private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9050));
     private final boolean USE_PROXY = false;
 
@@ -30,32 +38,135 @@ public class AlphaVantageHandler {
     private int downloadsSinceToggle = 0;
     private final Semaphore availableThreads = new Semaphore(MAX_CONCURRENT_DOWNLOADS, false);
 
-    public void init(String apiKey){
+    /**
+     * Initialises the AlphaVantage Handler class using the necessary API key
+     *
+     * @param apiKey The AlphaVantage API Key, required to access the stock feed API
+     */
+    public void init(String apiKey) {
         this.apiKey = apiKey;
     }
 
-    private synchronized int getDownloadsSinceToggle() {return downloadsSinceToggle;}
-    private synchronized void incrementDownloadsSinceToggle(){downloadsSinceToggle++;}
-    private synchronized void resetDownloadsSinceToggle(){downloadsSinceToggle = 0;}
-    private synchronized boolean getUseProxy() {return useProxy;}
-    private synchronized void toggleProxy() {useProxy = !useProxy;}
+    /**
+     * Access the number of successful downloads since the last proxy switch
+     *
+     * @return The number of successful downloads since the last proxy switch
+     */
+    private synchronized int getDownloadsSinceToggle() {return downloadsSinceToggle;
+    }
+
+    /**
+     * Increases the number of successful downloads since the last proxy switch by 1
+     */
+    private synchronized void incrementDownloadsSinceToggle(){downloadsSinceToggle++;
+    }
+
+    /**
+     * Resets the number of successful downloads since the last proxy switch to 0 (used whenever the proxy is switched)
+     */
+    private synchronized void resetDownloadsSinceToggle(){downloadsSinceToggle = 0;
+    }
+
+    /**
+     * Access the status of whether or not proxies are used when downloading stock data
+     * @return True if the class is using a proxy, false otherwise
+     */
+    private synchronized boolean getUseProxy() {return useProxy;
+    }
+
+    /**
+     * Switches between the direct and proxy connection
+     */
+    private synchronized void toggleProxy() {useProxy = !useProxy;
+    }
+
+    /**
+     * Decrease the number of paused threads by 1
+     */
     private synchronized void decrementPause() {
         pausedDownloads--;
     }
+
+    /**
+     * Increase the number of paused threads by 1
+     */
     private synchronized void incrementPause() {
         pausedDownloads++;
     }
-    private synchronized int getPausedDownloads() {return pausedDownloads;}
-    private synchronized void decrementCurrentlyDownloading(){ currentlyDownloading--;}
-    private synchronized void incrementCurrentlyDownloading(){ currentlyDownloading++;}
-    private synchronized int getCurrentlyDownloading() {return currentlyDownloading;}
-    private synchronized void unpauseAll(){ allPaused = false; pausedDownloads = 0;}
-    private synchronized void pauseAll(){allPaused = true;}
-    private synchronized boolean getAllPaused() {return allPaused;}
-    private synchronized int getFailedDownloads() { return failedDownloads;}
-    private synchronized void incrementFailedDownloads(){ failedDownloads++;}
-    private synchronized void resetFailedDownloads(){failedDownloads = 0;}
 
+    /**
+     * Access the number of currently paused threads
+     * @return The number of currently paused download threads
+     */
+    private synchronized int getPausedDownloads() {return pausedDownloads;
+    }
+
+    /**
+     * Decrease the number of downloading threads by 1
+     */
+    private synchronized void decrementCurrentlyDownloading(){ currentlyDownloading--;
+    }
+
+    /**
+     * Increase the number of downloading threads by 1
+     */
+    private synchronized void incrementCurrentlyDownloading(){ currentlyDownloading++;
+    }
+
+    /**
+     * Access the number of currently downloading threads
+     * @return The number of currently downloading threads
+     */
+    private synchronized int getCurrentlyDownloading() {return currentlyDownloading;
+    }
+
+    /**
+     * Sets all threads' 'paused' value to false and reset ths paused thread counter
+     */
+    private synchronized void unpauseAll(){ allPaused = false; pausedDownloads = 0;
+    }
+
+    /**
+     * Sets all threads' 'paused' value to true
+     */
+    private synchronized void pauseAll() {
+        allPaused = true;
+        pausedDownloads = currentlyDownloading;
+    }
+
+    /**
+     * Access whether or not all threads are currently paused
+     * @return True if all threads are in a paused state, false otherwise
+     */
+    private synchronized boolean getAllPaused() {return allPaused;
+    }
+
+    /**
+     * Access the number of downloads that have failed due to e.g. connection timeouts or API limits
+     * @return The number of currently failed downloads
+     */
+    private synchronized int getFailedDownloads() { return failedDownloads;
+    }
+
+    /**
+     * Increase the number of failed downloads by 1
+     */
+    private synchronized void incrementFailedDownloads(){ failedDownloads++;
+    }
+
+    /**
+     * Reset the number of failed downloads when all downloads are complete
+     */
+    private synchronized void resetFailedDownloads(){failedDownloads = 0;
+    }
+
+    /**
+     * Submits a request to AlphaVantage using the API
+     * @param request The URL, containing the requested values
+     * @return A list of results retrieved from AlphaVantage
+     * @throws IOException Thrown if the connection to or reading of the API request/response fails due to server unavailability or connection refusal
+     * @see <a href=https://www.alphavantage.co/documentation/>AlphaVantage API Documentation</a>
+     */
     public ArrayList<String> submitRequest(String request) throws IOException {
         int exceeded = 1;
         ArrayList<String> temp = new ArrayList<>();
@@ -164,7 +275,11 @@ public class AlphaVantageHandler {
         return temp;
     }
 
+    /**
+     * Access the currently used API Key
+     *
+     * @return Currently used AlphaVantage API Key
+     */
     public String getApiKey() {
-        return apiKey;
-    }
+        return apiKey; }
 }

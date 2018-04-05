@@ -4,6 +4,12 @@ import java.io.*;
 import java.sql.*;
 import java.util.ArrayList;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
+
 public class DatabaseHandler {
     private String user = null;
     private Connection connection = null;
@@ -14,44 +20,14 @@ public class DatabaseHandler {
     private Statement batchStatement = null;
     private static boolean initialised = false;
 
-    private void initialiseDiskSQL() throws IOException {
-            diskSQL = new PrintWriter(System.getProperty("user.dir") + "/res/" + user + ".sql");
-    }
-
-    public void setWriteToFile(boolean wtf) {
-        WRITE_TO_FILE = wtf;
-    }
-
-    public void sendSQLFileToDatabase(boolean flush) throws SQLException, IOException {
-        File file = new File(System.getProperty("user.dir") + "/res/" + user + ".sql");
-
-        if (!file.exists())
-            return;
-
-        Main.getController().updateCurrentTask("Flushing '" + user + "' SQL file to database...", false, false);
-
-        setAutoCommit(false);
-
-        if (diskSQL != null)
-            diskSQL.close();
-
-        BufferedReader reader = new BufferedReader(new FileReader(file));
-        String line;
-
-        while ((line = reader.readLine()) != null)
-            addBatchCommand(line);
-
-        reader.close();
-
-        executeBatch();
-
-        setAutoCommit(true);
-
-        if (!flush)
-            initialiseDiskSQL();
-    }
-
-    public static void initialiseDatabase(String adminUser, String adminPass) throws SQLException {
+    /**
+     * Uses a root/admin MySQL/MariaDB account to create the database and initialise all tables, triggers and default values
+     *
+     * @param adminUser Administrator user account for the MySQL/MariaDB server
+     * @param adminPass Administrator password for the MySQL/MariaDB server
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
+    static void initialiseDatabase(String adminUser, String adminPass) throws SQLException {
         if (initialised) return;
         Connection conn = DriverManager.getConnection("jdbc:mysql://localhost?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC", adminUser, adminPass);
 
@@ -86,7 +62,7 @@ public class DatabaseHandler {
         statement.addBatch("CREATE TABLE IF NOT EXISTS investments (ID INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY, Symbol VARCHAR(7) NOT NULL, Amount INT UNSIGNED NOT NULL, EndDate DATE NOT NULL, Period INT UNSIGNED NOT NULL, FOREIGN KEY (Symbol) REFERENCES indices(Symbol) ON UPDATE CASCADE ON DELETE CASCADE)");
 
         //Insert initial values into relevant databases
-        statement.addBatch("INSERT INTO banktransactions(Amount, Type) SELECT 10000, 'DEPOSIT' WHERE NOT EXISTS (SELECT 1 FROM banktransactions WHERE Amount = 10000 AND Type='DEPOSIT');");
+        statement.addBatch("INSERT INTO banktransactions(Amount, Type) SELECT 10000, 'DEPOSIT' FROM dual WHERE NOT EXISTS (SELECT 1 FROM banktransactions WHERE Amount = 10000 AND Type='DEPOSIT');");
         statement.addBatch("INSERT INTO apimanagement VALUES ('INTRINIO',500,0),('AlphaVantage',0,1667),('BarChart', 2100,0) ON DUPLICATE KEY UPDATE DailyLimit=VALUES(DailyLimit), Delay=VALUES(Delay);");
         statement.addBatch("INSERT IGNORE INTO settings VALUES('PROFIT_CUTOFF', '11000'), ('LOSS_CUTOFF','9000'), ('BARCHART_API_KEY', 'NULL'), ('INTRINIO_API_KEY', 'NULL'), ('INTRINIO_API_USER', 'NULL'), ('ALPHAVANTAGE_API_KEY','NULL'), ('PREDICTION_MODE','SINGLE');");
 
@@ -115,10 +91,59 @@ public class DatabaseHandler {
         conn.close();
     }
 
+    /**
+     * Opens a new file in which to buffer SQL commands (prevents loss of data if the application is terminated unexpectedly)
+     *
+     * @throws IOException Throws IOException if the file cannot be created or accessed
+     */
+    private void initialiseDiskSQL() throws IOException {
+        diskSQL = new PrintWriter(System.getProperty("user.dir") + "/res/" + user + ".sql");
+    }
 
+    /**
+     * Toggles whether or not the SQL should be written to the database or buffered in an SQL file
+     *
+     * @param wtf Write To File - True if all SQL commands should be sent to an intermediary file before being sent to the database, False otherwise
+     */
+    void setWriteToFile(boolean wtf) {
+        WRITE_TO_FILE = wtf;
+    }
+
+    /**
+     * Sends the contents of the SQL buffer file to the database and clears the file if necessary
+     *
+     * @param flush True if the file should be cleared after database import, False otherwise (Setting as False is useful when debugging errors with a given SQL file)
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws IOException  Throws IOException if the file cannot be created or accessed
+     */
+    public void sendSQLFileToDatabase(boolean flush) throws SQLException, IOException {
+        File file = new File(System.getProperty("user.dir") + "/res/" + user + ".sql");
+
+        if (!file.exists()) return;
+
+        Main.getController().updateCurrentTask("Flushing '" + user + "' SQL file to database...", false, false);
+
+        setAutoCommit(false);
+
+        if (diskSQL != null) diskSQL.close();
+
+        BufferedReader reader = new BufferedReader(new FileReader(file));
+        String line;
+
+        while ((line = reader.readLine()) != null) addBatchCommand(line);
+
+        reader.close();
+        executeBatch();
+        setAutoCommit(true);
+
+        if (flush) initialiseDiskSQL();
+    }
+
+    /**
+     * Commits all uncommitted SQL commands
+     */
     public void commit() {
-        if (uncommittedStatements == 0)
-            return;
+        if (uncommittedStatements == 0) return;
 
         System.out.println("COMMITTING " + uncommittedStatements + " UNCOMMITTED STATEMENTS...");
 
@@ -133,15 +158,24 @@ public class DatabaseHandler {
         System.out.println("COMMITTED!");
     }
 
+    /**
+     * Sets whether or not the connection should automatically commit commands or buffer them as a transaction
+     *
+     * @param autoCommit True if commands should be sent straight to the database, False if they should be buffered
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     public void setAutoCommit(boolean autoCommit) throws SQLException {
         connection.setAutoCommit(autoCommit);
-
-        connection.getAutoCommit();
     }
 
+    /**
+     * Adds a command to the batch command buffer (speeds up SQL execution)
+     *
+     * @param command SQL command to add to the buffer
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     public void addBatchCommand(String command) throws SQLException {
-        if (batchStatement == null)
-            batchStatement = connection.createStatement();
+        if (batchStatement == null) batchStatement = connection.createStatement();
 
         batchStatement.addBatch(command);
 
@@ -152,16 +186,27 @@ public class DatabaseHandler {
         }
     }
 
+    /**
+     * Sends all buffered commands to the database as one large command (faster execution than single commands)
+     *
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     public void executeBatch() throws SQLException {
         if (batchStatement == null) return;
-        System.out.println("Executing batch command...");
+        Main.getController().updateCurrentTask("Executing batch command...", false, false);
         batchStatement.executeBatch();
         connection.commit();
         batchStatement.clearBatch();
-        uncommittedStatements=0;
-        System.out.println("Batch command committed successfully!");
+        uncommittedStatements = 0;
+        Main.getController().updateCurrentTask("Batch command committed successfully!", false, false);
     }
 
+    /**
+     * Executes a given SQL command by either executing immediately, buffering to a batch command or sending to an SQL file
+     *
+     * @param command SQL command to execute
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     public void executeCommand(String command) throws SQLException {
         Statement statement = connection.createStatement();
 
@@ -170,17 +215,22 @@ public class DatabaseHandler {
             statement.close();
         } else if (!connection.getAutoCommit() && !WRITE_TO_FILE)
             addBatchCommand(command);
-         else
+        else
             diskSQL.println(command);
 
         if (!connection.getAutoCommit() && !WRITE_TO_FILE) {
             uncommittedStatements++;
-            if (MAXIMUM_UNCOMMITTED_STATEMENTS > 0 && uncommittedStatements >= MAXIMUM_UNCOMMITTED_STATEMENTS)
+            if (uncommittedStatements >= MAXIMUM_UNCOMMITTED_STATEMENTS)
                 executeBatch();
         }
-
     }
 
+    /**
+     * Executes a given SQL query and returns the result
+     * @param command SQL query to execute
+     * @return A list of records that are returned from the database based on the given query
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     public ArrayList<String> executeQuery(String command) throws SQLException{
         Statement query = connection.createStatement();
 
@@ -189,11 +239,9 @@ public class DatabaseHandler {
         ResultSet tempRs = query.executeQuery(command);
         ResultSetMetaData rsmd = tempRs.getMetaData();
 
-        while(tempRs.next()){
-            StringBuilder temp = new StringBuilder(tempRs.getString(1));
-            for(int i = 2; i <= rsmd.getColumnCount(); i++) {
-                temp.append(",").append(tempRs.getString(i));
-            }
+        while (tempRs.next()) {
+            StringBuilder temp = new StringBuilder(tempRs.getString(1)); //Index starts at 1, not 0
+            for (int i = 2; i <= rsmd.getColumnCount(); i++) temp.append(",").append(tempRs.getString(i));
 
             tempArr.add(temp.toString());
         }
@@ -202,12 +250,24 @@ public class DatabaseHandler {
         return tempArr;
     }
 
+    /**
+     * Closes the database connection
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     public void close() throws SQLException {
         connection.close();
         Main.getController().updateCurrentTask("Closed database connection for '" + user + "'", false, false);
     }
 
-    public void init(String username, String password) throws SQLException, IOException {
+    /**
+     * Connects to the database using the given username and password
+     *
+     * @param username Username to login to the MySQL/MariaDB server with
+     * @param password Password to login to the MySQL/MariaDB server with
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws IOException  Throws IOException if the request fails due to server unavailability or connection refusal
+     */
+    void init(String username, String password) throws SQLException, IOException {
         user = username;
 
         try {
@@ -231,6 +291,5 @@ public class DatabaseHandler {
             sendSQLFileToDatabase(true);
             initialiseDiskSQL();
         }
-
     }
 }

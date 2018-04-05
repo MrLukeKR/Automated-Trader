@@ -14,7 +14,7 @@ import static Utility.PortfolioUtils.getRandomWeights;
  * @since 0.3
  */
 
-class GAOptimiser implements Optimiser {
+class GAOptimiser {
 
     /**
      * Performs Roulette Wheel Selection on the population to obtain parent genomes

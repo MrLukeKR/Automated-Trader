@@ -3,7 +3,13 @@ package Portfolio;
 import Utility.MathUtils;
 import Utility.PortfolioUtils;
 
-public class DeterministicOptimiser implements Optimiser{
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.9
+ */
+
+public class DeterministicOptimiser {
     static public double[] optimise(int amountOfWeights, PortfolioManager.EvaluationMethod em, double[] returnsArray, double[][] riskCovarianceMatrix){
         double[] weights = PortfolioUtils.getEqualWeights(amountOfWeights);
 

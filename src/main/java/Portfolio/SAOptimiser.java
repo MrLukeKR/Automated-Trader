@@ -5,9 +5,12 @@ import Utility.PortfolioUtils;
 import static Utility.PortfolioUtils.getEqualWeights;
 
 /**
- * Simulated Annealing Portfolio Optimiser
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.3
  */
-public class SAOptimiser implements Optimiser{
+
+public class SAOptimiser {
 
     static public double[] optimise(int noOfStocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, double[] expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
         double t = initialTemperature;

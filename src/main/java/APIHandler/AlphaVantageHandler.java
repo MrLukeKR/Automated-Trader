@@ -42,6 +42,7 @@ public class AlphaVantageHandler {
      * Initialises the AlphaVantage Handler class using the necessary API key
      *
      * @param apiKey The AlphaVantage API Key, required to access the stock feed API
+     * @see <a href="https://www.alphavantage.co/support/#api-key">Request a free API key<a/>
      */
     public void init(String apiKey) {
         this.apiKey = apiKey;
@@ -162,16 +163,15 @@ public class AlphaVantageHandler {
 
     /**
      * Submits a request to AlphaVantage using the API
-     * @param request The URL, containing the requested values
+     * @param request The API URL containing the requested values
      * @return A list of results retrieved from AlphaVantage
      * @throws IOException Thrown if the connection to or reading of the API request/response fails due to server unavailability or connection refusal
      * @see <a href=https://www.alphavantage.co/documentation/>AlphaVantage API Documentation</a>
      */
-    public ArrayList<String> submitRequest(String request) throws IOException {
+    ArrayList<String> submitRequest(String request) throws IOException {
         int exceeded = 1;
         ArrayList<String> temp = new ArrayList<>();
         boolean paused = false, failed = false;
-        boolean downloadInitiated = false;
         int fails = 0;
         String errMessage = "";
 
@@ -179,10 +179,6 @@ public class AlphaVantageHandler {
         do {
             availableThreads.acquireUninterruptibly();
             incrementCurrentlyDownloading();
-            HttpURLConnection connection = null;
-            Reader reader = null;
-            URL url;
-            InputStream is = null;
 
             if(USE_PROXY && getDownloadsSinceToggle() >= 30) {
                 Main.getController().updateCurrentTask("SWITCHING PROXY", false, false);
@@ -204,22 +200,18 @@ public class AlphaVantageHandler {
                 try { TimeUnit.SECONDS.sleep(exceeded ); } catch (Exception e) { e.printStackTrace(); }
             }
 
-            if (!downloadInitiated || downloadInitiated) downloadInitiated = true;
+            URL url = new URL(request);
+            HttpURLConnection connection = (HttpURLConnection) (getUseProxy() ? url.openConnection(proxy) : url.openConnection());
+
+            connection.setRequestMethod("GET");
 
             try {
-                try { TimeUnit.SECONDS.sleep(CALL_LIMIT); } catch (Exception e) { e.printStackTrace(); }
+                TimeUnit.SECONDS.sleep(CALL_LIMIT);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
-                url = new URL(request);
-
-                if(getUseProxy())
-                    connection = (HttpURLConnection) url.openConnection(proxy);
-                else
-                    connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-
-                is = connection.getInputStream();
-                reader = new InputStreamReader(is);
-
+            try (InputStream is = connection.getInputStream(); Reader reader = new InputStreamReader(is)) {
                 final char[] buf = new char[10240];
                 int read;
                 final StringBuilder sb = new StringBuilder();
@@ -237,13 +229,11 @@ public class AlphaVantageHandler {
                     temp.addAll(Arrays.asList(sTemp.split("\r\n")));
                     if (exceeded != 1) exceeded = 1;
                 }
-            }catch (Exception e){
+            } catch (Exception e) {
                 errMessage = e.toString();
                 failed = true;
-            }finally {
-                if(is!=null) is.close();
-                if(connection != null) connection.disconnect();
-                if(reader != null) reader.close();
+            } finally {
+                connection.disconnect();
             }
 
             if(failed){
@@ -277,9 +267,9 @@ public class AlphaVantageHandler {
 
     /**
      * Access the currently used API Key
-     *
      * @return Currently used AlphaVantage API Key
      */
-    public String getApiKey() {
-        return apiKey; }
+    String getApiKey() {
+        return apiKey;
+    }
 }

@@ -130,8 +130,9 @@ public class BarChartHandler {
      * @return A list of stock quote records, one for each stock
      * @throws IOException  Throws IOException if the API request fails due to server unavailability or connection refusal
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @see <a href="https://www.barchart.com/ondemand/api/getQuote">BarChart getQuote API Documentation</a>
      */
-    private ArrayList<String> downloadQuotes(ArrayList<String> stocks) throws IOException, SQLException {
+    ArrayList<String> downloadQuotes(ArrayList<String> stocks) throws IOException, SQLException {
         ArrayList<String> results = new ArrayList<>();
         int amount = 0;
 
@@ -179,7 +180,7 @@ public class BarChartHandler {
      * @throws IOException  Throws IOException if the API request fails due to server unavailability or connection refusal
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      */
-    private ArrayList<String> downloadHistory(String stock, boolean isIntraday) throws IOException, SQLException {
+    ArrayList<String> downloadHistory(String stock, boolean isIntraday) throws IOException, SQLException {
         String url;
 
         if (isIntraday) {
@@ -199,38 +200,31 @@ public class BarChartHandler {
      * @return List of records returned from the API request
      * @throws IOException Throws IOException if the API request fails due to server unavailability or connection refusal
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @see <a href="https://www.barchart.com/ondemand/api/getHistory">BarChart getHistory API Documentation</a>
      */
     private ArrayList<String> submitRequest(String request) throws IOException, SQLException {
         int exceeded = 1;
         ArrayList<String> temp = new ArrayList<>();
 
         do {
-            HttpURLConnection connection = null;
-            Reader reader= null;
-            InputStream is = null;
+            URL url = new URL(request);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
-            try {
-                URL url = new URL(request);
-                connection = (HttpURLConnection) url.openConnection();
-                is = connection.getInputStream();
-                reader = new InputStreamReader(is);
-
+            try (InputStream is = connection.getInputStream(); Reader reader = new InputStreamReader(is)) {
                 final char[] buf = new char[10240];
                 int read;
                 final StringBuilder sb = new StringBuilder();
-                while ((read = reader.read(buf,0,buf.length)) > 0)
+                while ((read = reader.read(buf, 0, buf.length)) > 0)
                     sb.append(buf, 0, read);
 
                 String sTemp = sb.toString();
 
                 temp.addAll(Arrays.asList(sTemp.split("\r\n")));
-            }catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
                 exceeded++;
-            }finally {
-                if(is!=null) is.close();
-                if(connection != null) connection.disconnect();
-                if(reader != null) reader.close();
+            } finally {
+                if (connection != null) connection.disconnect();
             }
 
             dh.executeCommand("INSERT INTO apicalls VALUES('BarChart', CURDATE(), 1) ON DUPLICATE KEY UPDATE Calls = Calls +1;");

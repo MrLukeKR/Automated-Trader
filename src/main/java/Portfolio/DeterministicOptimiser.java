@@ -12,7 +12,7 @@ import java.util.Map;
  */
 
 class DeterministicOptimiser {
-    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, Map<String, Double> returnsArray, double[][] riskCovarianceMatrix) {
+    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, Map<String, Double> returnsArray, Map<String, Map<String, Double>> riskCovarianceMatrix) {
         Map<String, Double> weights = PortfolioUtils.getEqualWeights(stocks);
 
         return weights;

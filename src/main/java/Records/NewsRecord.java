@@ -9,10 +9,22 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
+
 public class NewsRecord {
     private final HBox newsArticle = new HBox();
 
-    public NewsRecord(String symbol, String headline){ //TODO: Add date to the info box
+    /**
+     * Initialises a new News Record, given a stock's ticker (e.g. AAPL) and a news headline
+     *
+     * @param symbol   Stock ticker (e.g. AAPL for Apple Inc.)
+     * @param headline News article headline
+     */
+    public NewsRecord(String symbol, String headline) {
         Label stockSymbol = new Label(symbol);
         Text newsHeadline = new Text();
         newsHeadline.setText(headline);
@@ -37,5 +49,9 @@ public class NewsRecord {
         sep.setVisible(false);
     }
 
+    /**
+     * Returns the JavaFX GUI node associated with this record for inclusion with the main application GUI
+     * @return Record's JavaFX GUI node
+     */
     public Node getNode(){ return newsArticle; }
 }

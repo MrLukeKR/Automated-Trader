@@ -34,6 +34,7 @@ public class INTRINIOHandler {
     static private String INTRINIO_USERNAME;
     static private String INTRINIO_PASSWORD;
     static private final int PAGES = 0, ARTICLES = 1, PAGE_SIZE = 10000; //Indices for accessing JSON metadata
+    static private final int DOWNLOAD_THREADS = 20;
     static private DatabaseHandler dh;
     static private ProgressBar pb;
     static private double progress = 0;
@@ -324,7 +325,7 @@ public class INTRINIOHandler {
             return;
         }
 
-        Semaphore availableThreads = new Semaphore(20, false);
+        Semaphore availableThreads = new Semaphore(DOWNLOAD_THREADS, false);
 
         double t = undownloadedArticles.size() - 1;
         progress = 0;
@@ -378,7 +379,7 @@ public class INTRINIOHandler {
             }).start();
         }
 
-        while (availableThreads.availablePermits() != 30) TimeUnit.SECONDS.sleep(1);
+        while (availableThreads.availablePermits() != DOWNLOAD_THREADS) TimeUnit.SECONDS.sleep(1);
 
         Controller.updateProgress(0, pb);
     }

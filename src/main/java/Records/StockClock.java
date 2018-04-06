@@ -15,6 +15,12 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
+
 public class StockClock {
     private final VBox node = new VBox();
     private final Label clockTime = new Label();
@@ -24,6 +30,14 @@ public class StockClock {
     private LocalTime currTime;
     private final ZoneId zone;
 
+    /**
+     * Initialises a new stock clock object, given a market's name, its open/close time and time zone
+     *
+     * @param name        Name of the market (e.g. NASDAQ)
+     * @param marketStart Trading start time
+     * @param marketEnd   Trading end time
+     * @param zone        Time zone of the market
+     */
     public StockClock(String name, LocalTime marketStart, LocalTime marketEnd, ZoneId zone){
         node.setAlignment(Pos.CENTER);
         node.setMinWidth(150);
@@ -52,6 +66,9 @@ public class StockClock {
         node.getChildren().add(status);
     }
 
+    /**
+     * Updates the current time of this clock
+     */
     public void updateTime(){
         Platform.runLater(()-> {
             currTime = LocalTime.now(zone);
@@ -70,5 +87,9 @@ public class StockClock {
         });
     }
 
+    /**
+     * Gets the JavaFX GUI node associated with this record for inclusion with the main application GUI
+     * @return Record's JavaFX GUI node
+     */
     public Node getNode(){return node;}
 }

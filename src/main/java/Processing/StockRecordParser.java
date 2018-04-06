@@ -140,7 +140,7 @@ public class StockRecordParser {
     /**
      * Converts a pure CSV file into a Map of records that can be accessed via a date linked to the record
      *
-     * @param csv      List of CSV reocrds
+     * @param csv      List of CSV records
      * @param dateFrom Only consider records that are equal to or after this value
      * @return A Map of CSV records, accessible by date
      */
@@ -152,7 +152,7 @@ public class StockRecordParser {
                 String split[] = curr.split(",");
                 if (split.length == 6 && split[1].matches(IS_NUMERIC)) {
                     try {
-                        Date currDate = Date.valueOf(split[0]);
+                        Date currDate = Date.valueOf(split[0].split(" ")[0]);
                         if (dateFrom == null || currDate.equals(dateFrom) || currDate.after(dateFrom))
                             newCSV.put(currDate, curr);
                     } catch (Exception e) {

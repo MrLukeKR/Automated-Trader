@@ -6,57 +6,90 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.util.*;
 
-public class SimulationModel {
-    Map<String, Double> portfolio = new HashMap<>();
-    Map<String, Map<Integer, ArrayList<Investment>>> multidayInvestments = new HashMap<>();
-    Map<String, Double> investments = new HashMap<>();
-    Map<String, Integer> heldStocks = new HashMap<>();
-    private String name;
-    private double balance = 0;
-    private double stockWorth = 0;
-    private double balanceMin = 0, balanceMax = 0;
-    private double bought = 0, sold = 0;
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.6
+ */
 
-    public SimulationModel(String name, ArrayList<String> stocks, Set<Integer> dayArray) {
+public class SimulationModel {
+    private Map<String, Double> portfolio = new HashMap<>(), investments = new HashMap<>();
+    private Map<String, Integer> heldStocks = new HashMap<>();
+    private Map<String, Map<Integer, ArrayList<Investment>>> multidayInvestments = new HashMap<>();
+    private String name;
+    private double balance = 0, stockWorth = 0, balanceMin = 0, balanceMax = 0, bought = 0, sold = 0;
+
+    /**
+     * Initialises the Simulation Model with the name of the model, a list of stocks and a set of trading periods to simulate
+     *
+     * @param name     Name of the Simulation Model
+     * @param stocks   List of stocks to simulate trading on
+     * @param dayArray Set of trading periods to simulate
+     */
+    SimulationModel(String name, ArrayList<String> stocks, Set<Integer> dayArray) {
         this.name = name;
         initialiseMultidayInvestments(stocks, dayArray);
     }
 
-    public void initialiseIteration() {
+    /**
+     * Resets all iteration-dependent variables to 0
+     */
+    void initialiseIteration() {
         stockWorth = 0;
         bought = 0;
         sold = 0;
     }
 
+    /**
+     * Gets the current balance of the simulation model
+     * @return Balance of the simulation model
+     */
     public double getBalance() {
         return balance;
     }
 
-    public void setBalance(double balance) {
+    /**
+     * Sets the balance (i.e. available funds) of the simulation model
+     *
+     * @param balance Current amount of money available
+     */
+    void setBalance(double balance) {
         this.balance = balance;
     }
 
-    public double getStockWorth() {
-        return stockWorth;
-    }
-
-    public void setStockWorth(double stockWorth) {
-        this.stockWorth = stockWorth;
-    }
-
-    public Map getPortfolio() {
+    /**
+     * Returns the asset weighting of the portfolio
+     *
+     * @return Map of stock-to-asset-weight values
+     */
+    public Map<String, Double> getPortfolio() {
         return portfolio;
     }
 
+    /**
+     * Sets the portfolio of the simulation model
+     * @param portfolio Portfolio of stock-to-asset-weighting values
+     */
     public void setPortfolio(Map<String, Double> portfolio) {
         this.portfolio = portfolio;
     }
 
-    public void updateStockWorth(String stock, double price) {
+    /**
+     * Updates the total value of held stocks
+     *
+     * @param stock Stock to calculate the worth of
+     * @param price Current price of the given stock
+     */
+    void updateStockWorth(String stock, double price) {
         if (heldStocks.containsKey(stock) && heldStocks.get(stock) > 0)
             stockWorth += heldStocks.get(stock) * price;
     }
 
+    /**
+     * Initialises the arrays used to maintain the multi-day investments
+     * @param stocks List of stocks to consider for investment
+     * @param dayArray Set of trading periods to simulate
+     */
     private void initialiseMultidayInvestments(ArrayList<String> stocks, Set<Integer> dayArray) {
         for (String stock : stocks) {
             if (!multidayInvestments.containsKey(stock)) multidayInvestments.put(stock, new TreeMap<>());
@@ -66,7 +99,14 @@ public class SimulationModel {
         }
     }
 
-    public void tradeStock(String stock, double price, HashMap<Integer, Boolean> predictions) {
+    /**
+     * Simulate the trading of a stock
+     *
+     * @param stock       Stock ticker to trade
+     * @param price       Current price of the stock
+     * @param predictions Map of Day-to-Prediction values
+     */
+    void tradeStock(String stock, double price, HashMap<Integer, Boolean> predictions) {
         int splitFactor = 0;
         for (int predictionDay : predictions.keySet())
             if (predictions.get(predictionDay)) splitFactor++;
@@ -76,14 +116,14 @@ public class SimulationModel {
                 Investment investment = multidayInvestments.get(stock).get(day).get(i);
                 multidayInvestments.get(stock).get(day).get(i).decrementTime();
                 if (investment.hasExpired()) {
-                    //if (!predictions.get(day))
-                    sellStock(stock, price, investment.getQuantity());
-                    //else
-                    //    multidayInvestments.get(stock).get(day).get(i).resetTime();
+                    if (!predictions.get(day))
+                        sellStock(stock, price, investment.getQuantity());
+                    else
+                        multidayInvestments.get(stock).get(day).get(i).resetTime();
                 }
             }
 
-            multidayInvestments.get(stock).get(day).removeIf(i -> i.hasExpired());
+            multidayInvestments.get(stock).get(day).removeIf(Investment::hasExpired);
         }
 
         for (Integer day : predictions.keySet()) {
@@ -94,11 +134,25 @@ public class SimulationModel {
         }
     }
 
-    public void sellAllStock(String stock, double price) {
+    /**
+     * Sells all shares of a given stock
+     *
+     * @param stock Stock to sell all shares of
+     * @param price Current price of the stock
+     */
+    void sellAllStock(String stock, double price) {
         if (heldStocks.containsKey(stock)) sellStock(stock, price, heldStocks.get(stock));
+        multidayInvestments.get(stock).clear();
     }
 
-    public void sellStock(String stock, double price, int quantity) {
+    /**
+     * Sells a given number of shares of a given stock
+     *
+     * @param stock    Stock to sell
+     * @param price    Current price of the stock
+     * @param quantity Quantity of the stock to sell
+     */
+    private void sellStock(String stock, double price, int quantity) {
         if (heldStocks.containsKey(stock) && heldStocks.get(stock) > 0 && quantity <= heldStocks.get(stock)) {
             double worth = quantity * price;
             sold += worth;
@@ -108,7 +162,13 @@ public class SimulationModel {
         }
     }
 
-    public void buyStock(String stock, double price, int splitFactor) {
+    /**
+     * Buys a given number of shares of a given stock
+     * @param stock Stock to buy
+     * @param price Current price of the stock
+     * @param splitFactor Quantity of the stock to buy
+     */
+    void buyStock(String stock, double price, int splitFactor) {
         if (!portfolio.containsKey(stock)) return;
 
         double allocation;
@@ -125,42 +185,64 @@ public class SimulationModel {
         }
     }
 
-    public void updateCutoff(double cutoff) {
+    /**
+     * Updates the cutoff point in which the portfolio will rebalance if the balance falls above or below two bounds
+     * @param cutoff Cutoff percentage
+     */
+    void updateCutoff(double cutoff) {
         balanceMin = balance * (1 - cutoff);
         balanceMax = balance * (1 + cutoff);
     }
 
-    public void rebalancePortfolio(HashMap<String, TreeMap<Date, String>> testingRecords, Date date, int holdPeriod, TreeMap<String, TreeMap<Date, Double>> reducedPrices) throws SQLException {
+    /**
+     * Rebalances the portfolio using the latest price information
+     *
+     * @param testingRecords Records used to gather the latest price information
+     * @param date           Current date to consider
+     * @param holdPeriod     Amount of time (in days) to hold a stock before considering for sale/reinvestment
+     * @param latestPrices   Collection of latest n days of prices
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
+    void rebalancePortfolio(HashMap<String, TreeMap<Date, String>> testingRecords, Date date, int holdPeriod, TreeMap<String, TreeMap<Date, Double>> latestPrices, boolean sellAllStocks) throws SQLException {
         if (balance + stockWorth <= balanceMin || balance + stockWorth >= balanceMax) {
-            portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.SIMULATED_ANNEALING, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, reducedPrices, false);
+            portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.SIMULATED_ANNEALING, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, latestPrices, false);
             double cutoff = portfolio.get("RETURN");
             portfolio.remove("RETURN");
-            /*
-            for (String symbol : heldStocks.keySet()) {
-                double worth = Double.parseDouble(testingRecords.get(symbol).get(date).split(",")[5]) * heldStocks.get(symbol);
-                balance += worth;
-                sold += worth;
-            }
 
-            heldStocks.clear();
-            investments.clear();
-            */
+            if (sellAllStocks) {
+                for (String symbol : heldStocks.keySet())
+                    sellAllStock(symbol, Double.parseDouble(testingRecords.get(symbol).get(date).split(",")[5]));
+
+                heldStocks.clear();
+                investments.clear();
+            }
             updateCutoff(cutoff);
         }
     }
 
-    public double getTotal() {
+    /**
+     * Gets the current total monetary value of this simulation model
+     * @return The value of held stock + the current total of available funds
+     */
+    double getTotal() {
         return stockWorth + balance;
     }
 
-    public void finalise(double initialBalance) {
+    /**
+     * Sells all remaining stock and prints the final performance measurement of the simulation
+     * @param initialBalance Starting balance of the model
+     */
+    void finalise(double initialBalance) {
         balance += stockWorth;
         stockWorth = 0;
 
         System.out.println(name.toUpperCase() + "\tFinished Simulation with: " + balance + " -> " + ((balance - initialBalance) / initialBalance * 100) + "% return");
     }
 
-    public void printStatus() {
+    /**
+     * Prints the current balance, stock worth and status to the console
+     */
+    void printStatus() {
         System.out.println(name.toUpperCase() + "\t Balance: " + balance + ", Stock Worth: " + stockWorth + ", Total: " + (balance + stockWorth) + "(BOUGHT: " + bought + ", SOLD:" + sold + ")");
     }
 }

@@ -215,8 +215,10 @@ public class TradingUtils {
 
             int buyAmount = (int) Math.floor(allocation / currentPrice);
 
+            if (splitAmount == 0) return;
+
             buyAmount = (int) Math.floor(buyAmount / splitAmount);
-            if (buyAmount >= dayArray.length) {
+            if (buyAmount >= splitAmount) {
                 int remaining = buyAmount * splitAmount;
                 for (int day : dayArray)
                     if (buyAmount * currentPrice <= balance) {

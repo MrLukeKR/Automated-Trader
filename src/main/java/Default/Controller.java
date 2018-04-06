@@ -109,8 +109,6 @@ public class Controller {
     @FXML
     Button setProfitTargetButton;
     @FXML
-    Button newsSearchButton;
-    @FXML
     VBox simulatorPredictionBox;
     @FXML
     VBox historicOptions;
@@ -231,7 +229,7 @@ public class Controller {
 
     private boolean automated = false;
 
-    public static void shutdown() throws SQLException {
+    static void shutdown() throws SQLException {
         quit = true;
 
         if (mainThread.isAlive()) mainThread.interrupt();
@@ -449,11 +447,10 @@ public class Controller {
                 XYChart.Series<Number, Number> willR = new XYChart.Series<>("Williams %R", FXCollections.observableArrayList(values.get("WillR")));
                 XYChart.Series<Number, Number> sentiment = new XYChart.Series<>("News Article Sentiment", FXCollections.observableArrayList(values.get("Sentiment")));
 
-                Platform.runLater(() -> {
-                    historicPriceChart.getData().addAll(openPrices, highPrices, lowPrices, closePrices, smoothedClosePrices,
-                            sma5, sma10, sma20, sma200,
-                            ema5, ema10, ema20, ema200);
-                });
+                Platform.runLater(() ->
+                        historicPriceChart.getData().addAll(openPrices, highPrices, lowPrices, closePrices, smoothedClosePrices,
+                                sma5, sma10, sma20, sma200,
+                                ema5, ema10, ema20, ema200));
 
                 Platform.runLater(() -> historicVolumeChart.getData().add(volumes));
                 Platform.runLater(() -> macdChart.getData().addAll(macd, macdSig, macdHist));
@@ -496,7 +493,9 @@ public class Controller {
             Platform.runLater(()->exportAllTrainingFilesButton.setDisable(true));
             try {
                 TrainingFileUtils.exportAllFiles(stocks, stockForecastProgress, dayArray);
-            } catch (Exception e){} finally{
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
                 Platform.runLater(()->exportAllTrainingFilesButton.setDisable(false));
             }
         }).start();
@@ -688,7 +687,11 @@ public class Controller {
                 TechnicalAnalyser.calculatePercentChanges(stocks);
                 SmoothingUtils.smoothStocks(stocks, smoothRate);
                 TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
-            } catch (Exception e) { } finally{Platform.runLater(() -> smoothPriceDataButton.setDisable(false));}
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                Platform.runLater(() -> smoothPriceDataButton.setDisable(false));
+            }
         }).start();
     }
 
@@ -697,7 +700,11 @@ public class Controller {
             Platform.runLater(()->resetPriceDataButton.setDisable(true));
             try {
                 TrainingFileUtils.resetPriceValues();
-            } catch (SQLException e) {} finally{Platform.runLater(()->resetPriceDataButton.setDisable(false));}
+            } catch (SQLException e) {
+                e.printStackTrace();
+            } finally {
+                Platform.runLater(() -> resetPriceDataButton.setDisable(false));
+            }
         }).start();
     }
 
@@ -775,7 +782,7 @@ public class Controller {
 
         Optional<ButtonType> result = alert.showAndWait();
 
-        if (result.get() == ButtonType.YES)
+        if (result.isPresent() && result.get() == ButtonType.YES)
             new Thread(() -> {
                 Platform.runLater(() -> rebalanceButton.setDisable(true));
                 try {
@@ -786,7 +793,7 @@ public class Controller {
     }
 
 
-    public void rebalancePortfolio(boolean automated) throws SQLException, ParseException {
+    private void rebalancePortfolio(boolean automated) throws SQLException, ParseException {
         //TradingUtils.sellAllStock(automated);
 
         PortfolioManager.OptimisationMethod om = null;
@@ -816,7 +823,7 @@ public class Controller {
         TreeMap<String, TreeMap<Date, Double>> prices = new TreeMap<>();
 
         for(String stock : stocks)
-            prices.put(stock, PortfolioManager.getPrices(stock, 20));
+            prices.put(stock, PortfolioManager.getPrices(stock, 200));
 
         Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(om, em,1,prices, true);
         double cutoff = portfolio.get("RETURN");
@@ -885,7 +892,7 @@ public class Controller {
 
         lossCutoffField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.matches("\\d*\\.?\\d*"))
-                lossCutoffField.setText(newValue.replaceAll("[^\\d\\.]", ""));
+                lossCutoffField.setText(newValue.replaceAll("[^\\d.]", ""));
             setLossCutoffButton.setDisable(newValue.isEmpty());
             if(!newValue.isEmpty()){
                 try {
@@ -898,7 +905,7 @@ public class Controller {
 
         profitTargetField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.matches("\\d*\\.?\\d*"))
-                profitTargetField.setText(newValue.replaceAll("[^\\d\\.]", ""));
+                profitTargetField.setText(newValue.replaceAll("[^\\d.]", ""));
 
             setProfitTargetButton.setDisable(newValue.isEmpty());
             if(!newValue.isEmpty()){
@@ -928,14 +935,14 @@ public class Controller {
 
         simulationPortfolioHoldPeriod.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.matches("\\d*\\.?\\d*"))
-                simulationPortfolioHoldPeriod.setText(newValue.replaceAll("[^\\d\\.]", ""));
+                simulationPortfolioHoldPeriod.setText(newValue.replaceAll("[^\\d.]", ""));
 
             simulateTradingButton.setDisable(simulationPortfolioHoldPeriod.getText().isEmpty() || simulationPortfolioLookbackPeriod.getText().isEmpty());
         });
 
         simulationPortfolioLookbackPeriod.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.matches("\\d*\\.?\\d*"))
-                simulationPortfolioLookbackPeriod.setText(newValue.replaceAll("[^\\d\\.]", ""));
+                simulationPortfolioLookbackPeriod.setText(newValue.replaceAll("[^\\d.]", ""));
 
             simulateTradingButton.setDisable(simulationPortfolioHoldPeriod.getText().isEmpty() || simulationPortfolioLookbackPeriod.getText().isEmpty());
         });
@@ -1157,7 +1164,6 @@ public class Controller {
                         }
                     } catch (Exception e) { e.printStackTrace(); }
                 }
-
             }
         });
 
@@ -1179,12 +1185,17 @@ public class Controller {
         initialiseStocks();
         if (!Arrays.asList(Main.getArguments()).contains("-DLM")) {
             String predictionMode = dh.executeQuery("SELECT value FROM settings WHERE ID = 'PREDICTION_MODE ';").get(0);
-            if (predictionMode.equals("SINGLE"))
-                StockPredictor.loadLatestRandomForest(stocks);
-            else if (predictionMode.equals("MULTI"))
-                StockPredictor.loadLatestRandomForest();
-            else
-                updateCurrentTask("Invalid setting for value 'PREDICTION_MODE'!", true, true);
+            switch (predictionMode) {
+                case "SINGLE":
+                    StockPredictor.loadLatestRandomForest(stocks);
+                    break;
+                case "MULTI":
+                    StockPredictor.loadLatestRandomForest();
+                    break;
+                default:
+                    updateCurrentTask("Invalid setting for value 'PREDICTION_MODE'!", true, true);
+                    break;
+            }
         }
 
         initialiseSimulatorCharts();
@@ -1282,6 +1293,7 @@ public class Controller {
             try {
                 NaturalLanguageProcessor.enumerateSentencesFromArticles();
             } catch (Exception e) {
+                e.printStackTrace();
             }
         });
 
@@ -1342,13 +1354,15 @@ public class Controller {
                     if (dayArray[i] != 1) predictionLabels[i].setText(predictionLabels[i].getText() + "s");
                 }
 
-                for (String stock : stocks) {
                     HBox header = new HBox(spacer);
                     header.getChildren().addAll(predictionLabels);
                     Platform.runLater(() -> stockPredictionsBox.getChildren().add(header));
+
+                for (String stock : stocks) {
                     boolean[] currentPredictions = new boolean[dayArray.length];
                     int i = 0;
-                    for (int days : dayArray) currentPredictions[i++] = predictionArray.get(stock).get(days);
+                    for (int days : dayArray)
+                        currentPredictions[i++] = Objects.requireNonNull(predictionArray).get(stock).get(days);
 
                     predictions.put(stock, new PredictionBox(stock, dayArray, currentPredictions));
                 }
@@ -1410,7 +1424,7 @@ public class Controller {
     }
 
     @FXML
-    public void initialiseStocks() throws SQLException {
+    private void initialiseStocks() throws SQLException {
         updateCurrentTask("Initialising stocks", false, false);
         stocks = dh.executeQuery("SELECT Symbol FROM indices");
     }
@@ -1475,7 +1489,7 @@ public class Controller {
         }
 
         PieChart finalChart = chart;
-        Platform.runLater(() -> finalChart.getData().clear());
+        Platform.runLater(() -> Objects.requireNonNull(finalChart).getData().clear());
 
         if (portfolio.isEmpty()) return;
 
@@ -1484,7 +1498,7 @@ public class Controller {
         for (String stock : portfolio.keySet())
             piechartData.add(new PieChart.Data(stock, portfolio.get(stock)));
 
-        Platform.runLater(() -> finalChart.getData().addAll(piechartData));
+        Platform.runLater(() -> Objects.requireNonNull(finalChart).getData().addAll(piechartData));
     }
 
     private void updateComponentChart() throws SQLException {

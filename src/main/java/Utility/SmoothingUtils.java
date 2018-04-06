@@ -11,25 +11,34 @@ import java.util.ArrayList;
 import java.util.Objects;
 import java.util.TreeMap;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.5
+ */
+
 public class SmoothingUtils {
     private static DatabaseHandler dh;
     private static ProgressBar pb;
     private static double ALPHA;
 
+    /**
+     * Initialises the Smoothing Utils class, given a Database Handler to prevent deadlocks when accessing the database and a progress bar to visualise the progress of various methods
+     *
+     * @param sudh Smoothing Utils Database handler
+     * @param supb Smoothing Utils Progress Bar
+     */
     static public void initialise(DatabaseHandler sudh, ProgressBar supb){
         dh = sudh;
         pb = supb;
     }
 
-    static public double calculateMSE(TreeMap<Date,Double> closePrices, TreeMap<Date,Double> smoothedPrices){
-        double error = 0;
-
-        for(Date day : closePrices.keySet())
-            error += Math.pow(closePrices.get(day) - smoothedPrices.get(day), 2);
-
-        return error / closePrices.size();
-    }
-
+    /**
+     * Exponentially Smooths a list of price data, giving more importance to more recent data
+     * @param closePrices List of close prices for a given stock
+     * @param alpha The smoothing factor to apply to the smoothing process (lower is more intense smoothing)
+     * @return A list of smoothed price data
+     */
     private static TreeMap<Date, Double> exponentialSmooth(TreeMap<Date, Double> closePrices, double alpha){
         TreeMap<Date, Double> smoothedPrices = new TreeMap<>();
         double[] forecasts = new double[closePrices.size()];
@@ -48,7 +57,14 @@ public class SmoothingUtils {
         return smoothedPrices;
     }
 
-    static public void smoothStock(String stock, double alpha) throws SQLException {
+    /**
+     * Performs smoothing of a given stock, using a given smoothing factor
+     *
+     * @param stock Stock ticker to smooth the price data of (e.g. AAPL for Apple Inc.)
+     * @param alpha The smoothing factor to apply to the smoothing process (lower is more intense smoothing)
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
+    private static void smoothStock(String stock, double alpha) throws SQLException {
         ALPHA = alpha;
 
         Main.getController().updateCurrentTask("Smoothing Stock Close Prices for " + stock + "...", false, false);
@@ -69,6 +85,12 @@ public class SmoothingUtils {
         sendToDatabase(stock, smoothed);
     }
 
+    /**
+     * Performs smoothing of a given list of stocks, using a given smoothing factor
+     * @param stocks List of stock tickers to smooth the price data of (e.g. AAL, AAPL, BIIB etc.)
+     * @param alpha The smoothing factor to apply to the smoothing process (lower is more intense smoothing)
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void smoothStocks(ArrayList<String> stocks, double alpha) throws SQLException {
         double t = stocks.size()-1, c = 0;
 
@@ -84,6 +106,12 @@ public class SmoothingUtils {
         Controller.updateProgress(0, t, pb);
     }
 
+    /**
+     * Sends the price information to the database
+     * @param stock Stock ticker to associate the smoothed price data with
+     * @param records Smoothed price data
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static private void sendToDatabase(String stock, TreeMap<Date, Double> records) throws SQLException {
         ArrayList<String> result = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Symbol='" + stock + "' AND SmoothedClosePrice is not null ORDER BY TradeDate DESC LIMIT 1");
 
@@ -96,6 +124,10 @@ public class SmoothingUtils {
                 dh.addBatchCommand("UPDATE dailystockprices SET SmoothedClosePrice =" + "'" + records.get(key) + "' WHERE Symbol = '" + stock + "' AND TradeDate = '" + key + "' AND (SmoothedClosePrice is null OR SmoothedClosePrice !='" + records.get(key) + "');");
     }
 
+    /**
+     * Retrieves the current smoothing factor
+     * @return Smoothing Factor
+     */
     static public double getAlpha(){
         return ALPHA;
     }

@@ -13,51 +13,96 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.util.*;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.5
+ */
+
 public class TradingSimulator {
     static private DatabaseHandler dh;
 
-    static public void initialise(DatabaseHandler tsdh){dh = tsdh;}
+    /**
+     * Initialises the Trading Simulator with a Database Handler to prevent deadlocks when accessing the database alongside other classes
+     *
+     * @param tsdh Trading Simulator Database Handler
+     */
+    static public void initialise(DatabaseHandler tsdh) {
+        dh = tsdh;
+    }
 
+    /**
+     * Splits the data from the database into training and testing sets
+     *
+     * @param stock            Stock to create data sets for
+     * @param testingTimeFrame Time Frame to simulate trading for (test set period)
+     * @param index            Index of stock (for use with Multi-Stock models)
+     * @return Collection of all data collected from the database and formatted for use with models
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static private HashMap<String, ArrayList<String>> getSplit(String stock, int testingTimeFrame, int index) throws SQLException {
         HashMap<String, ArrayList<String>> values = new HashMap<>();
 
         ArrayList<String> dbSchema = dh.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dailystockprices';");
 
-        String commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ",0)";
+        StringBuilder commandStart = new StringBuilder("SELECT COALESCE(" + dbSchema.get(0) + ",0)");
         for(int i = 1; i < dbSchema.size(); i++)
-            commandStart += ",COALESCE(" + dbSchema.get(i)+", 0)";
-        commandStart += " FROM (SELECT * FROM dailystockprices WHERE Symbol='" + stock + "'";
+            commandStart.append(",COALESCE(").append(dbSchema.get(i)).append(", 0)");
+        commandStart.append(" FROM (SELECT * FROM dailystockprices WHERE Symbol='").append(stock).append("'");
         String commandEnd = " ORDER BY TradeDate DESC LIMIT " + testingTimeFrame + ") as t ORDER BY t.TradeDate ASC";
 
         values.put("TestingRecords", dh.executeQuery(commandStart + commandEnd));
 
         String cutoffDate = values.get("TestingRecords").get(0).split(",")[1];
 
-        commandStart = "SELECT COALESCE(" + dbSchema.get(0) + ",0)";
+        commandStart = new StringBuilder("SELECT COALESCE(" + dbSchema.get(0) + ",0)");
         for(int i = 1; i < dbSchema.size(); i++)
-            commandStart += ",COALESCE(" + dbSchema.get(i)+",0)";
-        commandStart += " FROM dailystockprices WHERE Symbol='" + stock + "' AND TradeDate < '" + cutoffDate+"'";
+            commandStart.append(",COALESCE(").append(dbSchema.get(i)).append(",0)");
+        commandStart.append(" FROM dailystockprices WHERE Symbol='").append(stock).append("' AND TradeDate < '").append(cutoffDate).append("'");
         commandEnd = " ORDER BY TradeDate ASC";
         values.put("TrainingRecords", dh.executeQuery(commandStart + commandEnd));
-        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock, commandStart, commandEnd, index, new int[]{1, 30, 200}, 0.1, true, true, false, false));
+        values.put("TrainingSet", TrainingFileUtils.convertToClassificationTrainingArray(stock, commandStart.toString(), commandEnd, index, new int[]{1, 30, 200}, 0.1, true, true, false, false));
 
         return values;
     }
 
+    /**
+     * Trains Single Stock models, given a set of training file locations
+     *
+     * @param stocks List of stocks to train prediction models for
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void trainSingleStocks(ArrayList<String> stocks) throws SQLException {
         for (String stock : stocks)
             StockPredictor.trainRandomForest(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingFile.libsvm", stock, true);
     }
 
-    static public void trainMultiStock(ArrayList<String> stocks) throws Exception {
+    /**
+     * Trains a Multi Stock model, given a training file location
+     *
+     * @param stocks List of stocks to train prediction model on
+     * @throws SQLException         Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws InterruptedException Throws InterruptedException if the sleep function is interrupted by another process
+     */
+    static public void trainMultiStock(ArrayList<String> stocks) throws SQLException, InterruptedException {
         StockPredictor.trainRandomForest(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingFile.libsvm", stocks.size(), true);
     }
 
+    /**
+     * Creates individual stock-based training files required for training Single Stock models
+     *
+     * @param stocks        List of stocks to create training files for
+     * @param timeFrame     Time frame for which testing should be done (e.g. 200 days)
+     * @param includeHeader True if the title of each column should be included, False if otherwise
+     * @throws IOException  Throws IOException if the request fails due to server unavailability or connection refusal
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void generateSingleStockTrainingFiles(ArrayList<String> stocks, int timeFrame, boolean includeHeader) throws IOException, SQLException {
         for(String stock : stocks) {
             File dir = new File(System.getProperty("user.dir") + "/res/Simulator/" + stock);
             if(!dir.exists())
-                dir.mkdirs();
+                if (!dir.mkdirs())
+                    Main.getController().updateCurrentTask("Could not create file/directory: " + dir, true, true);
 
             File trainRecs = new File(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingRecords.csv");
             File testRecs = new File(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TestingRecords.csv");
@@ -86,10 +131,20 @@ public class TradingSimulator {
         }
     }
 
+    /**
+     * Creates a large multi-stock training file required for training a Multi-Stock model
+     *
+     * @param stocks        Stocks to include in the training file
+     * @param timeFrame     Time frame for which testing should be done (e.g. 200 days)
+     * @param includeHeader True if the title of each column should be included, False if otherwise
+     * @throws IOException  Throws IOException if the request fails due to server unavailability or connection refusal
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void generateMultistockTrainingFiles(ArrayList<String> stocks, int timeFrame, boolean includeHeader) throws IOException, SQLException {
         File dir = new File(System.getProperty("user.dir") + "/res/Simulator/MultiStock");
         if(!dir.exists())
-            dir.mkdirs();
+            if (!dir.mkdirs())
+                Main.getController().updateCurrentTask("Could not create file/directory: " + dir, true, true);
 
         File trainFile = new File(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingFile.csv");
         File trainRecs = new File(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingRecords.csv");
@@ -128,6 +183,13 @@ public class TradingSimulator {
         }
     }
 
+    /**
+     * Converts a file to a price map that is accessible through specifying a stock and then a date
+     *
+     * @param filePath File to load in
+     * @return A Map of prices sorted by stock and trade date
+     * @throws IOException Throws IOException if the request fails due to server unavailability or connection refusal
+     */
     static private TreeMap<String, TreeMap<Date, Double>> fileToPriceTreeMap(String filePath) throws IOException {
         String line;
         TreeMap<String, TreeMap<Date, Double>> prices = new TreeMap<>();
@@ -137,10 +199,7 @@ public class TradingSimulator {
 
         while ((line = br.readLine()) != null) {
             String[] splitString = line.split(",");
-
-            if (prices.get(splitString[0]) == null)
-                prices.put(splitString[0], new TreeMap<>());
-
+            prices.computeIfAbsent(splitString[0], k -> new TreeMap<>());
             prices.get(splitString[0]).put(Date.valueOf(splitString[1]), Double.parseDouble(splitString[5]));
         }
 
@@ -150,7 +209,14 @@ public class TradingSimulator {
         return prices;
     }
 
-    static private HashMap fileToRecordArray(String filePath) throws IOException {
+    /**
+     * Converts a file to a record array, accessible through specifying a stock and a date
+     *
+     * @param filePath File to load in
+     * @return A Map of records sorted by trade date
+     * @throws IOException Throws IOException if the request fails due to server unavailability or connection refusal
+     */
+    static private HashMap<String, TreeMap<Date, String>> fileToRecordArray(String filePath) throws IOException {
         String line;
 
         FileReader fr = new FileReader(filePath);
@@ -159,16 +225,24 @@ public class TradingSimulator {
 
         while ((line = br.readLine()) != null) {
             String[] splitString = line.split(",");
-            if (records.get(splitString[0]) == null)
-                records.put(splitString[0], new TreeMap<>());
-
+            records.computeIfAbsent(splitString[0], k -> new TreeMap<>());
             records.get(splitString[0]).put(Date.valueOf(splitString[1]), line);
         }
 
         return records;
     }
 
-    static public void simulate(ArrayList<String> stocksToSimulate, boolean singleStock, int lookback, int holdPeriod, Integer[] dayArray) throws Exception {
+    /**
+     * Simulates trading amongst a given set of stocks for a given time period
+     *
+     * @param stocksToSimulate           Stocks that are considered for buying and selling during simulation
+     * @param singleStock                True if the simulator should use Single-Stock models, False if it should use Multi-Stock
+     * @param portfolioCalibrationPeriod Number of days of historic data that the portfolio should consider
+     * @param holdPeriod                 Number of days that a stock is expected to be held
+     * @param dayArray                   Set of days that are to be used during long-term investments
+     * @throws Exception Including SQLException, IOException and InterruptedException
+     */
+    static public void simulate(ArrayList<String> stocksToSimulate, boolean singleStock, int portfolioCalibrationPeriod, int holdPeriod, Integer[] dayArray) throws Exception {
         Main.getController().updateCurrentTask("Starting Simulation", false, false);
         TreeMap<Date, Double> indexPerformance = new TreeMap<>();
 
@@ -216,42 +290,21 @@ public class TradingSimulator {
                 prices.putAll(fileToPriceTreeMap(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingRecords.csv"));
                 trainingRecords.putAll(fileToRecordArray(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TrainingRecords.csv"));
                 testingRecords.putAll(fileToRecordArray(System.getProperty("user.dir") + "/res/Simulator/" + stock + "/TestingRecords.csv"));
-                for (Date date : testingRecords.get(stock).keySet())
-                    testDates.add(date);
-                for (Date date : trainingRecords.get(stock).keySet())
-                    trainDates.add(date);
+                testDates.addAll(testingRecords.get(stock).keySet());
+                trainDates.addAll(trainingRecords.get(stock).keySet());
             }
         }else{
             prices.putAll(fileToPriceTreeMap(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingRecords.csv"));
             trainingRecords.putAll(fileToRecordArray(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TrainingRecords.csv"));
             testingRecords.putAll(fileToRecordArray(System.getProperty("user.dir") + "/res/Simulator/MultiStock/TestingRecords.csv"));
-            for(String stock : stocksToSimulate) {
-                for (Date date : testingRecords.get(stock).keySet())
-                    testDates.add(date);
-                for (Date date : trainingRecords.get(stock).keySet())
-                    trainDates.add(date);
+            for (String stock : stocksToSimulate) {
+                testDates.addAll(testingRecords.get(stock).keySet());
+                trainDates.addAll(trainingRecords.get(stock).keySet());
             }
         }
 
-        TreeSet<Date> dirtyDates = new TreeSet<>(testDates);
-
-        for(Date date : dirtyDates)
-            for (String s : stocksToSimulate) {
-                String rec = testingRecords.get(s).get(date);
-                if (rec == null || rec.isEmpty())
-                    testDates.remove(date);
-            }
-
-        dirtyDates = new TreeSet<>(trainDates);
-
-        for(Date date : dirtyDates)
-            for (String s : stocksToSimulate) {
-                String rec = trainingRecords.get(s).get(date);
-                if (rec == null || rec.isEmpty())
-                    trainDates.remove(date);
-            }
-
-        int portfolioTimeFrame = lookback;
+        testDates = cleanDates(testDates, stocksToSimulate, testingRecords);
+        trainDates = cleanDates(trainDates, stocksToSimulate, trainingRecords);
 
         ArrayList<Date> dates = new ArrayList<>(trainDates);
 
@@ -260,14 +313,14 @@ public class TradingSimulator {
 
             reducedPrices.put(stock, new TreeMap<>());
 
-            for(int i = 0; i < portfolioTimeFrame; i++)
+            for (int i = 0; i < portfolioCalibrationPeriod; i++)
                 reducedPrices.get(stock).put(dates.get(i), prices.get(stock).get(dates.get(i)));
         }
 
         SimulationModel automatedTrader = new SimulationModel("Automated Trader (Initial Portfolio Optimisation only)", stocksToSimulate, new HashSet<>(Arrays.asList(dayArray)));
-        SimulationModel automatedTraderWithRebalancing = new SimulationModel("Automated Trader (with Portfolio Rebalancing)", stocksToSimulate, new HashSet(Arrays.asList(dayArray)));
-        SimulationModel automatedTraderEqualAllocation = new SimulationModel("Automated Trader (with Equal Allocation)", stocksToSimulate, new HashSet(Arrays.asList(dayArray)));
-        SimulationModel randomTrader = new SimulationModel("Random Trader", stocksToSimulate, new HashSet(Arrays.asList(dayArray)));
+        SimulationModel automatedTraderWithRebalancing = new SimulationModel("Automated Trader (with Portfolio Rebalancing)", stocksToSimulate, new HashSet<>(Arrays.asList(dayArray)));
+        SimulationModel automatedTraderEqualAllocation = new SimulationModel("Automated Trader (with Equal Allocation)", stocksToSimulate, new HashSet<>(Arrays.asList(dayArray)));
+        SimulationModel randomTrader = new SimulationModel("Random Trader", stocksToSimulate, new HashSet<>(Arrays.asList(dayArray)));
 
         Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.SIMULATED_ANNEALING, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, reducedPrices, false);
         Main.getController().updateSimulatedComponentChart("REBALANCED_ALLOC", portfolio);
@@ -292,9 +345,6 @@ public class TradingSimulator {
         portfolio.remove("RETURN");
 
         Random rng = new Random();
-        TreeMap<Date, Double> balance = new TreeMap<>();
-        TreeMap<Date, ArrayList<String>> actions = new TreeMap<>();
-        ArrayList<String> investmentRecords = new ArrayList<>();
 
         int index = 0;
         double initialBalance = -1;
@@ -332,8 +382,7 @@ public class TradingSimulator {
                     Main.getController().initialiseSimulatorPredictions(predictions);
                 }
 
-                automatedTraderWithRebalancing.rebalancePortfolio(testingRecords, date, holdPeriod, reducedPrices);
-                // randomTrader.rebalancePortfolio(testingRecords,date,holdPeriod,reducedPrices);
+                automatedTraderWithRebalancing.rebalancePortfolio(testingRecords, date, holdPeriod, reducedPrices, false);
 
                 Main.getController().updateSimulatedComponentChart("REBALANCED_ALLOC", automatedTraderWithRebalancing.getPortfolio());
 
@@ -344,7 +393,6 @@ public class TradingSimulator {
                     double price = Double.parseDouble(testingRecords.get(stock).get(date).split(",")[5]);
 
                     reducedPrices.get(stock).put(date, price);
-                    //    for(int day : dayArray) {
                     if (rng.nextBoolean())
                         randomTrader.buyStock(stock, price, 1);
                     else
@@ -354,7 +402,6 @@ public class TradingSimulator {
                     automatedTraderEqualAllocation.tradeStock(stock, price, predictions.get(stock));
                     automatedTraderWithRebalancing.tradeStock(stock, price, predictions.get(stock));
 
-                    // }
                     for (SimulationModel model : simulations) model.updateStockWorth(stock, price);
                     Main.getController().addHistoricPrice(stock, index, price);
                 }
@@ -381,6 +428,38 @@ public class TradingSimulator {
         for (SimulationModel model : simulations) model.finalise(initialBalance);
     }
 
+    /**
+     * Matches up the latest dates so that all simulations can be performed accurately on the same days
+     *
+     * @param dates   Original (dirty) dates
+     * @param stocks  Stocks to extract record dates from
+     * @param records Records to search for dates
+     * @return A set of dates that are present in all stock records
+     */
+    static private TreeSet<Date> cleanDates(TreeSet<Date> dates, ArrayList<String> stocks, HashMap<String, TreeMap<Date, String>> records) {
+        TreeSet<Date> cleanDates = new TreeSet<>(dates);
+
+        for (Date date : dates)
+            for (String s : stocks) {
+                String rec = records.get(s).get(date);
+                if (rec == null || rec.isEmpty())
+                    cleanDates.remove(date);
+            }
+        return cleanDates;
+    }
+
+    /**
+     * Utilises simulation prediction models to predict the price direction at n days
+     *
+     * @param stock        Stock to predict the price direction of
+     * @param numberOfDays Number of days in advance to predict the price direction
+     * @param stockIndex   Index of the stock from the total list of stocks (for use with Multi-Stock models)
+     * @param date         Date to calculate the News Sentiment of
+     * @param record       Record associated with this date (for price and indicator extraction)
+     * @param singleStock  True if the simulator should use a Single-Stock model or the Multi-Stock model
+     * @return True if the stock price is expected to rise or stay the same, False if it is expected to fall
+     * @throws Exception Including IOException, SQLException and InterruptedException
+     */
     static private boolean predictStock(String stock, int numberOfDays, int stockIndex, Date date, String record, boolean singleStock) throws Exception {
         String[] splitString = record.split(",");
         double newsSentiment = NaturalLanguageProcessor.getAverageSentimentOnDate(stock, date.toString());

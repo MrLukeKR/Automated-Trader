@@ -42,6 +42,12 @@ import java.util.concurrent.TimeUnit;
 
 import static Utility.ChartUtils.*;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
+
 public class Controller {
     static final private double smoothRate = 0.1;
     static private boolean DISABLE_SYSTEM_UPDATE;
@@ -490,8 +496,7 @@ public class Controller {
             Platform.runLater(()->exportAllTrainingFilesButton.setDisable(true));
             try {
                 TrainingFileUtils.exportAllFiles(stocks, stockForecastProgress, dayArray);
-            } catch (Exception e){}
-            finally{
+            } catch (Exception e){} finally{
                 Platform.runLater(()->exportAllTrainingFilesButton.setDisable(false));
             }
         }).start();
@@ -513,7 +518,7 @@ public class Controller {
                         if (!newDir.exists())
                             newDir.mkdirs();
 
-                        TrainingFileUtils.exportClassificationCSV(stock, System.getProperty("user.dir") + "/res/TrainingFiles/" + stock + "/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress, smoothRate, true, true, false, false);
+                        TrainingFileUtils.exportClassificationCSV(stock, System.getProperty("user.dir") + "/res/TrainingFiles/" + stock + "/SmoothedNASDAQTraining.csv", dayArray, smoothRate, true, true, false, false);
                         TrainingFileUtils.exportLibSVMFile(System.getProperty("user.dir") + "/res/TrainingFiles/" + stock + "/SmoothedNASDAQTraining.csv", System.getProperty("user.dir") + "/res/TrainingFiles/" + stock + "/SmoothedNASDAQTraining.libsvm");
                     }
 
@@ -683,8 +688,7 @@ public class Controller {
                 TechnicalAnalyser.calculatePercentChanges(stocks);
                 SmoothingUtils.smoothStocks(stocks, smoothRate);
                 TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
-            } catch (Exception e) { }
-            finally{Platform.runLater(() -> smoothPriceDataButton.setDisable(false));}
+            } catch (Exception e) { } finally{Platform.runLater(() -> smoothPriceDataButton.setDisable(false));}
         }).start();
     }
 
@@ -693,8 +697,7 @@ public class Controller {
             Platform.runLater(()->resetPriceDataButton.setDisable(true));
             try {
                 TrainingFileUtils.resetPriceValues();
-            } catch (SQLException e) {}
-            finally{Platform.runLater(()->resetPriceDataButton.setDisable(false));}
+            } catch (SQLException e) {} finally{Platform.runLater(()->resetPriceDataButton.setDisable(false));}
         }).start();
     }
 
@@ -781,7 +784,6 @@ public class Controller {
                 Platform.runLater(() -> rebalanceButton.setDisable(false));
             }).start();
     }
-
 
 
     public void rebalancePortfolio(boolean automated) throws SQLException, ParseException {
@@ -1173,7 +1175,6 @@ public class Controller {
         TrainingFileUtils.setDatabaseHandler(dh);
         TradingUtils.setDatabaseHandler(dh);
         TradingSimulator.initialise(dh);
-        NewsDownloader.initialise(nddh);
 
         initialiseStocks();
         if (!Arrays.asList(Main.getArguments()).contains("-DLM")) {
@@ -1254,8 +1255,8 @@ public class Controller {
             try {
                 StockRecordParser.processYahooHistories(stocks, stockFeedProgress);
                 dh.executeCommand("DELETE FROM intradaystockprices WHERE Temporary = 1;");
-                bch.downloadDailyHistory(stocks);
-                bch.downloadIntradayHistory(stocks);
+                bch.downloadHistory(stocks, false);
+                bch.downloadHistory(stocks, true);
                 StockQuoteDownloader.downloadStockHistory(stocks, true, true, false);
             } catch (Exception e) { e.printStackTrace(); }
         });

@@ -227,7 +227,7 @@ public class StockPredictor {
         System.out.println("Training Single-Stock Random Forest for " + stock + "...");
         JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(jsc.sc(), libSVMFilePath).toJavaRDD().persist(StorageLevel.MEMORY_AND_DISK());
 
-        JavaRDD<LabeledPoint>[] trainingTestSplits = data.randomSplit(new double[]{0.7, 0.3});
+        final JavaRDD<LabeledPoint>[] trainingTestSplits = data.randomSplit(new double[]{0.7, 0.3});
 
         Integer classes = 2;
         HashMap<Integer, Integer> categoryInfo = new HashMap<>();

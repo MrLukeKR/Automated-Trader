@@ -183,7 +183,6 @@ public class TechnicalAnalyser {
         else
             closePrices = getFromDatabase(stock, "ClosePrice");
         TreeMap<Date, Double> volumes = getFromDatabase(stock, "TradeVolume");
-        TreeMap<Date, Double> openPrices = getFromDatabase(stock, "OpenPrice");
         TreeMap<Date, Double> lowPrices = getFromDatabase(stock, "LowPrice");
         TreeMap<Date, Double> highPrices = getFromDatabase(stock, "HighPrice");
 

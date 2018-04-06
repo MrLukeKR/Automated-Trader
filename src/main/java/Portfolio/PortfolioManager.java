@@ -146,7 +146,6 @@ public class PortfolioManager {
 
         Map<String, Double> expectedReturns = new TreeMap<>();
 
-
         for (String stock : stocks) {
             Stock currStock = new Stock(stock);
             currStock.setPrices(prices.get(stock));

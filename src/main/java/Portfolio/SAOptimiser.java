@@ -29,7 +29,7 @@ class SAOptimiser {
      * @param showDebug            True if debug information is to be printed, False if otherwise
      * @return An optimal portfolio, containing asset weightings
      */
-    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, Map<String, Double> expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
+    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovarianceMatrix, boolean showDebug) {
         double t = initialTemperature;
 
         Map<String, Double> solution = getRandomWeights(stocks);

@@ -116,15 +116,13 @@ public class PortfolioManager {
      * @param stocksToCalculate Stocks to calculate the covariance for
      * @return A covariance matrix based on the given list of stocks
      */
-    private static double[][] calculateCovarianceMatrix(Map<String, Stock> stocksToCalculate) {
-        double[][] covarianceMatrix = new double[stocksToCalculate.size()][stocksToCalculate.size()];
+    private static Map<String, Map<String, Double>> calculateCovarianceMatrix(Map<String, Stock> stocksToCalculate) {
+        Map<String, Map<String, Double>> covarianceMatrix = new TreeMap<>();
 
-        int i = 0;
         for (String stock1 : stocksToCalculate.keySet()) {
-            int j = 0;
+            covarianceMatrix.put(stock1, new TreeMap<>());
             for (String stock2 : stocksToCalculate.keySet())
-                covarianceMatrix[i][j++] = calculateCovariance(stocksToCalculate.get(stock1).getReturns(), stocksToCalculate.get(stock2).getReturns());
-            i++;
+                covarianceMatrix.get(stock1).put(stock2, calculateCovariance(stocksToCalculate.get(stock1).getReturns(), stocksToCalculate.get(stock2).getReturns()));
         }
 
         return covarianceMatrix;
@@ -160,7 +158,7 @@ public class PortfolioManager {
         for (String currStock : calcStocks.keySet())
             expectedReturns.put(currStock, calcStocks.get(currStock).getExpectedReturn());
 
-        double[][] covarianceMatrix = calculateCovarianceMatrix(calcStocks);
+        Map<String, Map<String, Double>> covarianceMatrix = calculateCovarianceMatrix(calcStocks);
         Map<String, Double> portfolio = null;
 
         switch(method) {

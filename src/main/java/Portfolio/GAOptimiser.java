@@ -32,13 +32,17 @@ class GAOptimiser {
 
         double totalFitness = 0;
 
-        for (Genome genome : population) totalFitness += genome.getFitness();
+        double worstFitness = Double.NaN;
+
+        for (Genome genome : population)
+            if (genome.getFitness() < worstFitness || Double.isNaN(worstFitness)) worstFitness = genome.getFitness();
+        for (Genome genome : population) totalFitness += (genome.getFitness() - worstFitness);
 
         for (int i = 0; i < population.size() / 2; i++) {
             double selectionPoint = Math.random() * totalFitness, accumulatedFitnesss = 0;
             int selectInd = 0;
 
-            while ((accumulatedFitnesss += orderedIndividuals.get(selectInd).getFitness()) < selectionPoint)
+            while ((accumulatedFitnesss += orderedIndividuals.get(selectInd).getFitness() - worstFitness) < selectionPoint)
                 selectInd++;
 
             selectedPopulation.add(orderedIndividuals.get(selectInd));
@@ -113,9 +117,9 @@ class GAOptimiser {
      * @param showDebug       True if debug information should be printed, false otherwise
      * @return Total sum of fitness over all Genomes
      */
-    static private double evaluate(int generation, PortfolioManager.EvaluationMethod em, ArrayList<Genome> population, Map<String, Double> expectedReturns, double[][] riskCovariance, boolean showDebug) {
+    static private double evaluate(int generation, PortfolioManager.EvaluationMethod em, ArrayList<Genome> population, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovariance, boolean showDebug) {
         double sum = 0;
-        double best = 0;
+        double best = Double.NaN;
 
         for (Genome currentGenome : population) {
             double currFitness = 0;
@@ -129,7 +133,7 @@ class GAOptimiser {
             sum += currFitness;
             currentGenome.setFitness(currFitness);
 
-            if (currFitness >= best) best = currFitness;
+            if (currFitness >= best || Double.isNaN(best)) best = currFitness;
         }
 
         if (showDebug)
@@ -149,7 +153,7 @@ class GAOptimiser {
      * @param showDebug            True if debug information should be printed, False otherwise
      * @return Array of stock weights (the portfolio)
      */
-    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, int numberOfGenerations, int populationSize, Map<String, Double> expectedReturns, double[][] riskCovarianceMatrix, boolean showDebug) {
+    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, int numberOfGenerations, int populationSize, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovarianceMatrix, boolean showDebug) {
         System.out.println("Performing Genetic Portfolio Optimisation");
         ArrayList<Genome> population = new ArrayList<>();
         ArrayList<Genome> bestOfPopulation;

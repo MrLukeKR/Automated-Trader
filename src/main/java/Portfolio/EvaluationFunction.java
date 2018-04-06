@@ -17,17 +17,12 @@ class EvaluationFunction {
      * @param riskCovarianceMatrix Covariance matrix between stocks
      * @return Risk value (variance)
      */
-    static double getRisk(Map<String, Double> weights, double[][] riskCovarianceMatrix) {
+    static double getRisk(Map<String, Double> weights, Map<String, Map<String, Double>> riskCovarianceMatrix) {
         double risk = 0;
 
-        int i = 0;
-
-        for (String stock1 : weights.keySet()) {
-            int j = 0;
+        for (String stock1 : weights.keySet())
             for (String stock2 : weights.keySet())
-                risk += weights.get(stock1) * weights.get(stock2) * riskCovarianceMatrix[i][j++];
-            i++;
-        }
+                risk += weights.get(stock1) * weights.get(stock2) * riskCovarianceMatrix.get(stock1).get(stock2);
 
         return risk;
     }
@@ -61,7 +56,7 @@ class EvaluationFunction {
 
         for (String stock : weights.keySet()) sum += weights.get(stock);
 
-        return sum == 1;
+        return sum >= 0.99 || sum <= 1.01;
     }
 
     /**
@@ -72,7 +67,7 @@ class EvaluationFunction {
      * @param riskCovarianceMatrix Covariance matrix between stocks
      * @return Ratio of Return/Risk
      */
-    static double getReturnToRiskRatio(Map<String, Double> weights, Map<String, Double> expectedReturns, double[][] riskCovarianceMatrix) {
+    static double getReturnToRiskRatio(Map<String, Double> weights, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovarianceMatrix) {
         double expectedReturn = getReturn(weights, expectedReturns), expectedRisk = getRisk(weights, riskCovarianceMatrix);
 
         if (expectedReturn == 0 || expectedRisk == 0) return 0;

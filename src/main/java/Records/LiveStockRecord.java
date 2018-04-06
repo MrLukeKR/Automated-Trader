@@ -21,8 +21,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
+
 public class LiveStockRecord {
-    final String symbol;
+    private final String symbol;
 
     private final HBox hStock = new HBox();
     private final Label stockPrice = new Label();
@@ -31,9 +37,16 @@ public class LiveStockRecord {
     private final XYChart.Series<Number, Number> stockData = new XYChart.Series<>();
     private final NumberAxis xAxis = new NumberAxis(0,0,1);
     private final NumberAxis yAxis = new NumberAxis();
-    private final LineChart stockChart = new LineChart<>(xAxis, yAxis);
+    private final LineChart<Number, Number> stockChart = new LineChart<>(xAxis, yAxis);
     private final ProgressIndicator progress = new ProgressIndicator();
 
+    /**
+     * Initialises a new Live Stock Record by setting a stock ticker, name and database handler to prevent deadlocks when accessing the database
+     *
+     * @param symbol    Stock ticker (e.g. AAPL)
+     * @param stockName The full name of the stock's company (e.g. Apple Inc.)
+     * @param dh        Database Handler for access to the database
+     */
     public LiveStockRecord(String symbol, String stockName, DatabaseHandler dh) {
         this.symbol = symbol;
         Label stockNameLabel = new Label(stockName);
@@ -98,6 +111,11 @@ public class LiveStockRecord {
         updateRecord(dh);
     }
 
+    /**
+     * Updates the GUI by retrieving the latest data from the database
+     *
+     * @param dh Database handler for this stock record
+     */
     public void updateRecord(DatabaseHandler dh){
         float currPrice = getCurrentPrice(dh),
                 prevPrice = getPreviousPrice(dh),
@@ -123,6 +141,10 @@ public class LiveStockRecord {
         });
     }
 
+    /**
+     * Determines which was the last trading day before Today
+     * @return An integer value of how many days ago trading last occurred
+     */
     private int getLastTradeDay() {
         switch (Calendar.getInstance().get(Calendar.DAY_OF_WEEK)) {
             case Calendar.MONDAY:
@@ -134,12 +156,15 @@ public class LiveStockRecord {
         }
     }
 
+    /**
+     * Retrieves the price of a stock on the last trading day prior to Today
+     * @param dh Database handler
+     * @return The price retrieved from the last trading day
+     */
     private float getPreviousPrice(DatabaseHandler dh){
         ArrayList<String> pPrice = null;
         try {
             pPrice = (dh.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol='" + symbol + "' AND TradeDate < CURDATE() ORDER BY TradeDate DESC LIMIT 1;"));
-
-
         } catch (SQLException e) { e.printStackTrace(); }
 
         if(pPrice == null || pPrice.isEmpty())
@@ -148,6 +173,11 @@ public class LiveStockRecord {
             return Float.parseFloat(pPrice.get(0));
     }
 
+    /**
+     * Retrieves the current price of a stock for today
+     * @param dh Database handler
+     * @return Today's price retrieved from the database
+     */
     private float getCurrentPrice(DatabaseHandler dh){
         ArrayList<String> cPrice = null;
         try {
@@ -160,14 +190,17 @@ public class LiveStockRecord {
             return Float.parseFloat(cPrice.get(0));
     }
 
+    /**
+     * Updates the price graph with the latest price information
+     * @param dh Database handler to use for accessing the database
+     * @param forceClear True if the graph should be cleared before adding more data, False if it should be added to existing data
+     */
     public void updateChart(DatabaseHandler dh, boolean forceClear) {
         try {
-            float prevPrice = getPreviousPrice(dh), //TODO: remove the need to keep passing the database handler
-                    currPrice = getCurrentPrice(dh);  //TODO: remove the need to keep passing the database handler
+            float prevPrice = getPreviousPrice(dh),
+                    currPrice = getCurrentPrice(dh);
 
             if(prevPrice < 0 || currPrice < 0) return;
-
-            //TODO: Select only the latest value
 
             ArrayList<String> statistics = dh.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE DATE(TradeDateTime) = CURDATE() AND Symbol='" + symbol + "' ORDER BY TradeDateTime ASC;");
 
@@ -213,17 +246,31 @@ public class LiveStockRecord {
                 Platform.runLater(()-> stockData.nodeProperty().get().setStyle("-fx-stroke: green; -fx-stroke-width: 1px;"));
             else Platform.runLater(()-> stockData.nodeProperty().get().setStyle("-fx-stroke: black; -fx-stroke-width: 1px;"));
             if (!stockChart.isVisible()) Platform.runLater(()-> stockChart.setVisible(true));
-        }catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
+    /**
+     * Sets the update flag to prevent the same record from being updated multiple times in parallel
+     * @param isUpdating True if the record is currently being updated, False otherwise
+     */
     public void setUpdating(boolean isUpdating) {
         Platform.runLater(() -> progress.setVisible(isUpdating));
     }
 
+    /**
+     * Returns the stock ticker of this record
+     * @return Stock ticker/symbol
+     */
     public String getSymbol() {
         return symbol;
     }
 
+    /**
+     * Returns the record's GUI node for inclusion with the main application GUI
+     * @return Record's JavaFX GUI node
+     */
     public Node getNode() {
         return hStock;
     }

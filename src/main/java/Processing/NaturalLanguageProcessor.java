@@ -9,20 +9,36 @@ import java.sql.SQLException;
 import java.text.BreakIterator;
 import java.util.*;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
+
 public class NaturalLanguageProcessor {
 
     private static DatabaseHandler dh;
     private static ProgressBar pb;
 
-    static private final Set<String> STOP_WORDS = new HashSet<>();
-
+    /**
+     * Initialises the Natural Language Processor with a database handler to prevent deadlocks when accessing the database and a progress bar to visualise any progress made during method calls
+     *
+     * @param dbh         Database handler
+     * @param nlpProgress Natural Language Processor Progress bar
+     */
     static public void initialise(DatabaseHandler dbh, ProgressBar nlpProgress) {
         dh = dbh;
         pb = nlpProgress;
 
-        Main.getController().updateCurrentTask("Initialised Natural Language Processor",false,false);
+        Main.getController().updateCurrentTask("Initialised Natural Language Processor", false, false);
     }
 
+    /**
+     * Splits a document into its component sentences
+     *
+     * @param document HTML document to split into sentences
+     * @return A list of sentences
+     */
     private static ArrayList<String> splitToSentences(String document) {
         //Based on the code from https://stackoverflow.com/questions/2687012/split-string-into-sentences
         BreakIterator it = BreakIterator.getSentenceInstance(Locale.US);
@@ -38,22 +54,13 @@ public class NaturalLanguageProcessor {
         return sentenceList;
     }
 
-    private static String removeStopWords(String sentence) {
-        ArrayList<String> words = new ArrayList<>(Arrays.asList(sentence.split(" ")));
-
-        StringBuilder cleanSentence = new StringBuilder();
-
-        int i = 1;
-        for (String word : words) {
-            if (!STOP_WORDS.contains(word)) {
-                cleanSentence.append(word);
-                if (i++ < words.size()) cleanSentence.append(" ");
-            }
-        }
-
-        return cleanSentence.toString();
-    }
-
+    /**
+     * Splits a document to sentences and removes any blacklisted sentences
+     *
+     * @param document HTML Document to clean
+     * @return A document that is free of blacklisted sentences
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static String cleanDocument(String document) throws SQLException {
         ArrayList<String> sentences = splitToSentences(document);
 
@@ -70,11 +77,16 @@ public class NaturalLanguageProcessor {
         return cleanDocument.toString();
     }
 
+    /**
+     * Cleans a sentence (removes punctuation, normalises to the same case, performs simple logic conversions [NOT X -> !X] and trims white space)
+     *
+     * @param sentence Sentence to clean
+     * @return Cleaned sentence
+     */
     private static String cleanSentence(String sentence) {
         sentence = sentence.toUpperCase();                                                          //Convert to Upper Case
         sentence = sentence.replaceAll("[^a-zA-Z\\s]", "");                       //Remove non-alphabetic characters
         sentence = sentence.replaceAll("NOT ", "!");                               //Perform logic conversions
-        sentence = removeStopWords(sentence);                                                   //Remove blacklisted terms
         sentence = sentence.replaceAll("\\s\\s+", " ");                           //Trim multi-spaces
 
         if (sentence.isEmpty())
@@ -83,6 +95,11 @@ public class NaturalLanguageProcessor {
             return sentence.trim();
     }
 
+    /**
+     * Splits articles to sentences and sends the resultant sentence collection to the database
+     *
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void enumerateSentencesFromArticles() throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 0");
         Main.getController().updateCurrentTask("Enumerating sentences for " + unprocessedIDs.size() + " documents...", false, false);
@@ -144,15 +161,27 @@ public class NaturalLanguageProcessor {
         Controller.updateProgress(0, pb);
     }
 
+    /**
+     * Asserts whether or not a sentence has been blacklisted in the database (e.g. because it is spam/not actual news article data)
+     *
+     * @param sentence Sentence to check for blacklisted status
+     * @return True if the sentence has been blacklisted, False otherwise
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static private boolean isSentenceBlacklisted(String sentence) throws SQLException {
         ArrayList<String> result = dh.executeQuery("SELECT COALESCE(Blacklisted, 0) FROM sentences WHERE Hash = MD5('" + sentence + "')");
 
-        if (result.isEmpty())
-            return false;
-
-        return result.get(0) == "1";
+        return !result.isEmpty() && result.get(0).equals("1");
     }
 
+    /**
+     * Calculates the price change between a given date and the last available date (or 0 if considering a newly introduced stock)
+     *
+     * @param symbol Stock ticker to calculate the price change of
+     * @param date   Date to calculate the price change on
+     * @return Difference between price on date and nearest date before that date
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static double getPriceChangeOnDate(String symbol, String date) throws SQLException {
         String truncDate = date.split(" ")[0];
         double priceOnDate = 0, priceOnPrev = 0;
@@ -172,6 +201,12 @@ public class NaturalLanguageProcessor {
         return (priceOnDate - priceOnPrev) / priceOnDate * 100.0;
     }
 
+    /**
+     * Enumerates N-Grams from a document (splits them into n-word tokens)
+     *
+     * @param n Size of tokens/grams (e.g. n = 2 -> 2 word tokens)
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void enumerateNGramsFromArticles(int n) throws SQLException {
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Content IS NOT NULL AND Blacklisted = 0 AND Duplicate = 0 AND Redirected = 0 AND Enumerated = 1 AND Tokenised = 0 AND PublishedDate < CURDATE()"); //TODO: (Use join) Price difference can't be calculated for the weekend or after hours before the next day
         Main.getController().updateCurrentTask("Enumerating n-grams for " + unprocessedIDs.size() + " documents...", false, false);
@@ -214,7 +249,7 @@ public class NaturalLanguageProcessor {
                                 accumulations[a] += existingAccumulations[a];
                                 if (accumulations[a] == Double.NaN) accumulations[a] = 0.0;
                                 if (accumulations[a] == Double.POSITIVE_INFINITY)
-                                    accumulations[a] = Double.MAX_VALUE; //TODO: Maybe don't use this method for determining an ngrams impact
+                                    accumulations[a] = Double.MAX_VALUE;
                             }
 
                             temporaryDatabase.put(ngram, accumulations);
@@ -241,6 +276,12 @@ public class NaturalLanguageProcessor {
         Main.getController().updateCurrentTask("Finished processing n-grams", false, false);
     }
 
+    /**
+     * Sends a Map of n-gram/price-change values to the database
+     *
+     * @param temporaryDatabase Map containing n-gram keys associated with total accumulated price-change values
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static private void sendNGramsToDatabase(Map<String, Double[]> temporaryDatabase) throws SQLException {
         if (temporaryDatabase.isEmpty()) return;
 
@@ -277,15 +318,14 @@ public class NaturalLanguageProcessor {
         dh.setAutoCommit(true);
     }
 
-    static public ArrayList<String> splitToNGrams(ArrayList<String> cleanedSentences, Locale languageLocale, int n) {
-        ArrayList<String> ngrams = new ArrayList<>();
-        for (String cleanedSentence : cleanedSentences)
-            ngrams.addAll(Objects.requireNonNull(splitToNGrams(cleanedSentence, languageLocale, n)));
-
-        return ngrams;
-    }
-
-    private static ArrayList<String> splitToNGrams(String cleanedSentence, Locale languageLocale, int n) {
+    /**
+     * Splits a sentence into its component N-Grams
+     *
+     * @param cleanedSentence Sentence to split into N-Grams
+     * @param n               Size of grams/tokens (e.g. n=2 -> 2 word tokens)
+     * @return List of n-grams
+     */
+    private static ArrayList<String> splitToNGrams(String cleanedSentence, int n) {
         ArrayList<String> wordList = splitToWords(cleanedSentence);
         ArrayList<String> ngrams = new ArrayList<>();
 
@@ -302,10 +342,24 @@ public class NaturalLanguageProcessor {
         return ngrams;
     }
 
+    /**
+     * Splits a document into single words
+     *
+     * @param document Document to split
+     * @return A list of words
+     */
     private static ArrayList<String> splitToWords(String document) {
         return new ArrayList<>(Arrays.asList(document.split(" ")));
     }
 
+    /**
+     * Calculates the average news sentiment for Today
+     *
+     * @param stock     Stock to calculate the average news sentiment for
+     * @param ngramSize Size of n-grams to consider
+     * @return Average sentiment of news articles published on Today's date
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public double getTodaysAverageSentiment(String stock, int ngramSize) throws SQLException {
         String latestDate = dh.executeQuery("SELECT MAX(TradeDate) FROM dailystockprices WHERE Symbol='" + stock + "'").get(0);
         ArrayList<String> unprocessedIDs = dh.executeQuery("SELECT ID FROM newsarticles WHERE Symbol='" + stock + "' AND PublishedDate = '" + latestDate +"' AND Content IS NOT NULL AND Enumerated = 1 AND Tokenised = 1 AND Processed = 0 AND Blacklisted = 0");
@@ -321,6 +375,12 @@ public class NaturalLanguageProcessor {
         return sentiment / unprocessedIDs.size();
     }
 
+    /**
+     * Calculates the sentiment values for all unprocessed articles
+     *
+     * @param ngramSize Largest size of n-grams to process up to
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void processArticlesForSentiment(int ngramSize) throws SQLException {
         Main.getController().updateCurrentTask("Processing Sentiment of Articles", false, false);
 
@@ -340,7 +400,6 @@ public class NaturalLanguageProcessor {
             dh.addBatchCommand("UPDATE newsarticles SET processed = 1, mood = " + sentiment + " WHERE ID = " + id);
             Main.getController().updateCurrentTask("Sentiment for Article ID " + id + ": " + sentiment,false,false);
 
-
             Controller.updateProgress(++curr, t, pb);
         }
 
@@ -350,21 +409,14 @@ public class NaturalLanguageProcessor {
         dh.setAutoCommit(true);
     }
 
-    static public void enumerateSentiments(String stock) throws SQLException {
-        ArrayList<String> dates = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE Sentiment is null Symbol='" + stock + "' AND TradeDate < CURRENT_DATE ORDER BY TradeDate ASC");
-        TreeMap<String, Double> sentiments = new TreeMap<>();
-
-        for(String date : dates)
-            sentiments.put(date, getAverageSentimentOnDate(stock, date));
-
-        dh.setAutoCommit(false);
-        for(String date : sentiments.keySet())
-            dh.addBatchCommand("UPDATE dailystockprices SET Sentiment = " + sentiments.get(date) + " WHERE TradeDate = '" + date + "';");
-
-        dh.executeBatch();
-        dh.setAutoCommit(true);
-    }
-
+    /**
+     * Gets the average per-day sentiments of a given stock, over the past n records
+     *
+     * @param stock Stock to retrieve the sentiment data for
+     * @param size  Amount of days to gather the average sentiment for
+     * @return Array of average sentiment over n days
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public double[] getAverageSentiments(String stock, int size) throws SQLException {
         ArrayList<String> results = dh.executeQuery("SELECT COALESCE(AVG(newsarticles.Mood), 0.5) FROM dailystockprices LEFT JOIN newsarticles ON (dailystockprices.Symbol, dailystockprices.TradeDate) = (newsarticles.Symbol, newsarticles.PublishedDate) WHERE dailystockprices.Symbol='" + stock + "' GROUP BY dailystockprices.TradeDate ORDER BY dailystockprices.TradeDate ASC");
 
@@ -383,6 +435,14 @@ public class NaturalLanguageProcessor {
         return sentiments;
     }
 
+    /**
+     * Retrieves the average sentiment for a given stock on a given date
+     *
+     * @param stock Stock to retrieve the average sentiment for
+     * @param date  Date to retrieve the sentiments of
+     * @return Average sentiment over all news articles on a given date
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public double getAverageSentimentOnDate(String stock, String date) throws SQLException {
         ArrayList<String> result = dh.executeQuery("SELECT COALESCE(AVG(Mood),0.5) FROM newsarticles WHERE Symbol = '" + stock + "' AND PublishedDate = '" + date + "' AND Processed = 1");
 
@@ -392,6 +452,13 @@ public class NaturalLanguageProcessor {
             return Double.parseDouble(result.get(0));
     }
 
+    /**
+     * Enumerates all n-grams within a list of sentences
+     *
+     * @param sentences Sentences to extract the n-grams from
+     * @param ngramSize Largest size of gram to enumerate
+     * @return List of n-grams
+     */
     private static ArrayList<String> getNGramsFromSentences(ArrayList<String> sentences, int ngramSize){
         ArrayList<String> ngrams = new ArrayList<>();
 
@@ -400,12 +467,20 @@ public class NaturalLanguageProcessor {
             if (cSentence != null)
                 for (int i = 1; i <= ngramSize; i++)
                     if (cSentence.split(" ").length >= ngramSize)
-                        ngrams.addAll(Objects.requireNonNull(splitToNGrams(cSentence, Locale.US, i)));
+                        ngrams.addAll(Objects.requireNonNull(splitToNGrams(cSentence, i)));
         }
 
         return ngrams;
     }
 
+    /**
+     * Calculates the sentiment of an article, given its unique ID
+     *
+     * @param articleID Unique article ID
+     * @param ngramSize Largest size of gram to consider
+     * @return Article sentiment
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static double evaluateArticleSentiment(int articleID, int ngramSize) throws SQLException {
         String article = dh.executeQuery("SELECT Content FROM newsarticles WHERE ID = " + articleID + ";").get(0);
 
@@ -413,15 +488,20 @@ public class NaturalLanguageProcessor {
 
         if (article != null) {
             ArrayList<String> ngrams = getNGramsFromSentences(splitToSentences(cleanDocument(article)),ngramSize);
-
             Set<String> noDuplicateNGrams = new HashSet<>(ngrams);
-
             sentiment = calculateSentiment(new ArrayList<>(noDuplicateNGrams));
         }
 
         return sentiment;
     }
 
+    /**
+     * Calculates the sentiment of a list of words
+     *
+     * @param wordList List of n-grams to gather the sentiments for
+     * @return Average sentiment over the entire given list of n-grams
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static double calculateSentiment(ArrayList<String> wordList) throws SQLException {
         double totalSentiment = 0;
 

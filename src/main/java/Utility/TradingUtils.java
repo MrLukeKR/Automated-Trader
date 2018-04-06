@@ -8,13 +8,32 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.7
+ */
+
 public class TradingUtils {
     static private DatabaseHandler databaseHandler = null;
 
+    /**
+     * Passes a new database handler to the class, preventing deadlocks from occurring when accesing the database
+     *
+     * @param dh Trading Utils Database Handler
+     */
     static public void setDatabaseHandler(DatabaseHandler dh) {
         databaseHandler = dh;
     }
 
+    /**
+     * Sells a stock, given its ticker and an amount to sell
+     *
+     * @param stock     Stock ticker to consider (e.g. AAPL for Apple Inc.)
+     * @param amount    Quantity of the stock to sell
+     * @param automated True if this sale was done by the automated trader, False if it was manual
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void sellStock(String stock, int amount, boolean automated) throws SQLException {
         float cost = Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
         float totalCost = cost * amount;
@@ -39,6 +58,13 @@ public class TradingUtils {
         }
     }
 
+    /**
+     * Determines whether or not a sale can be made, based on the amount of currently held shares
+     * @param stock Stock ticker to consider (e.g. AAPL for Apple Inc.)
+     * @param amount Quantity of stock to sell
+     * @return True if the stock can be sold in this quantity, False otherwise
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public boolean canSellStock(String stock, int amount) throws SQLException {
         if (amount == 0 || stock.isEmpty()) return false;
 
@@ -52,6 +78,13 @@ public class TradingUtils {
         return availableStocks >= amount;
     }
 
+    /**
+     * Determines whether or not a purchase can be maade, based on the cost of the stock and the current balance
+     * @param stock Stock ticker to consider (e.g. AAPL for Apple Inc.)
+     * @param amount Quantity of stock to buy
+     * @return True if the stock can be bought in this quantity, False otherwise
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public boolean canBuyStock(String stock, int amount) throws SQLException {
         if (amount == 0 || stock.isEmpty())
             return false;
@@ -62,10 +95,22 @@ public class TradingUtils {
         return (stockCost * amount) <= availableFunds;
     }
 
-    static public int getHeldStocks(String stock) throws SQLException {
+    /**
+     * Retrieves the number of stocks owned for a given stock
+     *
+     * @param stock Stock ticker to consider (e.g. AAPL for Apple Inc.)
+     * @return Number of shares owned for this stock
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
+    private static int getHeldStocks(String stock) throws SQLException {
         return Integer.parseInt(databaseHandler.executeQuery("SELECT COALESCE(Held,0) FROM portfolio WHERE Symbol='" + stock + "';").get(0));
     }
 
+    /**
+     * Retrieves the total worth of all held stocks, as well as any free funds available
+     * @return Total worth of stocks + "bank balance"
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public double getTotalWorth() throws SQLException {
         float bankBalance = Float.parseFloat(databaseHandler.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0));
         float stockWorth = 0;
@@ -81,6 +126,11 @@ public class TradingUtils {
         return stockWorth + bankBalance;
     }
 
+    /**
+     * Retrieves the worth of all held stocks
+     * @return Total worth of stocks
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public float getStockWorth() throws SQLException {
         float potentialTotal = 0;
         ArrayList<String> heldStocks = databaseHandler.executeQuery("SELECT Symbol, Held FROM portfolio WHERE Held > 0");
@@ -93,6 +143,14 @@ public class TradingUtils {
         return potentialTotal;
     }
 
+    /**
+     * Buys a stock, given its ticker and an amount to buy
+     * @param stock Stock ticker to consider (e.g. AAPL for Apple Inc.)
+     * @param amount Quantity of the stock to buy
+     * @param investmentPeriod Number of days to hold the stock for
+     * @param automated True if this purchase was done by the automated trader, False if it was manual
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void buyStock(String stock, int amount, int investmentPeriod, boolean automated) throws SQLException {
         float cost = Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
         float totalCost = cost * amount;
@@ -104,13 +162,11 @@ public class TradingUtils {
 
         if (totalCost > balance) return;
 
-/**
- * If the investment period is not 0, treat it as a dated investment (i.e. disallow sale until a given date)
- */
+
+        //If the investment period is not 0, treat it as a dated investment (i.e. disallow sale until a given date)
         if (investmentPeriod > 0)
             databaseHandler.executeCommand("INSERT INTO investments(Symbol, Amount, EndDate, Period) VALUES ('" + stock + "', " + amount + ", DATE_ADD(CURRENT_DATE, INTERVAL " + investmentPeriod + " DAY), " + investmentPeriod + ");");
 
-        //TODO: Allocation warning if exceeding allocation but still purchasable
         String lastUpdated = databaseHandler.executeQuery("SELECT MAX(TradeDateTime) FROM intradaystockprices WHERE Symbol = '" + stock + "';").get(0);
         databaseHandler.executeCommand("INSERT INTO portfolio (Symbol, Allocation, Held, Investment, LastUpdated) VALUES ('" + stock + "', " + totalCost + ", " + amount + ", " + totalCost + ", '" + lastUpdated + "') ON DUPLICATE KEY UPDATE Allocation = GREATEST(VALUES(Allocation), (SELECT Allocation FROM (SELECT Allocation FROM portfolio WHERE Symbol='" + stock + "') as t)), Held = Held+ VALUES(Held), Investment = Investment + VALUES(Investment), LastUpdated = VALUES(LastUpdated);");
         databaseHandler.executeCommand("INSERT INTO banktransactions(Amount, Type) VALUES (" + -totalCost + ",'TRADE')");
@@ -122,6 +178,12 @@ public class TradingUtils {
                 ");");
     }
 
+    /**
+     * Automatically trades a set of stocks, given a list of trading days
+     * @param stocks List of stock tickers to consider
+     * @param dayArray List of trading periods
+     * @throws Exception Including SQLException
+     */
     public static void autoTrade(ArrayList<String> stocks, int[] dayArray) throws Exception {
         Main.getController().updateCurrentTask("Auto-Trading...", false, false);
         ArrayList<String> portfolio = databaseHandler.executeQuery("SELECT * FROM portfolio ORDER BY Allocation DESC;");
@@ -157,7 +219,7 @@ public class TradingUtils {
             if (buyAmount >= dayArray.length) {
                 int remaining = buyAmount * splitAmount;
                 for (int day : dayArray)
-                    if ((buyAmount > 0) && (buyAmount * currentPrice) <= balance) {
+                    if (buyAmount * currentPrice <= balance) {
                         Main.getController().updateCurrentTask("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol, false, true);
 
                         TradingUtils.buyStock(symbol, remaining, day, true);
@@ -170,6 +232,12 @@ public class TradingUtils {
         Main.getController().updateGUI();
     }
 
+    /**
+     * Sells all held stocks
+     * @param automated True if this purchase was done by the automated trader, False if it was manual
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws ParseException Throws ParseException if the GUI can't be updated
+     */
     static public void sellAllStock(boolean automated) throws SQLException, ParseException {
         ArrayList<String> stocks = databaseHandler.executeQuery("SELECT Symbol, Held FROM portfolio WHERE Held > 0");
 
@@ -182,6 +250,11 @@ public class TradingUtils {
         Main.getController().updateGUI();
     }
 
+    /**
+     * Gets the current "bank balance"
+     * @return Funds available within the "bank"
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public double getBalance() throws SQLException {
         return Math.floor(100 * Float.parseFloat(databaseHandler.executeQuery("SELECT SUM(Amount) FROM banktransactions").get(0))) / 100;
     }

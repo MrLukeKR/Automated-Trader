@@ -15,38 +15,49 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.TreeMap;
 
+/**
+ * @author Luke K. Rose <psylr5@nottingham.ac.uk>
+ * @version 1.0
+ * @since 0.1
+ */
 
 public class StockRecordParser {
     private static final String IS_NUMERIC = "[-+]?\\d*\\.?\\d+";
     private static DatabaseHandler dh;
 
-
+    /**
+     * Initialises the Stock Record Parser with a Database Handler to prevent deadlocks when accessing the database
+     *
+     * @param sqdh Stock Quote Database Handler
+     */
     static public void initialise(DatabaseHandler sqdh) {
         dh = sqdh;
 
-        System.out.println("Initialised Stock Record Parser");
+        Main.getController().updateCurrentTask("Initialised Stock Record Parser", false, false);
     }
 
-    static public void importDailyMarketData(File csvFile, String symbol) throws IOException, SQLException {
-        FileReader fr = new FileReader(csvFile);
-        BufferedReader br = new BufferedReader(fr);
-
-        String curr;
-        ArrayList<String> csvArray = new ArrayList<>();
-
-        while((curr = br.readLine()) != null)
-            csvArray.add(curr);
-
-        importDailyMarketData(csvArray, symbol);
-    }
-
+    /**
+     * Imports a list of CSV values into the daily price database
+     *
+     * @param csv    List of stock history Comma Separated Values
+     * @param symbol Stock ticker to associate the data with
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void importDailyMarketData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
         importDailyData(csv, symbol);
     }
 
-    static public void importDailyYahooMarketData(File csvFile, String symbol) throws SQLException, IOException {
+    /**
+     * Imports Yahoo! CSV files (useful for getting ALL available data since the IPO of the stock)
+     *
+     * @param csvFile Yahoo! stock history CSV data file
+     * @param symbol  Stock to associate the data with
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws IOException  Throws IOException if the CSV file cannot be found or cannot be read
+     */
+    private static void importDailyYahooMarketData(File csvFile, String symbol) throws SQLException, IOException {
         FileReader fr = new FileReader(csvFile);
         BufferedReader br = new BufferedReader(fr);
 
@@ -59,6 +70,12 @@ public class StockRecordParser {
         importDailyYahooMarketData(csvArray, symbol);
     }
 
+    /**
+     * Imports Yahoo! CSV values (useful for getting ALL available data since the IPO of the stock)
+     * @param csv Yahoo! stock history CSV list
+     * @param symbol Stock to associate the data with
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static void importDailyYahooMarketData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
@@ -81,20 +98,32 @@ public class StockRecordParser {
         importDailyData(newCsv, symbol);
     }
 
+    /**
+     * Imports a list of CSV values into the intraday price database
+     * @param csv List of stock history Comma Separated Values
+     * @param symbol Stock to associate the data with
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void importIntradayMarketData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
         importIntradayData(csv, symbol);
     }
 
-
-    static private TreeMap<Timestamp, String> cleanCSVWithTimestamp(ArrayList<String> csv, int columnCount, Timestamp timeFrom) {
+    /**
+     * Converts a pure CSV file into a Map of records that can be accessed via a timestamp linked to the record
+     *
+     * @param csv      List of CSV records
+     * @param timeFrom Only consider records that are equal to or after this value
+     * @return A Map of CSV records, accessible by timestamp
+     */
+    static private TreeMap<Timestamp, String> cleanCSVWithTimestamp(ArrayList<String> csv, Timestamp timeFrom) {
         TreeMap<Timestamp, String> newCSV = new TreeMap<>();
 
         for (String curr : csv)
             if (!(curr == null || curr.isEmpty())) {
                 String split[] = curr.split(",");
-                if (split.length == columnCount && split[1].matches(IS_NUMERIC)) {
+                if (split.length == 6 && split[1].matches(IS_NUMERIC)) {
                     try {
                         Timestamp currTime = Timestamp.valueOf(split[0]);
                         if (timeFrom == null || currTime.equals(timeFrom) || currTime.after(timeFrom))
@@ -108,13 +137,20 @@ public class StockRecordParser {
         return newCSV;
     }
 
-    static private TreeMap<Date, String> cleanCSVWithDate(ArrayList<String> csv, int columnCount, Date dateFrom) {
+    /**
+     * Converts a pure CSV file into a Map of records that can be accessed via a date linked to the record
+     *
+     * @param csv      List of CSV reocrds
+     * @param dateFrom Only consider records that are equal to or after this value
+     * @return A Map of CSV records, accessible by date
+     */
+    static private TreeMap<Date, String> cleanCSVWithDate(ArrayList<String> csv, Date dateFrom) {
         TreeMap<Date, String> newCSV = new TreeMap<>();
 
         for (String curr : csv)
             if (!(curr == null || curr.isEmpty())) {
                 String split[] = curr.split(",");
-                if (split.length == columnCount && split[1].matches(IS_NUMERIC)) {
+                if (split.length == 6 && split[1].matches(IS_NUMERIC)) {
                     try {
                         Date currDate = Date.valueOf(split[0]);
                         if (dateFrom == null || currDate.equals(dateFrom) || currDate.after(dateFrom))
@@ -128,11 +164,23 @@ public class StockRecordParser {
         return newCSV;
     }
 
+    /**
+     * Imports the latest quote to both the intraday and daily price database
+     * @param csv CSV quote data
+     * @param stock Stock to associate the quote data with
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     static public void importCurrentQuote(String csv, String stock) throws SQLException {
         dh.executeCommand("INSERT INTO intradaystockprices VALUES('" + stock + "'," + csv + ", 1) ON DUPLICATE KEY UPDATE OpenPrice=VALUES(OpenPrice), HighPrice=VALUES(HighPrice), LowPrice=VALUES(LowPrice), ClosePrice=VALUES(ClosePrice), TradeVolume=VALUES(TradeVolume), Temporary=1;");
         dh.executeCommand("INSERT INTO dailystockprices(Symbol, TradeDate, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume) VALUES('" + stock + "'," + csv + ") ON DUPLICATE KEY UPDATE OpenPrice=VALUES(OpenPrice), HighPrice=VALUES(HighPrice), LowPrice=VALUES(LowPrice), ClosePrice=VALUES(ClosePrice), TradeVolume=VALUES(TradeVolume);");
     }
 
+    /**
+     * Imports a list of CSV values into the intraday price database
+     * @param csv List of CSV price values
+     * @param symbol Syock to associate the price values with
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static void importIntradayData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
@@ -147,7 +195,7 @@ public class StockRecordParser {
         int count = 0;
         StringBuilder statement = new StringBuilder("INSERT INTO " + "intradaystockprices" + "(Symbol, TradeDateTime, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)" + " VALUES ");
 
-        TreeMap<Timestamp, String> newCSV = cleanCSVWithTimestamp(csv, 6, timeFrom);
+        TreeMap<Timestamp, String> newCSV = cleanCSVWithTimestamp(csv, timeFrom);
 
         for (Timestamp curr : newCSV.keySet()) {
             count++;
@@ -171,6 +219,12 @@ public class StockRecordParser {
             }
     }
 
+    /**
+     * Imports a list of CSV values into the daily price database
+     * @param csv List of CSV price values
+     * @param symbol Stock to associate the price values with
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     */
     private static void importDailyData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
@@ -185,7 +239,7 @@ public class StockRecordParser {
         int count = 0;
         StringBuilder statement = new StringBuilder("INSERT INTO " + "dailystockprices" + "(Symbol, TradeDate, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)" + " VALUES ");
 
-        TreeMap<Date, String> newCSV = cleanCSVWithDate(csv, 6, dateFrom);
+        TreeMap<Date, String> newCSV = cleanCSVWithDate(csv, dateFrom);
 
         for (Date curr : newCSV.keySet()) {
             count++;
@@ -208,8 +262,14 @@ public class StockRecordParser {
             }
     }
 
+    /**
+     * Imports all Yahoo! stock history files for all given stocks and updates the given progress bar appropriately
+     * @param stocks List of stocks to import the Yahoo! files of
+     * @param stockFeedProgress ProgressBar to visalise progress of import
+     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
+     * @throws IOException Throws IOException if the CSV file cannot be found or cannot be read
+     */
     static public void processYahooHistories(ArrayList<String> stocks, ProgressBar stockFeedProgress) throws SQLException, IOException {
-
         double curr = 0;
         final double t = stocks.size();
 

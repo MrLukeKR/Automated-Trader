@@ -74,4 +74,25 @@ class EvaluationFunction {
 
         return expectedReturn / expectedRisk;
     }
+
+    /**
+     * Calculates the transaction costs associated with a portfolio rebalance
+     *
+     * @param originalWeights Asset allocation of the old portfolio
+     * @param newWeights      Asset allocation of the new portfolio
+     * @param buyCosts        Costs associated with buying each stock
+     * @param sellCosts       Costs associated with selling each stock
+     * @return A total transaction cost for the cumulative buying and selling of stocks
+     */
+    static double getTransactionCosts(Map<String, Double> originalWeights, Map<String, Double> newWeights, Map<String, Double> buyCosts, Map<String, Double> sellCosts) {
+        double sellCost = 0, buyCost = 0;
+
+        for (String stock : originalWeights.keySet())
+            if (originalWeights.get(stock) > newWeights.get(stock)) //If buying a stock
+                sellCost += (originalWeights.get(stock) - newWeights.get(stock) * sellCosts.get(stock));
+            else if (originalWeights.get(stock) < newWeights.get(stock)) //If selling a stock
+                buyCost += (newWeights.get(stock) - originalWeights.get(stock)) * buyCosts.get(stock);
+
+        return sellCost + buyCost;
+    }
 }

@@ -1,268 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="1061ef2c-acbd-44b2-9590-84b6cee7656a" name="Default" comment="Refactored: Converted primitive Covariance Matrix to a stock-ticker accessible 2D Map">
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_guava_guava_16_0_1.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_commons_commons_lang3_3_5.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_commons_commons_math3_3_4_1.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_slf4j_slf4j_api_1_7_16.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_jniloader_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_native_ref_java_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_native_system_java_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_ref_linux_armhf_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_ref_linux_i686_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_ref_linux_x86_64_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_ref_osx_x86_64_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_ref_win_i686_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_ref_win_x86_64_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_system_linux_armhf_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_system_linux_i686_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_system_linux_x86_64_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_system_osx_x86_64_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_system_win_i686_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_fommil_netlib_netlib_native_system_win_x86_64_natives_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_stephenc_findbugs_findbugs_annotations_1_3_9_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_guava_guava_18_0.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_googlecode_matrix_toolkits_java_mtj_1_0_4.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_googlecode_netlib_java_netlib_java_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_h2database_h2_1_4_196.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__commons_logging_commons_logging_1_1_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__joda_time_joda_time_2_2.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__junit_junit_4_11.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__nz_ac_waikato_cms_weka_thirdparty_bounce_0_18.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__nz_ac_waikato_cms_weka_thirdparty_java_cup_11b_2015_03_26.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__nz_ac_waikato_cms_weka_thirdparty_java_cup_11b_runtime_2015_03_26.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__nz_ac_waikato_cms_weka_weka_stable_3_8_0.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_commons_commons_lang3_3_3_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_commons_commons_math3_3_2.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_bytedeco_javacpp_1_3_3.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_bytedeco_javacpp_presets_openblas_0_2_19_1_3.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_bytedeco_javacpp_presets_openblas_macosx_x86_64_0_2_19_1_3.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_codehaus_woodstox_stax2_api_3_1_4.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_hamcrest_hamcrest_core_1_3.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_nd4j_jackson_0_9_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_nd4j_nd4j_api_0_0_3.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_nd4j_nd4j_buffer_0_9_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_nd4j_nd4j_common_0_9_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_nd4j_nd4j_context_0_9_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_nd4j_nd4j_native_0_9_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_nd4j_nd4j_native_api_0_9_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_nd4j_nd4j_native_macosx_x86_64_0_9_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_projectlombok_lombok_1_16_16.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_reflections_reflections_0_9_10.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_slf4j_slf4j_api_1_7_2.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_springframework_spring_core_3_2_5_RELEASE.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_yaml_snakeyaml_1_12.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/AAL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/AAPL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ADBE.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ADI.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ADP.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ADSK.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/AKAM.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ALGN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ALXN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/AMAT.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/AMGN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/AMZN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ATVI.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/AVGO.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/BIDU.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/BIIB.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/BMRN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/BT.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CELG.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CERN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CHKP.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CHTR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CMCSA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/COST.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CSCO.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CSX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CTAS.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CTRP.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CTSH.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/CTXS.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/DISCA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/DISCK.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/DISH.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/DLTR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/EA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/EBAY.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ESRX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/EXPE.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/FAST.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/FB.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/FISV.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/FOX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/FOXA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/GILD.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/GOOG.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/GOOGL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/HAS.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/HOLX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/HSIC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/IDXX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ILMN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/INCY.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/INTC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/INTU.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ISRG.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/JBHT.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/JD.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/KHC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/KLAC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LBTYA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LBTYK.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LILA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LILAK.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LRCX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/AAL.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/ABF.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/ADM.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/AHT.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/ANTO.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/AV.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/AZN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BA.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BAB.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BARC.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BATS.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BDEV.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BKG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BLND.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BLT.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BNZL.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BP.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/BRBY.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/CCH.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/CCL.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/CNA.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/CPG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/CRDA.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/CRH.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/CTEC.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/DCC.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/DGE.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/DLG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/EXPN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/EZJ.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/FERG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/FRES.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/GFS.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/GKN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/GLEN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/GSK.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/HL.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/HMSO.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/HSBA.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/IAG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/IHG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/III.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/IMB.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/INF.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/ITRK.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/ITV.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/JMAT.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/KGF.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/LAND.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/LGEN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/LLOY.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/LSE.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/MCRO.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/MDC.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/MERL.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/MKS.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/MNDI.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/MRW.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/NG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/NMC.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/NXT.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/OML.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/PPB.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/PRU.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/PSN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/PSON.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/RB.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/RDSA.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/REL.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/RIO.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/RR.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/RRS.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/RSA.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/RTO.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SBRY.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SDR.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SGE.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SGRO.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SHP.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SKG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SKY.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SLA.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SMIN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SMT.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SSE.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/STAN.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/STJ.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/SVT.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/TSCO.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/TUI.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/TW.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/ULVR.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/UU.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/VOD.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/WPG.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/WPP.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LSE/WTB.L.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/LVNTA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MAR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MCHP.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MDLZ.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MELI.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MNST.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MSFT.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MU.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MXIM.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/MYL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/NCLH.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/NFLX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/NTES.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/NVDA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ORLY.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/PAYX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/PCAR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/PCLN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/PYPL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/QCOM.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/QVCA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/REGN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ROST.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/SBUX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/SHPG.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/SIRI.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/SNE.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/STX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/SWKS.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/SYMC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/TMUS.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/TSCO.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/TSLA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/TWTR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/TXN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/ULTA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/VIAB.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/VOD.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/VRSK.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/VRTX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/WBA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/WDC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/WYNN.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/XLNX.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/res/historicstocks/XRAY.csv" beforeDir="false" />
-    </list>
+    <list default="true" id="1061ef2c-acbd-44b2-9590-84b6cee7656a" name="Default" comment="Refactored: Converted primitive Covariance Matrix to a stock-ticker accessible 2D Map" />
     <ignored path="$PROJECT_DIR$/out/" />
     <ignored path="$PROJECT_DIR$/target/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -352,8 +91,8 @@
       <file leaf-file-name="EvaluationFunction.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/EvaluationFunction.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="304">
-              <caret line="67" column="35" lean-forward="true" selection-start-line="67" selection-start-column="35" selection-end-line="67" selection-end-column="35" />
+            <state relative-caret-position="253">
+              <caret line="64" column="63" lean-forward="true" selection-start-line="64" selection-start-column="63" selection-end-line="64" selection-end-column="63" />
             </state>
           </provider>
         </entry>
@@ -817,7 +556,7 @@
       <workItem from="1522590201266" duration="51766000" />
       <workItem from="1523056211471" duration="957000" />
       <workItem from="1523098477237" duration="942000" />
-      <workItem from="1523136313448" duration="1813000" />
+      <workItem from="1523136313448" duration="2257000" />
     </task>
     <task id="LOCAL-00043" summary="Refactored: Removed \r\n from print statement to disallow status bar resizing">
       <created>1521121436202</created>
@@ -1166,7 +905,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="187420000" />
+    <option name="totallyTimeSpent" value="187864000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1096" extended-state="6" />
@@ -1589,8 +1328,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/EvaluationFunction.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="304">
-          <caret line="67" column="35" lean-forward="true" selection-start-line="67" selection-start-column="35" selection-end-line="67" selection-end-column="35" />
+        <state relative-caret-position="253">
+          <caret line="64" column="63" lean-forward="true" selection-start-line="64" selection-start-column="63" selection-end-line="64" selection-end-column="63" />
         </state>
       </provider>
     </entry>

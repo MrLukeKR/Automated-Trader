@@ -2,10 +2,7 @@ package Portfolio;
 
 import Utility.PortfolioUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
+import java.util.*;
 
 import static Utility.PortfolioUtils.getRandomWeights;
 
@@ -25,27 +22,27 @@ class GAOptimiser {
      */
     static private ArrayList<Genome> selection(ArrayList<Genome> population) {
         ArrayList<Genome> selectedPopulation = new ArrayList<>();
-        ArrayList<Genome> orderedIndividuals = new ArrayList<>(population);
-
-        orderedIndividuals.sort(Comparator.comparing(Genome::getFitness));
-        Collections.reverse(orderedIndividuals);
+        population.sort(Comparator.comparing(Genome::getFitness));
+        Collections.reverse(population);
 
         double totalFitness = 0;
-
         double worstFitness = Double.NaN;
 
-        for (Genome genome : population)
+        for (Genome genome : population) {
             if (genome.getFitness() < worstFitness || Double.isNaN(worstFitness)) worstFitness = genome.getFitness();
-        for (Genome genome : population) totalFitness += (genome.getFitness() - worstFitness);
+            totalFitness += genome.getFitness();
+        }
+
+        totalFitness -= worstFitness * population.size();
 
         for (int i = 0; i < population.size() / 2; i++) {
             double selectionPoint = Math.random() * totalFitness, accumulatedFitnesss = 0;
             int selectInd = 0;
 
-            while ((accumulatedFitnesss += orderedIndividuals.get(selectInd).getFitness() - worstFitness) < selectionPoint)
+            while ((accumulatedFitnesss += population.get(selectInd).getFitness() - worstFitness) < selectionPoint)
                 selectInd++;
 
-            selectedPopulation.add(orderedIndividuals.get(selectInd));
+            selectedPopulation.add(population.get(selectInd));
         }
 
         return selectedPopulation;
@@ -97,13 +94,12 @@ class GAOptimiser {
      * @return List of mutate genomes
      */
     static private ArrayList<Genome> mutate(ArrayList<Genome> population, double rate) {
-        ArrayList<Genome> mutatedPopulation = new ArrayList<>();
-        for (Genome individual : population) {
-            Genome newGenome = new Genome(PortfolioUtils.mutate(individual.getGenes(), rate));
-            mutatedPopulation.add(newGenome);
-        }
+        ArrayList<Genome> mutatedPopultion = new ArrayList<>();
 
-        return mutatedPopulation;
+        for (Genome individual : population)
+            mutatedPopultion.add(new Genome(PortfolioUtils.mutate(individual.getGenes(), rate)));
+
+        return mutatedPopultion;
     }
 
     /**
@@ -112,28 +108,54 @@ class GAOptimiser {
      * @param generation      The iteration that the Genetic Algorithm is acting upon
      * @param em              Evaluation Method (Maximise Return, Balance Risk and Return)
      * @param population      List of Genomes (portfolio asset weightings)
+     * @param currentPortfolio The current weighting of assets in the portfolio
+     * @param stockPrices The current prices of each stock
      * @param expectedReturns Array of expected returns (mean return, one per stock)
      * @param riskCovariance  Covariance matrix (represents the risk of the portfolio)
      * @param showDebug       True if debug information should be printed, false otherwise
      * @return Total sum of fitness over all Genomes
      */
-    static private double evaluate(int generation, PortfolioManager.EvaluationMethod em, ArrayList<Genome> population, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovariance, boolean showDebug) {
+    static private double evaluate(int generation, PortfolioManager.EvaluationMethod em, ArrayList<Genome> population, Map<String, Double> currentPortfolio, Map<String, Double> stockPrices, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovariance, boolean showDebug) {
         double sum = 0;
         double best = Double.NaN;
 
+        Map<String, Double> buyCost = new TreeMap<>(stockPrices);
+        for (String stock : buyCost.keySet()) buyCost.put(stock, buyCost.get(stock) * 0.1);
+
+        Map<String, Double> sellCost = new TreeMap<>(stockPrices);
+        for (String stock : sellCost.keySet()) sellCost.put(stock, sellCost.get(stock) * 0.1);
+
+        ArrayList<Thread> evaluationThreads = new ArrayList<>();
+
         for (Genome currentGenome : population) {
-            double currFitness = 0;
+            evaluationThreads.add(new Thread(() -> {
+                double currFitness = 0;
 
-            if (EvaluationFunction.sumsToOne(currentGenome.getGenes()))
-                if (em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
-                    currFitness = EvaluationFunction.getReturnToRiskRatio(currentGenome.getGenes(), expectedReturns, riskCovariance);
-                else
-                    currFitness = EvaluationFunction.getReturn(currentGenome.getGenes(), expectedReturns);
+                if (Constraint.sumsToOne(currentGenome.getGenes())) {
+                    if (em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
+                        currFitness = EvaluationFunction.getReturnToRiskRatio(currentGenome.getGenes(), expectedReturns, riskCovariance);
+                    else
+                        currFitness = EvaluationFunction.getReturn(currentGenome.getGenes(), expectedReturns);
 
-            sum += currFitness;
-            currentGenome.setFitness(currFitness);
+                    currFitness -= Constraint.getTransactionCosts(currentPortfolio, currentGenome.getGenes(), buyCost, sellCost);
+                }
 
-            if (currFitness >= best || Double.isNaN(best)) best = currFitness;
+                currentGenome.setFitness(currFitness);
+            }));
+        }
+
+        for (Thread thread : evaluationThreads) thread.start();
+        for (Thread thread : evaluationThreads)
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        for (Genome currentGenome : population) {
+            double currentFitness = currentGenome.getFitness();
+            sum += currentFitness;
+            if (currentFitness >= best || Double.isNaN(best)) best = currentFitness;
         }
 
         if (showDebug)
@@ -153,7 +175,7 @@ class GAOptimiser {
      * @param showDebug            True if debug information should be printed, False otherwise
      * @return Array of stock weights (the portfolio)
      */
-    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, int numberOfGenerations, int populationSize, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovarianceMatrix, boolean showDebug) {
+    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, int numberOfGenerations, int populationSize, Map<String, Double> currentPortfolio, Map<String, Double> stockPrices, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovarianceMatrix, boolean showDebug) {
         System.out.println("Performing Genetic Portfolio Optimisation");
         ArrayList<Genome> population = new ArrayList<>();
         ArrayList<Genome> bestOfPopulation;
@@ -164,30 +186,32 @@ class GAOptimiser {
         double prevFitness = -1, currFitness;
         int convergenceCount = 0;
 
-        double bestFitness = evaluate(0, em, population, expectedReturns, riskCovarianceMatrix, showDebug); //Evaluate
+        double bestFitness = evaluate(0, em, population, currentPortfolio, stockPrices, expectedReturns, riskCovarianceMatrix, showDebug); //Evaluate
 
         bestGenome = getBestOfPopulation(population);
 
         for (int i = 1; i <= numberOfGenerations; i++) {
             bestOfPopulation = getBestOfPopulation(Math.round(population.size() / 10), population);
 
+
             ArrayList<Genome> parents1 = selection(population); //Selection of parent population 1
             ArrayList<Genome> parents2 = selection(population); //Selection of parent population 2
 
-            population = mutate(crossover(parents1, parents2, 0.5), 0.1);
-            evaluate(i, em, population, expectedReturns, riskCovarianceMatrix, false); //Evaluate
+            population = crossover(parents1, parents2, 0.5);
+            population = mutate(population, 0.01);
+            evaluate(i, em, population, currentPortfolio, stockPrices, expectedReturns, riskCovarianceMatrix, false); //Evaluate
             population = replaceWorstOfPopulation(bestOfPopulation, population);
-            currFitness = evaluate(i, em, population, expectedReturns, riskCovarianceMatrix, showDebug); //Evaluate
 
-            if (currFitness >= bestFitness) {
-                bestFitness = currFitness;
-                bestGenome = getBestOfPopulation(population);
-            }
+            currFitness = evaluate(i, em, population, currentPortfolio, stockPrices, expectedReturns, riskCovarianceMatrix, showDebug); //Evaluate
 
-            if (currFitness == prevFitness) convergenceCount++;
-            if (convergenceCount == 100) break;
+            if (currFitness >= bestFitness) bestFitness = currFitness;
+            if (bestOfPopulation.get(0).getFitness() >= bestGenome.getFitness()) bestGenome = bestOfPopulation.get(0);
 
-            prevFitness = currFitness;
+            convergenceCount = (int) (prevFitness * 100.0) == (int) (bestGenome.getFitness() * 100.0) ? convergenceCount + 1 : 0;
+
+            if (convergenceCount == 10) break;
+
+            prevFitness = bestGenome.getFitness();
         }
         return bestGenome.getGenes();
     }
@@ -200,14 +224,12 @@ class GAOptimiser {
      * @return Population containing the elitist Genomes
      */
     static private ArrayList<Genome> replaceWorstOfPopulation(ArrayList<Genome> replacement, ArrayList<Genome> population) {
-        ArrayList<Genome> orderedIndividuals = new ArrayList<>(population);
-        orderedIndividuals.sort(Comparator.comparing(Genome::getFitness));
+        population.sort(Comparator.comparing(Genome::getFitness));
+        ArrayList<Genome> newPopulation = new ArrayList<>(new ArrayList<>(replacement));
+        for (int i = replacement.size() - 1; i < population.size(); i++)
+            newPopulation.add(new Genome(population.get(i)));
 
-        for (int i = 0; i < replacement.size(); i++) orderedIndividuals.remove(0);
-
-        orderedIndividuals.addAll(replacement);
-
-        return orderedIndividuals;
+        return newPopulation;
     }
 
     /**
@@ -217,12 +239,15 @@ class GAOptimiser {
      * @return An array of the n best performing Genomes
      */
     static private ArrayList<Genome> getBestOfPopulation(int amount, ArrayList<Genome> population) {
-        ArrayList<Genome> orderedIndividuals = new ArrayList<>(population);
-        orderedIndividuals.sort(Comparator.comparing(Genome::getFitness));
+        ArrayList<Genome> bestOfPopulation = new ArrayList<>();
+        population.sort(Comparator.comparing(Genome::getFitness));
 
-        Collections.reverse(orderedIndividuals);
+        Collections.reverse(population);
 
-        return new ArrayList<>(orderedIndividuals.subList(0, amount));
+        for (int i = 0; i < amount; i++)
+            bestOfPopulation.add(new Genome(population.get(i)));
+
+        return bestOfPopulation;
     }
 
     /**

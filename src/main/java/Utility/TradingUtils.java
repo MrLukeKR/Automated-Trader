@@ -35,7 +35,7 @@ public class TradingUtils {
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      */
     static public void sellStock(String stock, int amount, boolean automated) throws SQLException {
-        float cost = Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+        float cost = Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
         float totalCost = cost * amount;
         int longtermInvestments = Integer.parseInt(databaseHandler.executeQuery("SELECT COALESCE(SUM(Amount), 0) FROM investments WHERE Symbol='" + stock + "'").get(0));
         int available = getHeldStocks(stock) - longtermInvestments;
@@ -90,7 +90,7 @@ public class TradingUtils {
             return false;
 
         double availableFunds = Double.parseDouble(databaseHandler.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions;").get(0)),
-                stockCost = Double.parseDouble(databaseHandler.executeQuery("SELECT COALESCE(ClosePrice,0) FROM dailystockprices WHERE Symbol='" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+                stockCost = Double.parseDouble(databaseHandler.executeQuery("SELECT COALESCE(ClosePrice,0) FROM intradaystockprices WHERE Symbol='" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
 
         return (stockCost * amount) <= availableFunds;
     }
@@ -137,7 +137,7 @@ public class TradingUtils {
 
         for (String stock : heldStocks) {
             String[] splitStock = stock.split(",");
-            potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+            potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
         }
 
         return potentialTotal;
@@ -202,7 +202,7 @@ public class TradingUtils {
             String[] splitString = record.split(",");
             String symbol = splitString[0];
             double allocation = Double.parseDouble(splitString[1]) - Double.parseDouble(splitString[3]);
-            double currentPrice = Double.parseDouble(databaseHandler.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + symbol + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+            double currentPrice = Double.parseDouble(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
             int splitAmount = 0;
 
             for (int currDay : dayArray)

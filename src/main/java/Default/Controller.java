@@ -75,7 +75,6 @@ public class Controller {
     static private XYChart.Series<Number, Number> simulatedRandomPerformance = new XYChart.Series<>();
     static private XYChart.Series<Number, Number> simulatedPortfolioInitialPerformance = new XYChart.Series<>();
     static private XYChart.Series<Number, Number> simulatedEqualAllocationPerformance = new XYChart.Series<>();
-    static private HashMap<String, LineChart<Number, Number>> simulatorCharts = new HashMap<>();
     static private HashMap<String, NumberAxis> simulatorAxes = new HashMap<>();
 
     @FXML
@@ -209,7 +208,6 @@ public class Controller {
     ProgressBar newsFeedProgress;
     @FXML
     ProgressBar nlpProgress;
-    @FXML TextArea infoBox;
     @FXML Circle nlpAvailability;
     @FXML Circle newsFeedAvailability;
     @FXML
@@ -219,11 +217,13 @@ public class Controller {
     @FXML TextField profitTargetField;
     @FXML TextField stockAmountField;
     @FXML TextArea predictionModelInformationBox;
+    @FXML
+    TextArea infoBox;
+    @FXML
+    TextArea newsArticleArea;
     @FXML MenuItem exportAllTrainingFilesButton;
     @FXML MenuItem smoothPriceDataButton;
     @FXML MenuItem resetPriceDataButton;
-    @FXML
-    TextArea newsArticleArea;
     @FXML
     ListView<String> newsArticleList;
 
@@ -756,14 +756,14 @@ public class Controller {
             new Thread(() -> {
                 Platform.runLater(() -> rebalanceButton.setDisable(true));
                 try {
-                    rebalancePortfolio(false);
+                    rebalancePortfolio();
                 } catch (Exception e) { e.printStackTrace(); }
                 Platform.runLater(() -> rebalanceButton.setDisable(false));
             }).start();
     }
 
 
-    private void rebalancePortfolio(boolean automated) throws SQLException, ParseException {
+    private void rebalancePortfolio() throws SQLException, ParseException {
         //TradingUtils.sellAllStock(automated);
 
         PortfolioManager.OptimisationMethod om = null;
@@ -973,7 +973,7 @@ public class Controller {
 
     private void initialiseSimulatorCharts(){
         Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedPortfolioInitialPerformance));
-        Platform.runLater(()->simulatorProfitLoss.getData().add(simulatedBalance));
+        Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedBalance));
         Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedEqualAllocationPerformance));
         Platform.runLater(()->simulatorProfitLoss.getData().add(simulatedRandomPerformance));
         Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedIndexPerformance));
@@ -1002,7 +1002,6 @@ public class Controller {
             priceChart.setTitle(stock);
             yAxis.setAutoRanging(false);
             priceChart.getData().add(simulatedHistory.get(stock));
-            simulatorCharts.put(stock, priceChart);
             Platform.runLater(()-> priceHistoryChartBox.getChildren().add(priceChart));
         }
     }
@@ -1123,7 +1122,7 @@ public class Controller {
                             StockQuoteDownloader.updateIntradayStockData(records);
                             StockQuoteDownloader.updateDailyStockData(records);
                             double totalWorth = TradingUtils.getTotalWorth();
-                            if (totalWorth <= lossCutoff || totalWorth >= profitCutoff) rebalancePortfolio(true);
+                            if (totalWorth <= lossCutoff || totalWorth >= profitCutoff) rebalancePortfolio();
                             SmoothingUtils.smoothStocks(stocks, smoothRate);
                             TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
                             TechnicalAnalyser.calculatePercentChanges(stocks);
@@ -1366,14 +1365,25 @@ public class Controller {
 
     private void initialiseClocks() {
         updateCurrentTask("Initialising Clocks", false, false);
-        clocks.add(new StockClock("NASDAQ", LocalTime.of(9, 30), LocalTime.of(16, 0), ZoneId.of("America/New_York")));
-        clocks.add(new StockClock("London SE", LocalTime.of(8, 0), LocalTime.of(16, 30), ZoneId.of("Europe/London")));
-        clocks.add(new StockClock("Tokyo SE", LocalTime.of(9, 0), LocalTime.of(15, 0), ZoneId.of("Asia/Tokyo"))); //TODO: Allow multiple open/close periods
-        clocks.add(new StockClock("Hong Kong SE", LocalTime.of(9, 30), LocalTime.of(16, 0), ZoneId.of("Asia/Hong_Kong")));
-        clocks.add(new StockClock("Australia SX", LocalTime.of(10, 0), LocalTime.of(16, 0), ZoneId.of("Australia/Canberra")));
-        clocks.add(new StockClock("Deutsche Börse", LocalTime.of(8, 0), LocalTime.of(22, 0), ZoneId.of("CET")));
-        clocks.add(new StockClock("SIX Swiss Exchange", LocalTime.of(9, 0), LocalTime.of(17, 30), ZoneId.of("CET")));
-        clocks.add(new StockClock("Bombay SE", LocalTime.of(9, 15), LocalTime.of(15, 30), ZoneId.of("Asia/Calcutta")));
+
+        Map<LocalTime, LocalTime> jpBreak = new HashMap<>(), hkBreak = new HashMap<>();
+
+        jpBreak.put(LocalTime.of(11, 30), LocalTime.of(12, 30));
+        hkBreak.put(LocalTime.of(12, 0), LocalTime.of(13, 0));
+
+        clocks.add(new StockClock("NASDAQ", LocalTime.of(9, 30), null, LocalTime.of(16, 0), ZoneId.of("America/New_York")));
+        clocks.add(new StockClock("London SE", LocalTime.of(8, 0), null, LocalTime.of(16, 30), ZoneId.of("Europe/London")));
+        clocks.add(new StockClock("Euronext", LocalTime.of(9, 0), null, LocalTime.of(17, 30), ZoneId.of("CET")));
+        clocks.add(new StockClock("Japan Exchange Group", LocalTime.of(9, 0), jpBreak, LocalTime.of(15, 0), ZoneId.of("Asia/Tokyo")));
+        clocks.add(new StockClock("Hong Kong SE", LocalTime.of(9, 30), hkBreak, LocalTime.of(16, 0), ZoneId.of("Asia/Hong_Kong")));
+        clocks.add(new StockClock("Korea Exchange", LocalTime.of(9, 0), null, LocalTime.of(15, 30), ZoneId.of("Asia/Tokyo")));
+        clocks.add(new StockClock("Australia SX", LocalTime.of(9, 50), null, LocalTime.of(16, 12), ZoneId.of("Australia/Canberra")));
+        clocks.add(new StockClock("Deutsche Börse", LocalTime.of(8, 0), null, LocalTime.of(22, 0), ZoneId.of("CET")));
+        clocks.add(new StockClock("SIX Swiss Exchange", LocalTime.of(9, 0), null, LocalTime.of(17, 30), ZoneId.of("CET")));
+        clocks.add(new StockClock("Bombay SE", LocalTime.of(9, 15), null, LocalTime.of(15, 30), ZoneId.of("Asia/Calcutta")));
+        clocks.add(new StockClock("JSE Limited", LocalTime.of(9, 0), null, LocalTime.of(17, 0), ZoneId.of("Africa/Johannesburg")));
+        clocks.add(new StockClock("TMX Group", LocalTime.of(9, 30), null, LocalTime.of(16, 0), ZoneId.of("America/New_York")));
+        clocks.add(new StockClock("Taiwan SE", LocalTime.of(9, 0), null, LocalTime.of(13, 30), ZoneId.of("Asia/Hong_Kong")));
 
         for (StockClock clock : clocks) timePane.getChildren().add(clock.getNode());
     }
@@ -1385,7 +1395,7 @@ public class Controller {
         ArrayList<String> calls = dh.executeQuery("SELECT Calls FROM apicalls WHERE Name='INTRINIO' AND Date=CURDATE()");
 
         if (!calls.isEmpty())
-            newsCalls = Integer.parseInt(calls.get(0)); //TODO: See if this can be done via Event triggers
+            newsCalls = Integer.parseInt(calls.get(0));
 
         if (newsCalls < callLimit) {
             newsFeedAvailability.setFill(Color.GREEN);

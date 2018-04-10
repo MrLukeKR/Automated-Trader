@@ -211,7 +211,7 @@ public class TradingUtils {
             if (splitAmount == 0) return;
             int buyAmount = (int) Math.floor((int) Math.floor(allocation / currentPrice) / splitAmount);
 
-            double allocationRemaining = Double.parseDouble(portfolio.get(1)) - Double.parseDouble(portfolio.get(3));
+            double allocationRemaining = Double.parseDouble(splitString[1]) - Double.parseDouble(splitString[3]);
 
             if (buyAmount >= splitAmount) {
                 for (int day : dayArray)

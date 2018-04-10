@@ -160,7 +160,7 @@ public class TradingUtils {
         if (automated)
             auto = 1;
 
-        if (totalCost > balance) return;
+        if (totalCost > balance || amount == 0) return;
 
 
         //If the investment period is not 0, treat it as a dated investment (i.e. disallow sale until a given date)
@@ -213,22 +213,17 @@ public class TradingUtils {
             for (int currDay : dayArray)
                 if (StockPredictor.predictStock(stocks, symbol, currDay)) splitAmount++;
 
-            int buyAmount = (int) Math.floor(allocation / currentPrice);
-
             if (splitAmount == 0) return;
+            int buyAmount = (int) Math.floor((int) Math.floor(allocation / currentPrice) / splitAmount);
 
-            buyAmount = (int) Math.floor(buyAmount / splitAmount);
             if (buyAmount >= splitAmount) {
-                int remaining = buyAmount * splitAmount;
                 for (int day : dayArray)
-                    if (buyAmount * currentPrice <= balance) {
+                    if (buyAmount * currentPrice <= balance && StockPredictor.predictStock(stocks, symbol, day)) {
                         Main.getController().updateCurrentTask("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol, false, true);
 
-                        TradingUtils.buyStock(symbol, remaining, day, true);
-                        remaining -= buyAmount;
+                        TradingUtils.buyStock(symbol, buyAmount, day, true);
                     }
             }
-            //TODO: Rebalance portfolio and cutoff reassignment
         }
 
         Main.getController().updateGUI();

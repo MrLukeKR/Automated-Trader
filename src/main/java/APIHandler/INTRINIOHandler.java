@@ -33,8 +33,8 @@ public class INTRINIOHandler {
     private static final String INTRINIO_CSV_CALL = "https://api.intrinio.com/news.csv?page_size=10000&ticker=";
     static private String INTRINIO_USERNAME;
     static private String INTRINIO_PASSWORD;
-    static private final int PAGES = 0, ARTICLES = 1, PAGE_SIZE = 10000; //Indices for accessing JSON metadata
-    static private final int DOWNLOAD_THREADS = 20;
+    static private final int PAGES = 0, ARTICLES = 1 /*Indices for accessing JSON metadata*/;
+    static private final int DOWNLOAD_THREADS = 1;
     static private DatabaseHandler dh;
     static private ProgressBar pb;
     static private double progress = 0;
@@ -397,7 +397,7 @@ public class INTRINIOHandler {
         conn.setInstanceFollowRedirects(true);
         conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
         conn.setConnectTimeout(5000);
-        conn.setReadTimeout(5000);
+        conn.setReadTimeout(10000);
 
         conn.connect();
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));

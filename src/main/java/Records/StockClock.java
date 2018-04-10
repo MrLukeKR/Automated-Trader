@@ -14,6 +14,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.Map;
 
 /**
  * @author Luke K. Rose <psylr5@nottingham.ac.uk>
@@ -26,6 +27,7 @@ public class StockClock {
     private final Label clockTime = new Label();
     private final Label status = new Label();
     private final LocalTime tradeStart;
+    private final Map<LocalTime, LocalTime> tradeBreaks;
     private final LocalTime tradeEnd;
     private LocalTime currTime;
     private final ZoneId zone;
@@ -38,13 +40,14 @@ public class StockClock {
      * @param marketEnd   Trading end time
      * @param zone        Time zone of the market
      */
-    public StockClock(String name, LocalTime marketStart, LocalTime marketEnd, ZoneId zone){
+    public StockClock(String name, LocalTime marketStart, Map<LocalTime, LocalTime> marketBreaks, LocalTime marketEnd, ZoneId zone) {
         node.setAlignment(Pos.CENTER);
-        node.setMinWidth(150);
+        node.setMinWidth(140);
         node.setMinHeight(100);
 
         this.zone = zone;
         tradeStart = marketStart;
+        tradeBreaks = marketBreaks;
         tradeEnd = marketEnd;
 
         Label clockName = new Label();
@@ -83,6 +86,14 @@ public class StockClock {
             } else {
                 status.setText("OPEN");
                 status.setTextFill(Color.GREEN);
+
+                if (tradeBreaks != null)
+                    for (LocalTime date : tradeBreaks.keySet()) {
+                        if (currTime.isAfter(date) && currTime.isAfter(tradeBreaks.get(date))) {
+                            status.setText("BREAK");
+                            status.setTextFill(Color.ORANGE);
+                        }
+                    }
             }
         });
     }

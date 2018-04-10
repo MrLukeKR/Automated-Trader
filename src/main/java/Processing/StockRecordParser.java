@@ -46,7 +46,7 @@ public class StockRecordParser {
     static public void importDailyMarketData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
-        importDailyData(csv, symbol);
+        importData(csv, symbol, false);
     }
 
     /**
@@ -95,7 +95,7 @@ public class StockRecordParser {
             newCsv.add(newString.toString());
         }
 
-        importDailyData(newCsv, symbol);
+        importData(newCsv, symbol, false);
     }
 
     /**
@@ -107,7 +107,7 @@ public class StockRecordParser {
     static public void importIntradayMarketData(ArrayList<String> csv, String symbol) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
-        importIntradayData(csv, symbol);
+        importData(csv, symbol, true);
     }
 
     /**
@@ -176,78 +176,33 @@ public class StockRecordParser {
     }
 
     /**
-     * Imports a list of CSV values into the intraday price database
-     * @param csv List of CSV price values
-     * @param symbol Syock to associate the price values with
-     * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
-     */
-    private static void importIntradayData(ArrayList<String> csv, String symbol) throws SQLException {
-        if (csv == null || csv.isEmpty()) return;
-
-        ArrayList<String> result = dh.executeQuery("SELECT TradeDateTime FROM intradaystockprices WHERE symbol='" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1;");
-
-        Timestamp timeFrom = null;
-
-        if (!result.isEmpty())
-            timeFrom = Timestamp.valueOf(result.get(0));
-
-        int newValues = 0;
-        int count = 0;
-        StringBuilder statement = new StringBuilder("INSERT INTO " + "intradaystockprices" + "(Symbol, TradeDateTime, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)" + " VALUES ");
-
-        TreeMap<Timestamp, String> newCSV = cleanCSVWithTimestamp(csv, timeFrom);
-
-        for (Timestamp curr : newCSV.keySet()) {
-            count++;
-            String data = newCSV.get(curr);
-            String split[] = data.split(",");
-
-            statement.append("('").append(symbol).append("','").append(split[0]).append("'").append(data.replaceAll(split[0], "")).append(")");
-            if (count < newCSV.size() && curr != timeFrom)
-                statement.append(",\r\n");
-            newValues++;
-        }
-
-        statement.append(" ON DUPLICATE KEY UPDATE " + "OpenPrice = VALUES(OpenPrice)" + ", HighPrice = VALUES(HighPrice)" + ", LowPrice = VALUES(LowPrice)" + ", ClosePrice = VALUES(ClosePrice)" + ", TradeVolume = VALUES(TradeVolume);");
-
-        if (newValues > 0)
-            try {
-                dh.executeCommand(statement.toString());
-            } catch (Exception e) {
-                System.err.println(e.getMessage());
-                System.err.println(statement);
-            }
-    }
-
-    /**
-     * Imports a list of CSV values into the daily price database
+     * Imports a list of CSV values into the price database
      * @param csv List of CSV price values
      * @param symbol Stock to associate the price values with
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      */
-    private static void importDailyData(ArrayList<String> csv, String symbol) throws SQLException {
+    private static void importData(ArrayList<String> csv, String symbol, boolean isIntraday) throws SQLException {
         if (csv == null || csv.isEmpty()) return;
 
-        ArrayList<String> result = dh.executeQuery("SELECT TradeDate FROM dailystockprices WHERE symbol='" + symbol + "' ORDER BY TradeDate DESC LIMIT 1;");
+        ArrayList<String> result = dh.executeQuery("SELECT MAX(TradeDate" + (isIntraday ? "Time" : "") + ") FROM " + (isIntraday ? "intradaystockprices" : "dailystockprices") + " WHERE symbol='" + symbol + "' ORDER BY TradeDate" + (isIntraday ? "Time" : "") + ";");
+        Object from = null;
 
-        Date dateFrom = null;
-
-        if (!result.isEmpty())
-            dateFrom = Date.valueOf(result.get(0));
+        if (!result.isEmpty()) from = (isIntraday) ? Timestamp.valueOf(result.get(0)) : Date.valueOf(result.get(0));
 
         int newValues = 0;
         int count = 0;
-        StringBuilder statement = new StringBuilder("INSERT INTO " + "dailystockprices" + "(Symbol, TradeDate, OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)" + " VALUES ");
 
-        TreeMap<Date, String> newCSV = cleanCSVWithDate(csv, dateFrom);
+        StringBuilder statement = new StringBuilder("INSERT INTO " + (isIntraday ? "intradaystockprices" : "dailystockprices") + "(Symbol, TradeDate" + ((isIntraday) ? "Time" : "") + ", OpenPrice, HighPrice, LowPrice, ClosePrice, TradeVolume)" + " VALUES ");
 
-        for (Date curr : newCSV.keySet()) {
+        TreeMap<Object, String> newCSV = new TreeMap<>((isIntraday) ? cleanCSVWithTimestamp(csv, (Timestamp) from) : cleanCSVWithDate(csv, (Date) from));
+
+        for (Object curr : newCSV.keySet()) {
             count++;
             String data = newCSV.get(curr);
             String split[] = data.split(",");
 
             statement.append("('").append(symbol).append("','").append(split[0]).append("'").append(data.replaceAll(split[0], "")).append(")");
-            if (count < newCSV.size() && curr != dateFrom)
+            if (count < newCSV.size() && curr != from)
                 statement.append(",\r\n");
             newValues++;
         }

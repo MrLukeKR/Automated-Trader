@@ -31,7 +31,7 @@ public class Investment {
      * @return True if the investment should be considered for sale/reinvestment, False if the investment period is not over
      */
     boolean hasExpired() {
-        return remainingDays == 0;
+        return remainingDays <= 0;
     }
 
     /**
@@ -44,7 +44,7 @@ public class Investment {
     /**
      * Resets the investment period (i.e. reinvests the stock without selling and re-buying)
      */
-    public void resetTime() {
+    void resetTime() {
         remainingDays = investmentPeriod;
     }
 

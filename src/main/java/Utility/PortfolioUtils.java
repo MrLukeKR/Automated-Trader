@@ -2,6 +2,7 @@ package Utility;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
 
 /**
@@ -11,6 +12,8 @@ import java.util.TreeMap;
  */
 
 public class PortfolioUtils {
+    static private Random rng = new Random();
+
     /**
      * Creates a collection of random asset weights
      *
@@ -51,8 +54,7 @@ public class PortfolioUtils {
     static public Map<String, Double> mutate(Map<String, Double> weights, double rate) {
         Map<String, Double> newWeights = new TreeMap<>(weights);
         for (String stock : newWeights.keySet()) {
-            if (Math.random() < rate)
-                newWeights.put(stock, newWeights.get(stock));
+            if (Math.random() < rate) newWeights.put(stock, newWeights.get(stock) + rng.nextGaussian());
             if (newWeights.get(stock) < 0) newWeights.put(stock, 0.0);
         }
 

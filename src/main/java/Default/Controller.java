@@ -993,8 +993,8 @@ public class Controller {
             LineChart<Number, Number> priceChart = new LineChart<>(xAxis, yAxis);
             priceChart.setMaxHeight(300);
             priceChart.setMinHeight(300);
-            priceChart.setMaxWidth(1900);
-            priceChart.setMinWidth(1900);
+            priceChart.setMaxWidth(1700);
+            priceChart.setMinWidth(1700);
             priceChart.setLegendVisible(false);
             yAxis.setUpperBound(0);
             yAxis.setLowerBound(0);

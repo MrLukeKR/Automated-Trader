@@ -193,12 +193,11 @@ class GAOptimiser {
         for (int i = 1; i <= numberOfGenerations; i++) {
             bestOfPopulation = getBestOfPopulation(Math.round(population.size() / 10), population);
 
-
             ArrayList<Genome> parents1 = selection(population); //Selection of parent population 1
             ArrayList<Genome> parents2 = selection(population); //Selection of parent population 2
 
-            population = crossover(parents1, parents2, 0.5);
-            population = mutate(population, 0.01);
+            population = crossover(parents1, parents2, 0.8);
+            population = mutate(population, 0.1);
             evaluate(i, em, population, currentPortfolio, stockPrices, expectedReturns, riskCovarianceMatrix, false); //Evaluate
             population = replaceWorstOfPopulation(bestOfPopulation, population);
 
@@ -209,7 +208,7 @@ class GAOptimiser {
 
             convergenceCount = (int) (prevFitness * 100.0) == (int) (bestGenome.getFitness() * 100.0) ? convergenceCount + 1 : 0;
 
-            if (convergenceCount == 10) break;
+            if (convergenceCount == 20) break;
 
             prevFitness = bestGenome.getFitness();
         }

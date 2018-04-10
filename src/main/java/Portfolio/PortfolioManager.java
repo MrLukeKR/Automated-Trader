@@ -138,7 +138,7 @@ public class PortfolioManager {
      * @return A map of stock tickers and their respective percentage weightings
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      */
-    static public Map<String, Double> optimisePortfolio(OptimisationMethod method, EvaluationMethod em, int holdPeriod, TreeMap<String, TreeMap<Date, Double>> prices, boolean showDebug) throws SQLException {
+    static public Map<String, Double> optimisePortfolio(OptimisationMethod method, EvaluationMethod em, int holdPeriod, TreeMap<String, TreeMap<Date, Double>> prices, Map<String, Double> currentPortfolio, boolean showDebug) throws SQLException {
         ArrayList<String> stocks = dh.executeQuery("SELECT Symbol FROM indices ORDER BY Symbol ASC;");
         Map<String, Stock> calcStocks = new TreeMap<>();
 
@@ -161,12 +161,16 @@ public class PortfolioManager {
         Map<String, Map<String, Double>> covarianceMatrix = calculateCovarianceMatrix(calcStocks);
         Map<String, Double> portfolio = null;
 
+        Map<String, Double> currentStockPrices = new TreeMap<>();
+
+        for (String stock : stocks) currentStockPrices.put(stock, prices.get(stock).get(prices.get(stock).lastKey()));
+
         switch(method) {
             case GENETIC_ALGORITHM:
-                portfolio = GAOptimiser.optimise(stocks, em, 1000, 500, expectedReturns, covarianceMatrix, showDebug);
+                portfolio = GAOptimiser.optimise(stocks, em, 1000, 500, currentPortfolio, currentStockPrices, expectedReturns, covarianceMatrix, showDebug);
                 break;
             case SIMULATED_ANNEALING:
-                portfolio = SAOptimiser.optimise(stocks, em, 1, 0.0001, 0.99, 100, expectedReturns, covarianceMatrix, showDebug);
+                portfolio = SAOptimiser.optimise(stocks, em, 1, 0.0001, 0.99, 100, currentPortfolio, currentStockPrices, expectedReturns, covarianceMatrix, showDebug);
                 break;
             case DETERMINISTIC:
                 portfolio = DeterministicOptimiser.optimise(stocks, em, expectedReturns, covarianceMatrix);

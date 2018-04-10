@@ -29,16 +29,24 @@ class SAOptimiser {
      * @param showDebug            True if debug information is to be printed, False if otherwise
      * @return An optimal portfolio, containing asset weightings
      */
-    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovarianceMatrix, boolean showDebug) {
+    static Map<String, Double> optimise(ArrayList<String> stocks, PortfolioManager.EvaluationMethod em, double initialTemperature, double minimumTemperature, double coolRate, int iterations, Map<String, Double> originalPortfolio, Map<String, Double> stockPrices, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovarianceMatrix, boolean showDebug) {
         double t = initialTemperature;
 
         Map<String, Double> solution = getRandomWeights(stocks);
+
+        Map<String, Double> buyCost = new TreeMap<>(stockPrices);
+        for (String stock : buyCost.keySet()) buyCost.put(stock, buyCost.get(stock) * 0.1);
+
+        Map<String, Double> sellCost = new TreeMap<>(stockPrices);
+        for (String stock : sellCost.keySet()) sellCost.put(stock, sellCost.get(stock) * 0.1);
 
         double bestFitness;
         if(em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
             bestFitness = EvaluationFunction.getReturnToRiskRatio(solution, expectedReturns, riskCovarianceMatrix);
         else
             bestFitness = EvaluationFunction.getReturn(solution,expectedReturns);
+
+        bestFitness -= Constraint.getTransactionCosts(originalPortfolio, solution, buyCost, sellCost);
 
         double currentFitness = bestFitness;
         Map<String, Double> currentSolution = new TreeMap<>(solution);
@@ -53,6 +61,8 @@ class SAOptimiser {
                 else
                     fitness = EvaluationFunction.getReturn(candidateSolution,expectedReturns);
 
+                fitness -= Constraint.getTransactionCosts(originalPortfolio, candidateSolution, buyCost, sellCost);
+
                 if (showDebug)
                     System.out.println("ITERATION " + i + " - CURRENT FITNESS: " + currentFitness + " (RETURN: " + (EvaluationFunction.getReturn(currentSolution,expectedReturns) * 100.0) + "%) CANDIDATE FITNESS: " + fitness + " (RETURN: " + (EvaluationFunction.getReturn(candidateSolution,expectedReturns) * 100.0) + "%) BEST FITNESS: " + bestFitness + " (RETURN: " + (EvaluationFunction.getReturn(solution,expectedReturns) * 100) + "%)");
 
@@ -63,7 +73,7 @@ class SAOptimiser {
                         bestFitness = fitness;
                         solution = new TreeMap<>(candidateSolution);
                     }
-                }else if((Math.exp((currentFitness - fitness) / t) > Math.random())) {
+                } else if (Math.exp((-fitness - currentFitness) / t) > Math.random()) {
                     currentFitness = fitness;
                     currentSolution = new TreeMap<>(candidateSolution);
                 }

@@ -35,7 +35,7 @@ public class TradingUtils {
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      */
     static public void sellStock(String stock, int amount, boolean automated) throws SQLException {
-        float cost = Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+        float cost = Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
         float totalCost = cost * amount;
         int longtermInvestments = Integer.parseInt(databaseHandler.executeQuery("SELECT COALESCE(SUM(Amount), 0) FROM investments WHERE Symbol='" + stock + "'").get(0));
         int available = getHeldStocks(stock) - longtermInvestments;
@@ -119,7 +119,7 @@ public class TradingUtils {
 
         for (String stock : heldStocks) {
             int volume = getHeldStocks(stock);
-            float currPrice = Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+            float currPrice = Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + stock + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
             stockWorth += volume * currPrice;
         }
 
@@ -137,7 +137,7 @@ public class TradingUtils {
 
         for (String stock : heldStocks) {
             String[] splitStock = stock.split(",");
-            potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM dailystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
+            potentialTotal += Float.parseFloat(splitStock[1]) * Float.parseFloat(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + splitStock[0] + "' ORDER BY TradeDate DESC LIMIT 1").get(0));
         }
 
         return potentialTotal;

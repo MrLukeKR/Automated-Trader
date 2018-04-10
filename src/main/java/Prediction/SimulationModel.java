@@ -205,7 +205,8 @@ public class SimulationModel {
      */
     void rebalancePortfolio(HashMap<String, TreeMap<Date, String>> testingRecords, Date date, int holdPeriod, TreeMap<String, TreeMap<Date, Double>> latestPrices, boolean sellAllStocks) throws SQLException {
         if (balance + stockWorth <= balanceMin || balance + stockWorth >= balanceMax) {
-            portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.SIMULATED_ANNEALING, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, latestPrices, false);
+            portfolio.remove("RETURN");
+            portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.GENETIC_ALGORITHM, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, latestPrices, portfolio, false);
             double cutoff = portfolio.get("RETURN");
             portfolio.remove("RETURN");
 

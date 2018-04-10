@@ -165,7 +165,6 @@ public class TechnicalAnalyser {
             percentChanges.put(dates.get(i), percentChangeArray[i]);
 
         sendToDatabase(stock,"PercentChange", percentChanges);
-
     }
 
     /**

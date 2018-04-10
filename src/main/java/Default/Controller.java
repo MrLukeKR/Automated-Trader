@@ -342,126 +342,94 @@ public class Controller {
                 values.put("Sentiment", new ArrayDeque<>());
                 for(int i = 0; i < sentimentData.length; i++) values.get("Sentiment").add(new XYChart.Data<>(i, sentimentData[i]));
 
+                Map<String, String> historicValues = new HashMap<>();
+                Map<String, String> indicatorValues = new HashMap<>();
+
+                historicValues.put("OpenPrice", "Open Prices");
+                historicValues.put("HighPrice", "High Prices");
+                historicValues.put("ClosePrice", "Close Prices");
+                historicValues.put("SmoothedClosePrice", "Smoothed Close Prices");
+                indicatorValues.put("SMA5", "Simple Moving Average (5-Day)");
+                indicatorValues.put("SMA10", "Simple Moving Average (10-Day)");
+                indicatorValues.put("SMA20", "Simple Moving Average (20-Day)");
+                indicatorValues.put("SMA200", "Simple Moving Average (200-Day)");
+                indicatorValues.put("EMA5", "Exponential Moving Average (5-Day)");
+                indicatorValues.put("EMA10", "Exponential Moving Average (10-Day)");
+                indicatorValues.put("EMA20", "Exponential Moving Average (20-Day)");
+                indicatorValues.put("EMA200", "Exponential Moving Average (200-Day)");
+
+                Map<String, CheckBox> visualisationCheckboxes = new HashMap<>();
+
+                visualisationCheckboxes.put("SMA5", showSMA5);
+                visualisationCheckboxes.put("SMA10", showSMA10);
+                visualisationCheckboxes.put("SMA20", showSMA20);
+                visualisationCheckboxes.put("SMA200", showSMA200);
+                visualisationCheckboxes.put("EMA5", showEMA5);
+                visualisationCheckboxes.put("EMA10", showEMA10);
+                visualisationCheckboxes.put("EMA20", showEMA20);
+                visualisationCheckboxes.put("EMA200", showEMA200);
+                visualisationCheckboxes.put("MACD", showMACD);
+                visualisationCheckboxes.put("MACDSig", showMACDSig);
+                visualisationCheckboxes.put("MACDHist", showMACDHist);
+                visualisationCheckboxes.put("RSI", showRSI);
+                visualisationCheckboxes.put("ADX10", showADX10);
+                visualisationCheckboxes.put("CCI", showCCI);
+                visualisationCheckboxes.put("AD", showAD);
+                visualisationCheckboxes.put("OBV", showOBV);
+                visualisationCheckboxes.put("StoOscSlowD", showStoOscSlowD);
+                visualisationCheckboxes.put("StoOscSlowK", showStoOscSlowK);
+                visualisationCheckboxes.put("WillR", showWillR);
+
                 for (String record : Objects.requireNonNull(dbData)) {
                     int idx;
 
                     String[] splitRecord = record.split(",");
 
-                    if(!splitRecord[dbSchema.indexOf("OpenPrice")].equals("null"))
-                        values.get("OpenPrice").add(createChartPoint(count, Double.parseDouble(splitRecord[dbSchema.indexOf("OpenPrice")])));
-                    if(!splitRecord[dbSchema.indexOf("HighPrice")].equals("null"))
-                        values.get("HighPrice").add(createChartPoint(count, Double.parseDouble(splitRecord[dbSchema.indexOf("HighPrice")])));
-                    if(!splitRecord[dbSchema.indexOf("LowPrice")].equals("null"))
-                        values.get("LowPrice").add(createChartPoint(count, Double.parseDouble(splitRecord[dbSchema.indexOf("LowPrice")])));
-                    if(!splitRecord[dbSchema.indexOf("ClosePrice")].equals("null"))
-                        values.get("ClosePrice").add(createChartPoint(count, Double.parseDouble(splitRecord[dbSchema.indexOf("ClosePrice")])));
-                    if(!splitRecord[dbSchema.indexOf("TradeVolume")].equals("null"))
-                        values.get("TradeVolume").add(createChartPoint(count, Integer.parseInt(splitRecord[dbSchema.indexOf("TradeVolume")])));
-                    if(!splitRecord[dbSchema.indexOf("SmoothedClosePrice")].equals("null"))
-                        values.get("SmoothedClosePrice").add(createChartPoint(count, Double.parseDouble(splitRecord[dbSchema.indexOf("SmoothedClosePrice")])));
+                    for (String value : historicValues.keySet())
+                        if (!splitRecord[dbSchema.indexOf(value)].equals("null"))
+                            values.get(value).add(createChartPoint(count, Double.parseDouble(splitRecord[dbSchema.indexOf(value)])));
 
-                    if (showSMA5.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA5")].equals("null"))
-                        values.get("SMA5").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showSMA10.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA10")].equals("null"))
-                        values.get("SMA10").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showSMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA20")].equals("null"))
-                        values.get("SMA20").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showSMA200.isSelected() && !splitRecord[idx = dbSchema.indexOf("SMA200")].equals("null"))
-                        values.get("SMA200").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showEMA5.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA5")].equals("null"))
-                        values.get("EMA5").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showEMA10.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA10")].equals("null"))
-                        values.get("EMA10").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showEMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA20")].equals("null"))
-                        values.get("EMA20").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showEMA20.isSelected() && !splitRecord[idx = dbSchema.indexOf("EMA200")].equals("null"))
-                        values.get("EMA200").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showMACD.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACD")].equals("null"))
-                        values.get("MACD").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showMACDSig.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACDSig")].equals("null"))
-                        values.get("MACDSig").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showMACDHist.isSelected() && !splitRecord[idx = dbSchema.indexOf("MACDHist")].equals("null"))
-                        values.get("MACDHist").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showRSI.isSelected() && !splitRecord[idx = dbSchema.indexOf("RSI")].equals("null"))
-                        values.get("RSI").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showADX10.isSelected() && !splitRecord[idx = dbSchema.indexOf("ADX10")].equals("null"))
-                        values.get("ADX10").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showCCI.isSelected() && !splitRecord[idx = dbSchema.indexOf("CCI")].equals("null"))
-                        values.get("CCI").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showAD.isSelected() && !splitRecord[idx = dbSchema.indexOf("AD")].equals("null"))
-                        values.get("AD").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showOBV.isSelected() && !splitRecord[idx = dbSchema.indexOf("OBV")].equals("null"))
-                        values.get("OBV").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showStoOscSlowD.isSelected() && !splitRecord[idx = dbSchema.indexOf("StoOscSlowD")].equals("null"))
-                        values.get("StoOscSlowD").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showStoOscSlowK.isSelected() && !splitRecord[idx = dbSchema.indexOf("StoOscSlowK")].equals("null"))
-                        values.get("StoOscSlowK").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
-
-                    if (showWillR.isSelected() && !splitRecord[idx = dbSchema.indexOf("WillR")].equals("null"))
-                        values.get("WillR").add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
+                    for (String indicator : visualisationCheckboxes.keySet())
+                        if (visualisationCheckboxes.get(indicator).isSelected() && !splitRecord[idx = dbSchema.indexOf(indicator)].equals("null"))
+                            values.get(indicator).add(createChartPoint(count, Double.parseDouble(splitRecord[idx])));
 
                     count++;
                 }
 
-                XYChart.Series<Number, Number> openPrices = new XYChart.Series<>("Open Prices", FXCollections.observableArrayList(values.get("OpenPrice")));
-                XYChart.Series<Number, Number> highPrices = new XYChart.Series<>("High Prices", FXCollections.observableArrayList(values.get("HighPrice")));
-                XYChart.Series<Number, Number> lowPrices = new XYChart.Series<>("Low Prices", FXCollections.observableArrayList(values.get("LowPrice")));
-                XYChart.Series<Number, Number> closePrices = new XYChart.Series<>("Close Prices", FXCollections.observableArrayList(values.get("ClosePrice")));
-                AreaChart.Series<Number, Number> volumes = new AreaChart.Series<>("Trade Volume", FXCollections.observableArrayList(values.get("TradeVolume")));
-                XYChart.Series<Number, Number> smoothedClosePrices = new XYChart.Series<>("Smoothed Close Prices", FXCollections.observableArrayList(values.get("SmoothedClosePrice")));
-                XYChart.Series<Number, Number> sma5 = new XYChart.Series<>("Simple Moving Average (5-Day)", FXCollections.observableArrayList(values.get("SMA5")));
-                XYChart.Series<Number, Number> sma10 = new XYChart.Series<>("Simple Moving Average (10-Day)", FXCollections.observableArrayList(values.get("SMA10")));
-                XYChart.Series<Number, Number> sma20 = new XYChart.Series<>("Simple Moving Average (20-Day)", FXCollections.observableArrayList(values.get("SMA20")));
-                XYChart.Series<Number, Number> sma200 = new XYChart.Series<>("Simple Moving Average (200-Day)", FXCollections.observableArrayList(values.get("SMA200")));
-                XYChart.Series<Number, Number> ema5 = new XYChart.Series<>("Exponential Moving Average (5-Day)", FXCollections.observableArrayList(values.get("EMA5")));
-                XYChart.Series<Number, Number> ema10 = new XYChart.Series<>("Exponential Moving Average (10-Day)", FXCollections.observableArrayList(values.get("EMA10")));
-                XYChart.Series<Number, Number> ema20 = new XYChart.Series<>("Exponential Moving Average (20-Day)", FXCollections.observableArrayList(values.get("EMA20")));
-                XYChart.Series<Number, Number> ema200 = new XYChart.Series<>("Exponential Moving Average (200-Day)", FXCollections.observableArrayList(values.get("EMA200")));
-                XYChart.Series<Number, Number> macd = new XYChart.Series<>("Moving Average Convergence/Divergence", FXCollections.observableArrayList(values.get("MACD")));
-                XYChart.Series<Number, Number> macdSig = new XYChart.Series<>("Moving Average Convergence/Divergence Signal Line", FXCollections.observableArrayList(values.get("MACDSig")));
-                XYChart.Series<Number, Number> macdHist = new XYChart.Series<>("Moving Average Convergence/Divergence Histogram", FXCollections.observableArrayList(values.get("MACDHist")));
+                ArrayList<XYChart.Series<Number, Number>> historicData = new ArrayList<>();
+                ArrayList<XYChart.Series<Number, Number>> macdData = new ArrayList<>();
+                ArrayList<XYChart.Series<Number, Number>> stoOscData = new ArrayList<>();
+
+                for (String value : historicValues.keySet())
+                    historicData.add(new XYChart.Series<>(historicValues.get(value), FXCollections.observableArrayList(values.get(value))));
+                for (String value : indicatorValues.keySet())
+                    historicData.add(new XYChart.Series<>(indicatorValues.get(value), FXCollections.observableArrayList(values.get(value))));
+
+                macdData.add(new XYChart.Series<>("Moving Average Convergence/Divergence", FXCollections.observableArrayList(values.get("MACD"))));
+                macdData.add(new XYChart.Series<>("Moving Average Convergence/Divergence Signal Line", FXCollections.observableArrayList(values.get("MACDSig"))));
+                macdData.add(new XYChart.Series<>("Moving Average Convergence/Divergence Histogram", FXCollections.observableArrayList(values.get("MACDHist"))));
+                XYChart.Series<Number, Number> volumes = new XYChart.Series<>("Trade Volume", FXCollections.observableArrayList(values.get("TradeVolume")));
                 XYChart.Series<Number, Number> rsi = new XYChart.Series<>("Relative Strength Indicator", FXCollections.observableArrayList(values.get("RSI")));
                 XYChart.Series<Number, Number> adx10 = new XYChart.Series<>("Average Directional Index (10-Day)", FXCollections.observableArrayList(values.get("ADX10")));
                 XYChart.Series<Number, Number> cci = new XYChart.Series<>("Commodity Channel Index", FXCollections.observableArrayList(values.get("CCI")));
                 XYChart.Series<Number, Number> ad = new XYChart.Series<>("Accumulation Distribution", FXCollections.observableArrayList(values.get("AD")));
                 XYChart.Series<Number, Number> obv = new XYChart.Series<>("On-Balance Volume", FXCollections.observableArrayList(values.get("OBV")));
-                XYChart.Series<Number, Number> stoOscSlowK = new XYChart.Series<>("Stochastic Oscillator Slow %K", FXCollections.observableArrayList(values.get("StoOscSlowK")));
-                XYChart.Series<Number, Number> stoOscSlowD = new XYChart.Series<>("Stochastic Oscillator Slow %D", FXCollections.observableArrayList(values.get("StoOscSlowD")));
+                stoOscData.add(new XYChart.Series<>("Stochastic Oscillator Slow %K", FXCollections.observableArrayList(values.get("StoOscSlowK"))));
+                stoOscData.add(new XYChart.Series<>("Stochastic Oscillator Slow %D", FXCollections.observableArrayList(values.get("StoOscSlowD"))));
                 XYChart.Series<Number, Number> willR = new XYChart.Series<>("Williams %R", FXCollections.observableArrayList(values.get("WillR")));
                 XYChart.Series<Number, Number> sentiment = new XYChart.Series<>("News Article Sentiment", FXCollections.observableArrayList(values.get("Sentiment")));
 
-                Platform.runLater(() ->
-                        historicPriceChart.getData().addAll(openPrices, highPrices, lowPrices, closePrices, smoothedClosePrices,
-                                sma5, sma10, sma20, sma200,
-                                ema5, ema10, ema20, ema200));
-
+                Platform.runLater(() -> historicPriceChart.getData().addAll(historicData));
                 Platform.runLater(() -> historicVolumeChart.getData().add(volumes));
-                Platform.runLater(() -> macdChart.getData().addAll(macd, macdSig, macdHist));
+                Platform.runLater(() -> macdChart.getData().addAll(macdData));
                 Platform.runLater(() -> rsiChart.getData().add(rsi));
                 Platform.runLater(() -> adxChart.getData().add(adx10));
                 Platform.runLater(() -> cciChart.getData().add(cci));
                 Platform.runLater(() -> adChart.getData().add(ad));
                 Platform.runLater(() -> obvChart.getData().add(obv));
                 Platform.runLater(() -> willRChart.getData().add(willR));
-                Platform.runLater(() -> stoOscChart.getData().addAll(stoOscSlowD, stoOscSlowK));
-                Platform.runLater(() -> sentimentChart.getData().addAll(sentiment));
+                Platform.runLater(() -> stoOscChart.getData().addAll(stoOscData));
+                Platform.runLater(() -> sentimentChart.getData().add(sentiment));
 
                 formatLineChart(historicPriceChart.getData());
                 formatLineChart(macdChart.getData());
@@ -515,7 +483,8 @@ public class Controller {
                     for (String stock : stocks) {
                         File newDir = new File(System.getProperty("user.dir") + "/res/TrainingFiles/" + stock + "/");
                         if (!newDir.exists())
-                            newDir.mkdirs();
+                            if (!newDir.mkdirs())
+                                updateCurrentTask("Error: Could not create '" + newDir.getAbsolutePath() + "'", true, true);
 
                         TrainingFileUtils.exportClassificationCSV(stock, System.getProperty("user.dir") + "/res/TrainingFiles/" + stock + "/SmoothedNASDAQTraining.csv", dayArray, smoothRate, true, true, false, false);
                         TrainingFileUtils.exportLibSVMFile(System.getProperty("user.dir") + "/res/TrainingFiles/" + stock + "/SmoothedNASDAQTraining.csv", System.getProperty("user.dir") + "/res/TrainingFiles/" + stock + "/SmoothedNASDAQTraining.libsvm");
@@ -527,7 +496,8 @@ public class Controller {
                 } else if (predictionMode.equals("MULTI")) {
                     File newDir = new File(System.getProperty("user.dir") + "/res/TrainingFiles/MultiStock/");
                     if (!newDir.exists())
-                        newDir.mkdirs();
+                        if (!newDir.mkdirs())
+                            updateCurrentTask("Error: Could not create '" + newDir.getAbsolutePath() + "'", true, true);
 
                     TrainingFileUtils.exportClassificationCSV(stocks, System.getProperty("user.dir") + "/res/TrainingFiles/MultiStock/SmoothedNASDAQTraining.csv", dayArray, stockForecastProgress, smoothRate, true, true, false, false);
                     TrainingFileUtils.exportLibSVMFile(System.getProperty("user.dir") + "/res/TrainingFiles/MultiStock/SmoothedNASDAQTraining.csv", System.getProperty("user.dir") + "/res/TrainingFiles/MultiStock/SmoothedNASDAQTraining.libsvm");
@@ -733,7 +703,7 @@ public class Controller {
 
             double held = Double.parseDouble(splitRecord[1]),
                     cost = Double.parseDouble(splitRecord[2]);
-            String command = "SELECT ClosePrice, TradeDateTime FROM intradaystockprices WHERE Symbol = '" + splitRecord[0] + "' AND TradeDateTime >= '" + Timestamp.valueOf(splitRecord[3]).toLocalDateTime() + "';";
+            String command = "SELECT ClosePrice, TradeDateTime FROM intradaystockprices WHERE Symbol = '" + splitRecord[0] + "' AND TradeDateTime >= '" + Timestamp.valueOf(splitRecord[3]).toLocalDateTime() + "' ORDER BY TradeDateTime ASC;";
             for (String iRecord : dh.executeQuery(command)) {
                 String[] splitIRecord = iRecord.split(",");
 
@@ -825,7 +795,15 @@ public class Controller {
         for(String stock : stocks)
             prices.put(stock, PortfolioManager.getPrices(stock, 200));
 
-        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(om, em,1,prices, true);
+        double totalAllocation = Double.valueOf(dh.executeQuery("SELECT COALESCE(SUM(Allocation), 0) FROM portfolio;").get(0));
+        Map<String, Double> currentPortfolio = new TreeMap<>();
+        for (String stock : stocks) currentPortfolio.put(stock, 0.0);
+        for (String record : dh.executeQuery("SELECT Symbol, COALESCE(Allocation, 0) FROM portfolio;")) {
+            String[] splitString = record.split(",");
+            currentPortfolio.put(splitString[0], Double.valueOf(splitString[1]) / totalAllocation);
+        }
+
+        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(om, em, 1, prices, currentPortfolio, true);
         double cutoff = portfolio.get("RETURN");
 
         calculateLossCutoff(cutoff);
@@ -1127,7 +1105,8 @@ public class Controller {
 
         File res = new File("res");
         if(!res.exists())
-            res.mkdirs();
+            if (!res.mkdirs())
+                updateCurrentTask("Error: Could not create '" + res.getAbsolutePath() + "'", true, true);
 
         System.out.println(res.getPath() + " " + res.getAbsolutePath() + " " + System.getProperty("user.dir"));
 
@@ -1144,9 +1123,10 @@ public class Controller {
                             StockQuoteDownloader.updateIntradayStockData(records);
                             StockQuoteDownloader.updateDailyStockData(records);
                             double totalWorth = TradingUtils.getTotalWorth();
-                            if (totalWorth <= lossCutoff || totalWorth >= profitCutoff) TradingUtils.sellAllStock(true);
+                            if (totalWorth <= lossCutoff || totalWorth >= profitCutoff) rebalancePortfolio(true);
                             SmoothingUtils.smoothStocks(stocks, smoothRate);
                             TechnicalAnalyser.calculateTechnicalIndicators(stocks, true, false);
+                            TechnicalAnalyser.calculatePercentChanges(stocks);
                             if (StockPredictor.isModelLoaded())
                                 updatePredictions(StockPredictor.predictStocks(stocks, dayArray, stockForecastProgress));
                         }
@@ -1184,18 +1164,23 @@ public class Controller {
 
         initialiseStocks();
         if (!Arrays.asList(Main.getArguments()).contains("-DLM")) {
-            String predictionMode = dh.executeQuery("SELECT value FROM settings WHERE ID = 'PREDICTION_MODE ';").get(0);
-            switch (predictionMode) {
-                case "SINGLE":
-                    StockPredictor.loadLatestRandomForest(stocks);
-                    break;
-                case "MULTI":
-                    StockPredictor.loadLatestRandomForest();
-                    break;
-                default:
-                    updateCurrentTask("Invalid setting for value 'PREDICTION_MODE'!", true, true);
-                    break;
-            }
+            new Thread(() -> {
+                try {
+                    switch (dh.executeQuery("SELECT value FROM settings WHERE ID = 'PREDICTION_MODE ';").get(0)) {
+                        case "SINGLE":
+                            StockPredictor.loadLatestRandomForest(stocks);
+                            break;
+                        case "MULTI":
+                            StockPredictor.loadLatestRandomForest();
+                            break;
+                        default:
+                            updateCurrentTask("Invalid setting for value 'PREDICTION_MODE'!", true, true);
+                            break;
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }).start();
         }
 
         initialiseSimulatorCharts();

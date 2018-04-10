@@ -322,7 +322,10 @@ public class TradingSimulator {
         SimulationModel automatedTraderEqualAllocation = new SimulationModel("Automated Trader (with Equal Allocation)", stocksToSimulate, new HashSet<>(Arrays.asList(dayArray)));
         SimulationModel randomTrader = new SimulationModel("Random Trader", stocksToSimulate, new HashSet<>(Arrays.asList(dayArray)));
 
-        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.SIMULATED_ANNEALING, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, reducedPrices, false);
+        Map<String, Double> emptyPortfolio = new TreeMap<>();
+        for (String stock : stocksToSimulate) emptyPortfolio.put(stock, 0.0);
+
+        Map<String, Double> portfolio = PortfolioManager.optimisePortfolio(PortfolioManager.OptimisationMethod.GENETIC_ALGORITHM, PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK, holdPeriod, reducedPrices, emptyPortfolio, false);
         Main.getController().updateSimulatedComponentChart("REBALANCED_ALLOC", portfolio);
         Main.getController().updateSimulatedComponentChart("INITIAL_ALLOC", portfolio);
         Map<String, Double> equalPortfolio = new HashMap<>();

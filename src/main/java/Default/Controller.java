@@ -975,7 +975,7 @@ public class Controller {
         Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedPortfolioInitialPerformance));
         Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedBalance));
         Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedEqualAllocationPerformance));
-        Platform.runLater(()->simulatorProfitLoss.getData().add(simulatedRandomPerformance));
+        Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedRandomPerformance));
         Platform.runLater(() -> simulatorProfitLoss.getData().add(simulatedIndexPerformance));
 
         simulatedPortfolioInitialPerformance.setName("Automated Trader");
@@ -985,7 +985,7 @@ public class Controller {
         simulatedRandomPerformance.setName("Random Trader");
 
         for(String stock :stocks){
-            simulatedHistory.put(stock,new XYChart.Series<>());
+            simulatedHistory.put(stock, new XYChart.Series<>());
             final NumberAxis xAxis = new NumberAxis();
             final NumberAxis yAxis = new NumberAxis();
             yAxis.setTickUnit(1);

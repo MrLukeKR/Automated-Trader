@@ -211,6 +211,10 @@ public class Controller {
     @FXML Circle nlpAvailability;
     @FXML Circle newsFeedAvailability;
     @FXML
+    Circle stockFeedAvailability;
+    @FXML
+    Circle stockForecastAvailability;
+    @FXML
     Circle technicalAnalyserAvailability;
     @FXML ComboBox autonomyLevelDropdown;
     @FXML TextField lossCutoffField;

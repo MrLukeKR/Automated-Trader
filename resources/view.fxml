@@ -96,31 +96,29 @@
                                                     <Separator prefHeight="10.0" prefWidth="400.0"/>
                                                     <HBox prefHeight="32.0" prefWidth="401.0">
                                                         <VBox>
-                                                            <children>
-                                                                <ComboBox fx:id="optimisationMethodDropdown"
-                                                                          prefHeight="28.0" prefWidth="220.0"
-                                                                          promptText="Select Optimisation Method">
-                                                                    <items>
-                                                                        <FXCollections fx:factory="observableArrayList">
-                                                                            <String fx:value="Genetic Algorithm"/>
-                                                                            <String fx:value="Simulated Annealing"/>
-                                                                            <String fx:value="Deterministic Search"/>
-                                                                        </FXCollections>
-                                                                    </items>
-                                                                </ComboBox>
-                                                                <Separator prefHeight="10.0" prefWidth="220.0"
-                                                                           visible="false"/>
-                                                                <ComboBox fx:id="evaluationMethodDropdown"
-                                                                          prefHeight="28.0" prefWidth="220.0"
-                                                                          promptText="Select Evaluation Method">
-                                                                    <items>
-                                                                        <FXCollections fx:factory="observableArrayList">
-                                                                            <String fx:value="Maximise Return"/>
-                                                                            <String fx:value="Balance Return vs. Risk"/>
-                                                                        </FXCollections>
-                                                                    </items>
-                                                                </ComboBox>
-                                                            </children>
+                                                            <ComboBox fx:id="optimisationMethodDropdown"
+                                                                      prefHeight="28.0" prefWidth="220.0"
+                                                                      promptText="Select Optimisation Method">
+                                                                <items>
+                                                                    <FXCollections fx:factory="observableArrayList">
+                                                                        <String fx:value="Genetic Algorithm"/>
+                                                                        <String fx:value="Simulated Annealing"/>
+                                                                        <String fx:value="Deterministic Search"/>
+                                                                    </FXCollections>
+                                                                </items>
+                                                            </ComboBox>
+                                                            <Separator prefHeight="10.0" prefWidth="220.0"
+                                                                       visible="false"/>
+                                                            <ComboBox fx:id="evaluationMethodDropdown" prefHeight="28.0"
+                                                                      prefWidth="220.0"
+                                                                      promptText="Select Evaluation Method">
+                                                                <items>
+                                                                    <FXCollections fx:factory="observableArrayList">
+                                                                        <String fx:value="Maximise Return"/>
+                                                                        <String fx:value="Balance Return vs. Risk"/>
+                                                                    </FXCollections>
+                                                                </items>
+                                                            </ComboBox>
                                                         </VBox>
 
                                                         <Separator orientation="VERTICAL" prefHeight="0.0"
@@ -230,8 +228,8 @@
                             </TitledPane>
                         </left>
                         <top>
-                            <FlowPane fx:id="timePane" prefHeight="100.0" prefWidth="1920.0"
-                                      BorderPane.alignment="CENTER"/>
+                            <FlowPane fx:id="timePane" alignment="CENTER" columnHalignment="CENTER" prefHeight="100.0"
+                                      prefWidth="1920.0" BorderPane.alignment="CENTER"/>
                         </top>
                         <center>
                             <VBox maxHeight="750.0" prefHeight="826.0" prefWidth="848.0"
@@ -540,175 +538,124 @@
                     </BorderPane>
                 </Tab>
                 <Tab text="News Articles">
-                    <content>
-                        <BorderPane prefHeight="200.0" prefWidth="200.0">
-                            <left>
-                                <TitledPane animated="false" collapsible="false" prefHeight="956.0" prefWidth="400.0"
-                                            text="News Article Toolbox" BorderPane.alignment="CENTER">
-                                    <content>
-                                        <VBox prefWidth="321.0">
-                                            <children>
-                                                <HBox>
-                                                    <children>
-                                                        <Label prefHeight="25.0" prefWidth="45.0" text="Stock:"/>
-                                                        <ComboBox fx:id="newsStockCombobox" prefHeight="28.0"
-                                                                  prefWidth="335.0" promptText="Select a stock"/>
-                                                    </children>
-                                                </HBox>
-                                                <Separator prefWidth="200.0" visible="false"/>
-                                                <HBox>
-                                                    <children>
-                                                        <Label prefHeight="25.0" prefWidth="45.0" text="Date:"/>
-                                                        <ComboBox fx:id="newsDateCombobox" disable="true"
-                                                                  prefHeight="28.0" prefWidth="340.0"
-                                                                  promptText="Select a date"/>
-                                                    </children>
-                                                </HBox>
-                                                <Separator prefHeight="11.0" prefWidth="253.0" visible="false"/>
-                                                <ListView fx:id="newsArticleList" prefHeight="200.0" prefWidth="200.0"/>
-                                                <Separator prefHeight="11.0" prefWidth="253.0"/>
-                                            </children>
-                                        </VBox>
-                                    </content>
-                                </TitledPane>
-                            </left>
-                            <center>
-                                <TextArea fx:id="newsArticleArea" prefHeight="200.0" prefWidth="200.0" wrapText="true"
-                                          BorderPane.alignment="CENTER"/>
-                            </center>
-                        </BorderPane>
-                    </content>
+                    <BorderPane prefHeight="200.0" prefWidth="200.0">
+                        <left>
+                            <TitledPane animated="false" collapsible="false" prefHeight="956.0" prefWidth="400.0"
+                                        text="News Article Toolbox" BorderPane.alignment="CENTER">
+                                <VBox prefWidth="321.0">
+                                    <HBox>
+                                        <Label prefHeight="25.0" prefWidth="45.0" text="Stock:"/>
+                                        <ComboBox fx:id="newsStockCombobox" prefHeight="28.0" prefWidth="335.0"
+                                                  promptText="Select a stock"/>
+                                    </HBox>
+                                    <Separator prefWidth="200.0" visible="false"/>
+                                    <HBox>
+                                        <Label prefHeight="25.0" prefWidth="45.0" text="Date:"/>
+                                        <ComboBox fx:id="newsDateCombobox" disable="true" prefHeight="28.0"
+                                                  prefWidth="340.0" promptText="Select a date"/>
+                                    </HBox>
+                                    <Separator prefHeight="11.0" prefWidth="253.0" visible="false"/>
+                                    <ListView fx:id="newsArticleList" prefHeight="200.0" prefWidth="200.0"/>
+                                    <Separator prefHeight="11.0" prefWidth="253.0"/>
+                                </VBox>
+                            </TitledPane>
+                        </left>
+                        <center>
+                            <TextArea fx:id="newsArticleArea" prefHeight="200.0" prefWidth="200.0" wrapText="true"
+                                      BorderPane.alignment="CENTER"/>
+                        </center>
+                    </BorderPane>
                 </Tab>
                 <Tab text="Trading Simulator">
-                    <content>
-                        <BorderPane prefHeight="200.0" prefWidth="200.0">
-                            <center>
-                                <TitledPane animated="false" collapsible="false" prefHeight="600.0" prefWidth="1920.0"
-                                            text="Stock Prices" BorderPane.alignment="CENTER">
-                                    <content>
-                                        <ScrollPane>
-                                            <content>
-                                                <VBox fx:id="priceHistoryChartBox" prefHeight="200.0"
-                                                      prefWidth="100.0"/>
-                                            </content>
-                                        </ScrollPane>
-                                    </content>
-                                </TitledPane>
-                            </center>
-                            <top>
-                                <VBox BorderPane.alignment="CENTER">
-                                    <children>
-                                        <LineChart fx:id="simulatorProfitLoss" prefHeight="280.0" prefWidth="1920.0"
-                                                   title="Performance">
-                                            <xAxis>
-                                                <NumberAxis side="BOTTOM"/>
-                                            </xAxis>
-                                            <yAxis>
-                                                <NumberAxis fx:id="simulatorPerformanceAxis" autoRanging="false"
-                                                            side="LEFT"/>
-                                            </yAxis>
-                                        </LineChart>
-                                    </children>
-                                </VBox>
-                            </top>
-                            <bottom>
-                                <TitledPane animated="false" collapsible="false" prefHeight="125.0" prefWidth="1920.0"
-                                            text="Simulator Control Panel" BorderPane.alignment="CENTER">
-                                    <content>
-                                        <BorderPane>
-                                            <left>
-                                                <HBox BorderPane.alignment="CENTER">
-                                                    <children>
-                                                        <VBox prefHeight="76.0" prefWidth="300.0">
-                                                            <children>
-                                                                <Button fx:id="trainSimulationModelButton"
-                                                                        mnemonicParsing="false"
-                                                                        onAction="#trainSimulationModel"
-                                                                        prefHeight="28.0" prefWidth="300.0"
-                                                                        text="Train Simulation Model"/>
-                                                                <Separator prefHeight="22.0" prefWidth="300.0"/>
-                                                                <Button fx:id="simulateTradingButton" disable="true"
-                                                                        mnemonicParsing="false"
-                                                                        onAction="#simulateTrading" prefHeight="28.0"
-                                                                        prefWidth="300.0"
-                                                                        text="Simulate Automated Trading"/>
-                                                            </children>
-                                                        </VBox>
-                                                        <Separator orientation="VERTICAL" prefHeight="76.0"
-                                                                   prefWidth="20.0"/>
-                                                        <VBox prefHeight="76.0" prefWidth="375.0">
-                                                            <children>
-                                                                <HBox>
-                                                                    <children>
-                                                                        <Label prefHeight="30.0" prefWidth="215.0"
-                                                                               text="Portfolio Look-back Period (Days):"/>
-                                                                        <TextField
-                                                                                fx:id="simulationPortfolioLookbackPeriod"/>
-                                                                    </children>
-                                                                </HBox>
-                                                                <HBox>
-                                                                    <children>
-                                                                        <Label prefHeight="30.0" prefWidth="215.0"
-                                                                               text="Portfolio Hold Period (Days):"/>
-                                                                        <TextField
-                                                                                fx:id="simulationPortfolioHoldPeriod"/>
-                                                                    </children>
-                                                                </HBox>
-                                                            </children>
-                                                        </VBox>
-                                                    </children>
+                    <BorderPane prefHeight="200.0" prefWidth="200.0">
+                        <center>
+                            <TitledPane animated="false" collapsible="false" prefHeight="600.0" prefWidth="1709.0"
+                                        text="Stock Prices" BorderPane.alignment="CENTER">
+                                <ScrollPane>
+                                    <VBox fx:id="priceHistoryChartBox" prefHeight="200.0" prefWidth="100.0"/>
+                                </ScrollPane>
+                            </TitledPane>
+                        </center>
+                        <top>
+                            <VBox BorderPane.alignment="CENTER">
+                                <LineChart fx:id="simulatorProfitLoss" prefHeight="280.0" prefWidth="1920.0"
+                                           title="Performance">
+                                    <xAxis>
+                                        <NumberAxis side="BOTTOM"/>
+                                    </xAxis>
+                                    <yAxis>
+                                        <NumberAxis fx:id="simulatorPerformanceAxis" autoRanging="false" side="LEFT"/>
+                                    </yAxis>
+                                </LineChart>
+                            </VBox>
+                        </top>
+                        <bottom>
+                            <TitledPane animated="false" collapsible="false" prefHeight="125.0" prefWidth="1920.0"
+                                        text="Simulator Control Panel" BorderPane.alignment="CENTER">
+                                <BorderPane>
+                                    <left>
+                                        <HBox BorderPane.alignment="CENTER">
+                                            <VBox prefHeight="76.0" prefWidth="300.0">
+                                                <Button fx:id="trainSimulationModelButton" mnemonicParsing="false"
+                                                        onAction="#trainSimulationModel" prefHeight="28.0"
+                                                        prefWidth="300.0" text="Train Simulation Model"/>
+                                                <Separator prefHeight="22.0" prefWidth="300.0"/>
+                                                <Button fx:id="simulateTradingButton" disable="true"
+                                                        mnemonicParsing="false" onAction="#simulateTrading"
+                                                        prefHeight="28.0" prefWidth="300.0"
+                                                        text="Simulate Automated Trading"/>
+                                            </VBox>
+                                            <Separator orientation="VERTICAL" prefHeight="76.0" prefWidth="20.0"/>
+                                            <VBox prefHeight="76.0" prefWidth="375.0">
+                                                <HBox>
+                                                    <Label prefHeight="30.0" prefWidth="215.0"
+                                                           text="Portfolio Look-back Period (Days):"/>
+                                                    <TextField fx:id="simulationPortfolioLookbackPeriod"/>
                                                 </HBox>
-                                            </left>
-                                            <right>
-                                                <HBox prefHeight="151.0" prefWidth="1196.0"
-                                                      BorderPane.alignment="CENTER">
-                                                    <children>
-                                                        <Separator orientation="VERTICAL" prefHeight="200.0"/>
-                                                        <PieChart fx:id="simulatorInitialPortfolioChart"
-                                                                  animated="false" legendSide="RIGHT" prefHeight="64.0"
-                                                                  prefWidth="308.0" title="Initial Allocation"/>
-                                                        <PieChart fx:id="simulatorRebalancedPortfolioChart"
-                                                                  animated="false" legendSide="RIGHT" prefHeight="151.0"
-                                                                  prefWidth="319.0" title="Rebalanced Allocation"/>
-                                                    </children>
+                                                <HBox>
+                                                    <Label prefHeight="30.0" prefWidth="215.0"
+                                                           text="Portfolio Hold Period (Days):"/>
+                                                    <TextField fx:id="simulationPortfolioHoldPeriod"/>
                                                 </HBox>
-                                            </right>
-                                        </BorderPane>
-                                    </content>
-                                </TitledPane>
-                            </bottom>
-                            <right>
-                                <TitledPane animated="false" collapsible="false" prefHeight="562.0" prefWidth="200.0"
-                                            text="Predictions" BorderPane.alignment="CENTER">
-                                    <content>
-                                        <ScrollPane prefWidth="238.0">
-                                            <content>
-                                                <VBox fx:id="simulatorPredictionBox" prefHeight="530.0"
-                                                      prefWidth="180.0"/>
-                                            </content>
-                                        </ScrollPane>
-                                    </content>
-                                </TitledPane>
-                            </right>
-                        </BorderPane>
-                    </content>
+                                            </VBox>
+                                        </HBox>
+                                    </left>
+                                    <right>
+                                        <HBox prefHeight="151.0" prefWidth="1196.0" BorderPane.alignment="CENTER">
+                                            <Separator orientation="VERTICAL" prefHeight="200.0"/>
+                                            <PieChart fx:id="simulatorInitialPortfolioChart" animated="false"
+                                                      legendSide="RIGHT" prefHeight="64.0" prefWidth="308.0"
+                                                      title="Initial Allocation"/>
+                                            <PieChart fx:id="simulatorRebalancedPortfolioChart" animated="false"
+                                                      legendSide="RIGHT" prefHeight="151.0" prefWidth="319.0"
+                                                      title="Rebalanced Allocation"/>
+                                        </HBox>
+                                    </right>
+                                </BorderPane>
+                            </TitledPane>
+                        </bottom>
+                        <right>
+                            <TitledPane animated="false" collapsible="false" prefHeight="562.0" prefWidth="200.0"
+                                        text="Predictions" BorderPane.alignment="CENTER">
+                                <ScrollPane prefWidth="238.0">
+                                    <VBox fx:id="simulatorPredictionBox" prefHeight="530.0" prefWidth="180.0"/>
+                                </ScrollPane>
+                            </TitledPane>
+                        </right>
+                    </BorderPane>
                 </Tab>
             </TabPane>
         </center>
         <top>
             <MenuBar BorderPane.alignment="CENTER">
-                <menus>
-                    <Menu mnemonicParsing="false" text="Tools">
-                        <items>
-                            <MenuItem fx:id="exportAllTrainingFilesButton" mnemonicParsing="false"
-                                      onAction="#exportAllTrainingFiles" text="Export All Training Files"/>
-                            <MenuItem fx:id="smoothPriceDataButton" mnemonicParsing="false" onAction="#smoothPriceData"
-                                      text="Smooth Price Data"/>
-                            <MenuItem fx:id="resetPriceDataButton" mnemonicParsing="false" onAction="#resetPriceData"
-                                      text="Reset Price Data"/>
-                        </items>
-                    </Menu>
-                </menus>
+                <Menu mnemonicParsing="false" text="Tools">
+                    <MenuItem fx:id="exportAllTrainingFilesButton" mnemonicParsing="false"
+                              onAction="#exportAllTrainingFiles" text="Export All Training Files"/>
+                    <MenuItem fx:id="smoothPriceDataButton" mnemonicParsing="false" onAction="#smoothPriceData"
+                              text="Smooth Price Data"/>
+                    <MenuItem fx:id="resetPriceDataButton" mnemonicParsing="false" onAction="#resetPriceData"
+                              text="Reset Price Data"/>
+                </Menu>
             </MenuBar>
         </top>
     </BorderPane>

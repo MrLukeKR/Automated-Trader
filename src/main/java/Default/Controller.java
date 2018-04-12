@@ -1165,7 +1165,7 @@ public class Controller {
         if (!Arrays.asList(Main.getArguments()).contains("-DLM")) {
             new Thread(() -> {
                 try {
-                    switch (dh.executeQuery("SELECT value FROM settings WHERE ID = 'PREDICTION_MODE ';").get(0)) {
+                    switch (dh.executeQuery("SELECT value FROM settings WHERE ID = 'PREDICTION_MODE';").get(0)) {
                         case "SINGLE":
                             StockPredictor.loadLatestRandomForest(stocks);
                             break;

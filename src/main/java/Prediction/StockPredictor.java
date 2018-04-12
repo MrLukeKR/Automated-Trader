@@ -209,6 +209,7 @@ public class StockPredictor {
         if (dh.executeQuery("SELECT value FROM settings WHERE ID = 'PREDICTION_MODE'").get(0).equals("MULTI"))
             return model != null;
         else {
+            if (singleModels.isEmpty()) return false;
             for (String model : singleModels.keySet())
                 if (singleModels.get(model) == null)
                     return false;
@@ -350,16 +351,17 @@ public class StockPredictor {
         Main.getController().updateCurrentTask("Predicting Stock Performance...", false, false);
         Controller.updateProgress(ProgressBar.INDETERMINATE_PROGRESS, stockForecastProgress);
 
-        for (int numberOfDays : dayArray)
-            for (String stock : stocks) {
-                predictions.get(stock).put(numberOfDays, predictStock(stocks, stock, numberOfDays));
-                if (predictions.get(stock).get(numberOfDays))
-                    Main.getController().updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": RISE/MAINTAIN", false, false);
-                else
-                    Main.getController().updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": FALL", false, false);
-                i++;
-                Controller.updateProgress(i, dayArray.length * stocks.size(), stockForecastProgress);
-            }
+        if (isModelLoaded())
+            for (int numberOfDays : dayArray)
+                for (String stock : stocks) {
+                    predictions.get(stock).put(numberOfDays, predictStock(stocks, stock, numberOfDays));
+                    if (predictions.get(stock).get(numberOfDays))
+                        Main.getController().updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": RISE/MAINTAIN", false, false);
+                    else
+                        Main.getController().updateCurrentTask(numberOfDays + " Day Prediction for " + stock + ": FALL", false, false);
+                    i++;
+                    Controller.updateProgress(i, dayArray.length * stocks.size(), stockForecastProgress);
+                }
 
         Controller.updateProgress(0, stockForecastProgress);
         Main.getController().updateCurrentTask("Predicted Stock Performance!", false, false);

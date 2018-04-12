@@ -172,8 +172,7 @@ public class SimulationModel {
         if (!portfolio.containsKey(stock)) return;
 
         double allocation;
-        //if(price <= (allocation = (portfolio.get(stock) * balance) - investments.getOrDefault(stock, 0.0))){
-        if (price <= (allocation = (portfolio.get(stock) * balance))) {
+        if (price <= (allocation = (portfolio.get(stock) * balance) - investments.getOrDefault(stock, 0.0))) {
             int amount = (int) Math.floor(allocation / price) / splitFactor;
             if (balance - (amount * price) >= 0) {
                 double totalCost = amount * price;

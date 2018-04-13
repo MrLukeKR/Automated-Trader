@@ -25,7 +25,7 @@ public class AlphaVantageHandler {
     /**
      * TOR proxy connection, used to bypass IP-based API limits, for example if behind a network where multiple AlphaVantage calls are being made by different users/API keys
      */
-    private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9050));
+    private final Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 9150));
     private final boolean USE_PROXY = false;
 
     private String apiKey;
@@ -225,6 +225,9 @@ public class AlphaVantageHandler {
                 } else if (sTemp.contains("Invalid API call")) {
                     errMessage = "Possible invalid API call: " + request;
                     failed = true;
+                } else if (sTemp.isEmpty()) {
+                    errMessage = "No data received";
+                    failed = true;
                 } else {
                     temp.addAll(Arrays.asList(sTemp.split("\r\n")));
                     if (exceeded != 1) exceeded = 1;
@@ -256,11 +259,18 @@ public class AlphaVantageHandler {
 
         if (getCurrentlyDownloading() == 0 && availableThreads.availablePermits() == MAX_CONCURRENT_DOWNLOADS)
             resetFailedDownloads();
-        if (temp.size() < 100) Main.getController().updateCurrentTask("Error with quote download", true, false);
 
         incrementDownloadsSinceToggle();
 
-        Main.getController().updateCurrentTask("COMPLETED! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading(), false, false);
+
+        if (temp.size() < 100) {
+            if (exceeded == 10)
+                Main.getController().updateCurrentTask("Error with quote download: Exceeded reattempt limit!", true, false);
+            else
+                Main.getController().updateCurrentTask("Error with quote download: No data was received from the server!", true, false);
+        } else
+            Main.getController().updateCurrentTask("COMPLETED! STOCK QUOTE CONCURRENT DOWNLOADS - PAUSED: " + getPausedDownloads() + ", QUEUED: " + (getCurrentlyDownloading() - getPausedDownloads()) + "\tTOTAL: " + getCurrentlyDownloading(), false, false);
+
 
         return temp;
     }

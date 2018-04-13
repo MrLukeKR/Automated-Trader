@@ -216,7 +216,7 @@ public class TradingUtils {
             if (buyAmount >= splitAmount) {
                 for (int day : dayArray)
                     if (StockPredictor.predictStock(stocks, symbol, day) && buyAmount * currentPrice <= balance && allocationRemaining - (buyAmount * currentPrice) >= 0) {
-                        Main.getController().updateCurrentTask("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol, false, true);
+                        Main.getController().updateCurrentTask("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol + " (" + day + " day investment)", false, true);
 
                         TradingUtils.buyStock(symbol, buyAmount, day, true);
                     }

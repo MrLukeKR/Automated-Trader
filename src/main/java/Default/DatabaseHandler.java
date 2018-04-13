@@ -64,7 +64,7 @@ public class DatabaseHandler {
         //Insert initial values into relevant databases
         statement.addBatch("INSERT INTO banktransactions(Amount, Type) SELECT 10000, 'DEPOSIT' FROM dual WHERE NOT EXISTS (SELECT 1 FROM banktransactions WHERE Amount = 10000 AND Type='DEPOSIT');");
         statement.addBatch("INSERT INTO apimanagement VALUES ('INTRINIO',500,0),('AlphaVantage',0,1667),('BarChart', 2100,0) ON DUPLICATE KEY UPDATE DailyLimit=VALUES(DailyLimit), Delay=VALUES(Delay);");
-        statement.addBatch("INSERT IGNORE INTO settings VALUES('PROFIT_CUTOFF', '11000'), ('LOSS_CUTOFF','9000'), ('BARCHART_API_KEY', 'NULL'), ('INTRINIO_API_KEY', 'NULL'), ('INTRINIO_API_USER', 'NULL'), ('ALPHAVANTAGE_API_KEY','NULL'), ('PREDICTION_MODE','SINGLE');");
+        statement.addBatch("INSERT IGNORE INTO settings VALUES('PROFIT_CUTOFF', '11000'), ('LOSS_CUTOFF','9000'), ('BARCHART_API_KEY', 'NULL'), ('INTRINIO_API_KEY', 'NULL'), ('INTRINIO_API_USER', 'NULL'), ('ALPHAVANTAGE_API_KEY','NULL'), ('PREDICTION_MODE','SINGLE'), ('NEWS_ARTICLE_PARALLEL_DOWNLOAD', '1')");
 
         //Create users
         statement.addBatch("CREATE USER IF NOT EXISTS 'Agent'@'localhost' IDENTIFIED BY '0Y5q0m28pSB9jj2O';");

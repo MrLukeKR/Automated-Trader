@@ -34,7 +34,7 @@ public class INTRINIOHandler {
     static private String INTRINIO_USERNAME;
     static private String INTRINIO_PASSWORD;
     static private final int PAGES = 0, ARTICLES = 1 /*Indices for accessing JSON metadata*/;
-    static private final int DOWNLOAD_THREADS = 1;
+    static private int DOWNLOAD_THREADS = 1;
     static private DatabaseHandler dh;
     static private ProgressBar pb;
     static private double progress = 0;
@@ -92,9 +92,11 @@ public class INTRINIOHandler {
      * @param nddh News Downloader {@link DatabaseHandler} required to access the database without causing a deadlock
      * @param pb   {@link ProgressBar} to show the progress of new downloads
      */
-    static public void initialise(DatabaseHandler nddh, ProgressBar pb) {
+    static public void initialise(DatabaseHandler nddh, ProgressBar pb) throws SQLException {
         dh = nddh;
         INTRINIOHandler.pb = pb;
+
+        DOWNLOAD_THREADS = Integer.parseInt(dh.executeQuery("SELECT COALESCE(value, 1) FROM settings WHERE ID ='NEWS_ARTICLE_PARALLEL_DOWNLOAD';").get(0));
 
         Main.getController().updateCurrentTask("Initialised News API Handler", false, false);
     }

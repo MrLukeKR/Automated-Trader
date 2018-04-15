@@ -6,6 +6,7 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
 /**
@@ -172,13 +173,10 @@ public class PortfolioManager {
             case SIMULATED_ANNEALING:
                 portfolio = SAOptimiser.optimise(stocks, em, 1, 0.0001, 0.99, 100, currentPortfolio, currentStockPrices, expectedReturns, covarianceMatrix, showDebug);
                 break;
-            case DETERMINISTIC:
-                portfolio = DeterministicOptimiser.optimise(stocks, em, expectedReturns, covarianceMatrix);
-                break;
         }
 
         for (String stock : stocks) {
-            double val = portfolio.get(stock) * 10000;
+            double val = Objects.requireNonNull(portfolio).get(stock) * 10000;
             int newVal = (int) Math.round(val);
             double percentage = newVal / 100.0;
 
@@ -186,7 +184,7 @@ public class PortfolioManager {
                 System.out.println(stock + " weight: " + percentage + " (Expected Return: " + (Math.round(calcStocks.get(stock).getExpectedReturn() * 10000.0) / 100.0) + "\tRisk: " + (calculateVariance(calcStocks.get(stock).getReturns()) + "\tRatio: " + (calcStocks.get(stock).getExpectedReturn() / calculateVariance(calcStocks.get(stock).getReturns())) + ")"));
         }
 
-        double expectedReturn = EvaluationFunction.getReturn(portfolio, expectedReturns);
+        double expectedReturn = EvaluationFunction.getReturn(Objects.requireNonNull(portfolio), expectedReturns);
 
         int eRInt = (int) Math.round(expectedReturn * 10000);
 

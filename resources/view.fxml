@@ -103,7 +103,6 @@
                                                                     <FXCollections fx:factory="observableArrayList">
                                                                         <String fx:value="Genetic Algorithm"/>
                                                                         <String fx:value="Simulated Annealing"/>
-                                                                        <String fx:value="Deterministic Search"/>
                                                                     </FXCollections>
                                                                 </items>
                                                             </ComboBox>

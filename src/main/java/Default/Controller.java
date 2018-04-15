@@ -780,9 +780,6 @@ public class Controller {
             case "Genetic Algorithm":
                 om = PortfolioManager.OptimisationMethod.GENETIC_ALGORITHM;
                 break;
-            case "Deterministic Search":
-                om = PortfolioManager.OptimisationMethod.DETERMINISTIC;
-                break;
         }
 
         switch(evaluationMethodDropdown.getSelectionModel().getSelectedItem()){

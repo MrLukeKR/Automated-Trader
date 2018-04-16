@@ -1133,6 +1133,7 @@ public class Controller {
                         if (minutes == 0)
                             try {
                                 NewsDownloader.updateNews(stocks);
+                                INTRINIOHandler.downloadArticles();
                                 NaturalLanguageProcessor.enumerateSentencesFromArticles();
                                 NaturalLanguageProcessor.enumerateNGramsFromArticles(2);
                                 NaturalLanguageProcessor.processArticlesForSentiment(2);

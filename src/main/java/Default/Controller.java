@@ -1133,6 +1133,9 @@ public class Controller {
                         if (minutes == 0)
                             try {
                                 NewsDownloader.updateNews(stocks);
+                                NaturalLanguageProcessor.enumerateSentencesFromArticles();
+                                NaturalLanguageProcessor.enumerateNGramsFromArticles(2);
+                                NaturalLanguageProcessor.processArticlesForSentiment(2);
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -1177,6 +1180,9 @@ public class Controller {
                             updateCurrentTask("Invalid setting for value 'PREDICTION_MODE'!", true, true);
                             break;
                     }
+
+                    final String modelInfromation = StockPredictor.getModelInformation(stocks);
+                    Platform.runLater(() -> predictionModelInformationBox.setText(modelInfromation));
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
@@ -1192,8 +1198,6 @@ public class Controller {
         Platform.runLater(()->stockDropdown.getItems().addAll(stocks));
         Platform.runLater(() -> newsStockCombobox.getItems().addAll(stocks));
         Platform.runLater(() -> historicStockDropdown.getItems().addAll(stocks));
-        final String modelInfromation = StockPredictor.getModelInformation(stocks);
-        Platform.runLater(() -> predictionModelInformationBox.setText(modelInfromation));
         Platform.runLater(()->autonomyLevelDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->optimisationMethodDropdown.getSelectionModel().selectFirst());
         Platform.runLater(()->evaluationMethodDropdown.getSelectionModel().selectFirst());

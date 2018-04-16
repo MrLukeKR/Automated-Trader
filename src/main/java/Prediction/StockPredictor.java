@@ -20,6 +20,7 @@ import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.tree.RandomForest;
 import org.apache.spark.mllib.tree.model.RandomForestModel;
 import org.apache.spark.mllib.util.MLUtils;
+import org.apache.spark.status.AppStatusStore;
 import org.apache.spark.storage.StorageLevel;
 import scala.Tuple2;
 
@@ -38,7 +39,8 @@ import java.util.concurrent.TimeUnit;
 public class StockPredictor {
     private static final SparkConf sparkConf = new SparkConf().setMaster("local[*]").setAppName("StockMarketPredictor").set("spark.executor.cores", "6").set("spark.driver.memory", "2g").set("spark.executor.memory", "2g").setSparkHome(System.getProperty("user.dir") + "/res/sparkhome");
     private static final JavaSparkContext jsc = new JavaSparkContext(sparkConf);
-    private static final SparkStatusTracker tracker = new SparkStatusTracker(jsc.sc());
+    private static final AppStatusStore ass = AppStatusStore.createLiveStore(sparkConf);
+    private static final SparkStatusTracker tracker = new SparkStatusTracker(jsc.sc(), ass);
     private static RandomForestModel model;
     private static ProgressBar pb;
     private static DatabaseHandler dh;

@@ -29,6 +29,9 @@ import javafx.util.Pair;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.CookieHandler;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -1102,6 +1105,7 @@ public class Controller {
     @FXML
     public void initialize() throws Exception {
         DISABLE_SYSTEM_UPDATE = Arrays.asList(Main.getArguments()).contains("-DSU");
+        CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
 
         File res = new File("res");
         if(!res.exists())
@@ -1112,14 +1116,12 @@ public class Controller {
 
         mainThread = new Thread(() -> {
             while (!quit) {
-                int seconds = LocalTime.now().getSecond();
-                int minutes = LocalTime.now().getMinute();
-                int hours = LocalTime.now().getHour();
+                LocalTime time = LocalTime.now();
 
                 //DOWNLOAD INTRADAY DATA FOR VISUALISATION PURPOSES
-                if (seconds == 0) {
+                if (time.getSecond() == 0) {
                     try {
-                        if (hours < 21 && hours >= 14) {
+                        if (time.getHour() < 21 && time.getHour() >= 14) {
                             StockQuoteDownloader.updateIntradayStockData(records);
                             StockQuoteDownloader.updateDailyStockData(records);
                             double totalWorth = TradingUtils.getTotalWorth();
@@ -1130,7 +1132,7 @@ public class Controller {
                             if (StockPredictor.isModelLoaded())
                                 updatePredictions(StockPredictor.predictStocks(stocks, dayArray, stockForecastProgress));
                         }
-                        if (minutes == 0)
+                        if (time.getMinute() == 0)
                             try {
                                 NewsDownloader.updateNews(stocks);
                                 INTRINIOHandler.downloadArticles();
@@ -1142,7 +1144,7 @@ public class Controller {
                             }
                         if (automated && StockPredictor.isModelLoaded())
                             TradingUtils.autoTrade(stocks, dayArray);
-                        if (automated || (hours < 21 && hours >= 14) || minutes == 0) {
+                        if (automated || (time.getHour() < 21 && time.getHour() >= 14) || time.getMinute() == 0) {
                             checkServices();
                             updateGUI();
                         }

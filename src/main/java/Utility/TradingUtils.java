@@ -198,26 +198,29 @@ public class TradingUtils {
         }
 
         for (String record : portfolio) {
-            double balance = Double.parseDouble(databaseHandler.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions").get(0));
             String[] splitString = record.split(",");
             String symbol = splitString[0];
-            double allocation = Double.parseDouble(splitString[1]) - Double.parseDouble(splitString[3]);
-            double currentPrice = Double.parseDouble(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0));
+            double allocation = Double.parseDouble(splitString[1]),
+                    investment = Double.parseDouble(splitString[3]),
+                    allocationRemaining = allocation - investment,
+                    value,
+                    currentPrice = Double.parseDouble(databaseHandler.executeQuery("SELECT ClosePrice FROM intradaystockprices WHERE Symbol = '" + symbol + "' ORDER BY TradeDateTime DESC LIMIT 1").get(0)),
+                    balance = Double.parseDouble(databaseHandler.executeQuery("SELECT COALESCE(SUM(Amount),0) FROM banktransactions").get(0));
             int splitAmount = 0;
 
             for (int currDay : dayArray)
                 if (StockPredictor.predictStock(stocks, symbol, currDay)) splitAmount++;
 
             if (splitAmount == 0) return;
-            int buyAmount = (int) Math.floor((int) Math.floor(allocation / currentPrice) / splitAmount);
+            int buyAmount = (int) Math.floor(allocationRemaining / currentPrice / splitAmount);
 
-            double allocationRemaining = Double.parseDouble(splitString[1]) - Double.parseDouble(splitString[3]);
-
-            if (buyAmount >= splitAmount) {
-                for (int day : dayArray)
-                    if (StockPredictor.predictStock(stocks, symbol, day) && buyAmount * currentPrice <= balance && allocationRemaining - (buyAmount * currentPrice) >= 0) {
+            if (buyAmount == 0) return;
+            for (int day : dayArray) {
+                if ((value = buyAmount * currentPrice) <= balance || value <= allocationRemaining) return;
+                if (StockPredictor.predictStock(stocks, symbol, day)) {
                         Main.getController().updateCurrentTask("> AUTOMATED TRADER: BUYING " + buyAmount + " " + symbol + " (" + day + " day investment)", false, true);
-
+                    balance -= value;
+                    allocationRemaining -= value;
                         TradingUtils.buyStock(symbol, buyAmount, day, true);
                     }
             }

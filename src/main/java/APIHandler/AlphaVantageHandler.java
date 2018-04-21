@@ -3,7 +3,6 @@ package APIHandler;
 import Default.Main;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
@@ -200,8 +199,7 @@ public class AlphaVantageHandler {
                 try { TimeUnit.SECONDS.sleep(exceeded ); } catch (Exception e) { e.printStackTrace(); }
             }
 
-            URL url = new URL(request);
-            HttpURLConnection connection = (HttpURLConnection) (getUseProxy() ? url.openConnection(proxy) : url.openConnection());
+            HttpURLConnection connection = (HttpURLConnection) (getUseProxy() ? new URL(request).openConnection(proxy) : new URL(request).openConnection());
 
             connection.setRequestMethod("GET");
 
@@ -211,7 +209,7 @@ public class AlphaVantageHandler {
                 e.printStackTrace();
             }
 
-            try (InputStream is = connection.getInputStream(); Reader reader = new InputStreamReader(is)) {
+            try (Reader reader = new InputStreamReader(connection.getInputStream())) {
                 final char[] buf = new char[10240];
                 int read;
                 final StringBuilder sb = new StringBuilder();
@@ -261,7 +259,6 @@ public class AlphaVantageHandler {
             resetFailedDownloads();
 
         incrementDownloadsSinceToggle();
-
 
         if (temp.size() < 100) {
             if (exceeded == 10)

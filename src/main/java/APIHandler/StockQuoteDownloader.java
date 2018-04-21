@@ -224,7 +224,7 @@ public class StockQuoteDownloader {
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      */
     static public void updateBatchStockData(ArrayList<String> stocks, ArrayList<LiveStockRecord> records) throws SQLException, IOException {
-        ArrayList<String> temp = (useAPI == STOCK_API.AlphaVantage) ? StockQuoteDownloader.downloadBatchStockData(stocks) : barChartHandler.downloadQuotes(stocks);
+        ArrayList<String> temp = (useAPI == STOCK_API.AlphaVantage) ? downloadBatchStockData(stocks) : barChartHandler.downloadQuotes(stocks);
 
         int i = 0;
 
@@ -267,7 +267,7 @@ public class StockQuoteDownloader {
                             temp = barChartHandler.downloadHistory(curr.getSymbol(), true);
                             break;
                         case AlphaVantage:
-                            temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.INTRADAY, StockQuoteDownloader.OutputSize.COMPACT);
+                            temp = downloadStockData(curr.getSymbol(), Interval.INTRADAY, OutputSize.COMPACT);
                             break;
                     }
                 } catch (Exception e) {
@@ -316,7 +316,7 @@ public class StockQuoteDownloader {
                 ArrayList<String> temp = null;
 
                 try {
-                    temp = StockQuoteDownloader.downloadStockData(curr.getSymbol(), StockQuoteDownloader.Interval.DAILY, StockQuoteDownloader.OutputSize.COMPACT);
+                    temp = downloadStockData(curr.getSymbol(), Interval.DAILY, OutputSize.COMPACT);
                 } catch (Exception e) {
                     e.printStackTrace(); }
 

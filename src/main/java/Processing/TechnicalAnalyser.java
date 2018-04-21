@@ -154,8 +154,7 @@ public class TechnicalAnalyser {
 
 
         for(int i = 1; i < percentChangeArray.length; i++){
-            Date currDate = dates.get(i);
-            double currPrice = records.get(currDate);
+            double currPrice = records.get(dates.get(i));
 
             percentChangeArray[i] = (currPrice - prevPrice)/prevPrice;
             prevPrice = currPrice;

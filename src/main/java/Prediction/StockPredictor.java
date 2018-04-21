@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  */
 
 public class StockPredictor {
-    private static final SparkConf sparkConf = new SparkConf().setMaster("local[*]").setAppName("StockMarketPredictor").set("spark.executor.cores", "6").set("spark.driver.memory", "2g").set("spark.executor.memory", "2g").setSparkHome(System.getProperty("user.dir") + "/res/sparkhome");
+    private static final SparkConf sparkConf = new SparkConf().setMaster("local[*]").setAppName("StockMarketPredictor").set("spark.executor.cores", "6").set("spark.driver.memory", "2g").set("spark.executor.memory", "2g").setSparkHome(System.getProperty("user.dir") + "\\res\\sparkhome");
     private static final JavaSparkContext jsc = new JavaSparkContext(sparkConf);
     private static final AppStatusStore ass = AppStatusStore.createLiveStore(sparkConf);
     private static final SparkStatusTracker tracker = new SparkStatusTracker(jsc.sc(), ass);
@@ -231,23 +231,15 @@ public class StockPredictor {
         JavaRDD<LabeledPoint> data = MLUtils.loadLibSVMFile(jsc.sc(), libSVMFilePath).toJavaRDD().persist(StorageLevel.MEMORY_AND_DISK());
 
         final JavaRDD<LabeledPoint>[] trainingTestSplits = data.randomSplit(new double[]{0.7, 0.3});
-
-        Integer classes = 2;
         HashMap<Integer, Integer> categoryInfo = new HashMap<>();
+        int classes = 2, trees = 100, maxDepth = 15, seed = 12345;
+        String featureSubsetStrategy = "auto", impurity = "gini";
 
-        Integer trees = 100;
-        String featureSubsetStrategy = "auto";
-        String impurity = "gini";
-        Integer maxDepth = 15;
-        Integer seed = 12345;
-
-        RandomForestModel tempModel;
-
-        tempModel = RandomForest.trainClassifier(trainingTestSplits[0], classes, categoryInfo, trees, featureSubsetStrategy, impurity, maxDepth, 32, seed);
-        RandomForestModel finalTempModel = tempModel;
+        RandomForestModel tempModel = RandomForest.trainClassifier(trainingTestSplits[0], classes, categoryInfo, trees, featureSubsetStrategy, impurity, maxDepth, 32, seed);
+        final RandomForestModel finalTempModel = tempModel;
         JavaPairRDD<Double, Double> predictionAndLabel = trainingTestSplits[1].mapToPair((PairFunction<LabeledPoint, Double, Double>) point -> new Tuple2<>(finalTempModel.predict(point.features()), point.label()));
 
-        Double testErr = 1.0 * predictionAndLabel.filter((Function<Tuple2<Double, Double>, Boolean>) predictionLabel -> !predictionLabel._1().equals(predictionLabel._2())).count() / trainingTestSplits[1].count();
+        double testErr = 1.0 * predictionAndLabel.filter((Function<Tuple2<Double, Double>, Boolean>) predictionLabel -> !predictionLabel._1().equals(predictionLabel._2())).count() / trainingTestSplits[1].count();
         System.out.println(tempModel.toDebugString() + " Accuracy: " + (1 - testErr) * 100 + "%");
         tracker.getExecutorInfos();
         tempModel = RandomForest.trainClassifier(data,classes,categoryInfo,trees,featureSubsetStrategy,impurity,maxDepth,32,seed);

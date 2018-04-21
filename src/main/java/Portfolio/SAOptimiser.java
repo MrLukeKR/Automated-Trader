@@ -51,36 +51,33 @@ class SAOptimiser {
         double currentFitness = bestFitness;
         Map<String, Double> currentSolution = new TreeMap<>(solution);
 
-        while(t > minimumTemperature){
-            for(int i = 0; i < iterations; i++) {
-                Map<String, Double> candidateSolution = PortfolioUtils.mutate(currentSolution, 1);
+        while (t > minimumTemperature) {
+            for (int i = 0; i < iterations; i++) {
+                Map<String, Double> candidateSolution = PortfolioUtils.mutate(currentSolution, .5);
                 double fitness;
 
-                if(em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
+                if (em == PortfolioManager.EvaluationMethod.MAXIMISE_RETURN_MINIMISE_RISK)
                     fitness = EvaluationFunction.getReturnToRiskRatio(candidateSolution, expectedReturns, riskCovarianceMatrix);
                 else
-                    fitness = EvaluationFunction.getReturn(candidateSolution,expectedReturns);
+                    fitness = EvaluationFunction.getReturn(candidateSolution, expectedReturns);
 
                 fitness -= Constraint.getTransactionCosts(originalPortfolio, candidateSolution, buyCost, sellCost);
 
                 if (showDebug)
-                    System.out.println("ITERATION " + i + " - CURRENT FITNESS: " + currentFitness + " (RETURN: " + (EvaluationFunction.getReturn(currentSolution,expectedReturns) * 100.0) + "%) CANDIDATE FITNESS: " + fitness + " (RETURN: " + (EvaluationFunction.getReturn(candidateSolution,expectedReturns) * 100.0) + "%) BEST FITNESS: " + bestFitness + " (RETURN: " + (EvaluationFunction.getReturn(solution,expectedReturns) * 100) + "%)");
+                    System.out.println("ITERATION " + i + " - CURRENT FITNESS: " + currentFitness + " (RETURN: " + (EvaluationFunction.getReturn(currentSolution, expectedReturns) * 100.0) + "%) CANDIDATE FITNESS: " + fitness + " (RETURN: " + (EvaluationFunction.getReturn(candidateSolution, expectedReturns) * 100.0) + "%) BEST FITNESS: " + bestFitness + " (RETURN: " + (EvaluationFunction.getReturn(solution, expectedReturns) * 100) + "%)");
 
-                if(fitness >= currentFitness){
+                double delta = currentFitness - fitness;
+                if (delta < 0 || Math.exp(-delta / t) > Math.random()) {
                     currentFitness = fitness;
                     currentSolution = new TreeMap<>(candidateSolution);
                     if (fitness >= bestFitness) {
                         bestFitness = fitness;
                         solution = new TreeMap<>(candidateSolution);
                     }
-                } else if (Math.exp((-fitness - currentFitness) / t) > Math.random()) {
-                    currentFitness = fitness;
-                    currentSolution = new TreeMap<>(candidateSolution);
                 }
             }
             t *= coolRate;
         }
-
         return solution;
     }
 }

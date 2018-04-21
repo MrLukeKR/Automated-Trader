@@ -1240,7 +1240,7 @@ public class Controller {
 
     private void initialiseDisplay() throws SQLException {
         updateCurrentTask("Initialising Display", false, false);
-        ArrayList<String> stockInfo = dh.executeQuery("SELECT Symbol, Name FROM indices;");
+        ArrayList<String> stockInfo = dh.executeQuery("SELECT Symbol, Name FROM stocks;");
 
         Map<String, String> stockNames = new HashMap<>();
 
@@ -1429,7 +1429,7 @@ public class Controller {
     @FXML
     private void initialiseStocks() throws SQLException {
         updateCurrentTask("Initialising stocks", false, false);
-        stocks = dh.executeQuery("SELECT Symbol FROM indices");
+        stocks = dh.executeQuery("SELECT Symbol FROM stocks");
     }
 
     public void updateGUI() throws SQLException, ParseException {

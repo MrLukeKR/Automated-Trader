@@ -53,10 +53,9 @@ class EvaluationFunction {
      * @return Ratio of Return/Risk
      */
     static double getReturnToRiskRatio(Map<String, Double> weights, Map<String, Double> expectedReturns, Map<String, Map<String, Double>> riskCovarianceMatrix) {
-        double expectedReturn = getReturn(weights, expectedReturns), expectedRisk = getRisk(weights, riskCovarianceMatrix);
+        double expectedReturn = getReturn(weights, expectedReturns),
+                expectedRisk = getRisk(weights, riskCovarianceMatrix);
 
-        if (expectedReturn == 0 || expectedRisk == 0) return 0;
-
-        return expectedReturn / expectedRisk;
+        return (expectedReturn == 0 || expectedRisk == 0) ? 0 : expectedReturn / expectedRisk;
     }
 }

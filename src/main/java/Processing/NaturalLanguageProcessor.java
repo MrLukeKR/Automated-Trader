@@ -511,15 +511,13 @@ public class NaturalLanguageProcessor {
         for (String word : wordList) {
             ArrayList<String> results = dh.executeQuery("SELECT Increase, Decrease FROM ngrams WHERE Hash=MD5('" + word + "');");
 
-            if (!results.isEmpty()) {
+            if (results.isEmpty()) continue;
                 String result = results.get(0);
 
                 String[] splitResult = result.split(",");
-                double increase = Double.parseDouble(splitResult[0]), decrease = Integer.parseInt(splitResult[1]);
-                double sentiment = increase / (increase + decrease);
+            double increase = Double.parseDouble(splitResult[0]), decrease = Double.parseDouble(splitResult[1]);
 
-                totalSentiment += sentiment;
-            }
+            totalSentiment += increase / (increase + decrease);
         }
 
         return totalSentiment / wordList.size();

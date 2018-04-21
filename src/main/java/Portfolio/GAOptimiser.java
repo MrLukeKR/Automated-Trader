@@ -1,5 +1,6 @@
 package Portfolio;
 
+
 import Utility.PortfolioUtils;
 
 import java.util.*;
@@ -193,8 +194,7 @@ class GAOptimiser {
         for (int i = 1; i <= numberOfGenerations; i++) {
             bestOfPopulation = getBestOfPopulation(Math.round(population.size() / 10), population);
 
-            ArrayList<Genome> parents1 = selection(population); //Selection of parent population 1
-            ArrayList<Genome> parents2 = selection(population); //Selection of parent population 2
+            ArrayList<Genome> parents1 = selection(population), parents2 = selection(population); //Selection of parent population 1 + 2
 
             population = crossover(parents1, parents2, 0.8);
             population = mutate(population, 0.1);
@@ -206,11 +206,8 @@ class GAOptimiser {
             if (currFitness >= bestFitness) bestFitness = currFitness;
             if (bestOfPopulation.get(0).getFitness() >= bestGenome.getFitness()) bestGenome = bestOfPopulation.get(0);
 
-            convergenceCount = (int) (prevFitness * 100.0) == (int) (bestGenome.getFitness() * 100.0) ? convergenceCount + 1 : 0;
-
-            if (convergenceCount == 20) break;
-
-            prevFitness = bestGenome.getFitness();
+            if ((convergenceCount = (int) (prevFitness * 100.0) == (int) ((prevFitness = bestGenome.getFitness()) * 100.0) ? convergenceCount + 1 : 0) == 20)
+                break;
         }
         return bestGenome.getGenes();
     }

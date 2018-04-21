@@ -53,10 +53,8 @@ public class PortfolioUtils {
      */
     static public Map<String, Double> mutate(Map<String, Double> weights, double rate) {
         Map<String, Double> newWeights = new TreeMap<>(weights);
-        for (String stock : newWeights.keySet()) {
-            if (Math.random() < rate) newWeights.put(stock, newWeights.get(stock) + rng.nextGaussian());
-            if (newWeights.get(stock) < 0) newWeights.put(stock, 0.0);
-        }
+        for (String stock : newWeights.keySet())
+            if (Math.random() < rate) newWeights.put(stock, Math.max(newWeights.get(stock) + rng.nextGaussian(), 0));
 
         return scaleWeights(newWeights);
     }
@@ -64,17 +62,12 @@ public class PortfolioUtils {
     /**
      * Scales the weights to sum to 1 (i.e. so that the "sum to one" constraint cannot be violated)
      *
-     * @param originalWeights Original asset weightings that are to be scaled
+     * @param weights Original asset weightings that are to be scaled
      * @return Scaled weights that conform to the "sum to one" constraint
      */
-    static private Map<String, Double> scaleWeights(Map<String, Double> originalWeights) {
-        double sum = 0;
-        for (String stock : originalWeights.keySet()) sum += originalWeights.get(stock);
-
-        Map<String, Double> newWeights = new TreeMap<>(originalWeights);
-
-        for (String stock : newWeights.keySet()) newWeights.put(stock, originalWeights.get(stock) / sum);
-
-        return newWeights;
+    static private Map<String, Double> scaleWeights(Map<String, Double> weights) {
+        double sum = weights.entrySet().stream().mapToDouble(Map.Entry::getValue).sum();
+        weights.entrySet().forEach(x -> x.setValue(x.getValue() / sum));
+        return weights;
     }
 }

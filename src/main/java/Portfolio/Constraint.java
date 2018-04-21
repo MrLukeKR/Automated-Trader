@@ -10,10 +10,7 @@ class Constraint {
      * @return True if weights sum to 1, False otherwise
      */
     static boolean sumsToOne(Map<String, Double> weights) {
-        double sum = 0;
-
-        for (String stock : weights.keySet()) sum += weights.get(stock);
-
+        double sum = weights.entrySet().stream().mapToDouble(Map.Entry::getValue).sum();
         return sum >= 0.99 || sum <= 1.01;
     }
 
@@ -27,13 +24,16 @@ class Constraint {
      * @return A total transaction cost for the cumulative buying and selling of stocks
      */
     static double getTransactionCosts(Map<String, Double> originalWeights, Map<String, Double> newWeights, Map<String, Double> buyCosts, Map<String, Double> sellCosts) {
-        double sellCost = 0, buyCost = 0;
+        double sellCost = 0, buyCost = 0, currCost;
 
-        for (String stock : originalWeights.keySet())
-            if (originalWeights.get(stock) > newWeights.get(stock)) //If buying a stock
-                sellCost += (originalWeights.get(stock) - newWeights.get(stock)) * sellCosts.get(stock);
-            else if (originalWeights.get(stock) < newWeights.get(stock)) //If selling a stock
-                buyCost += (newWeights.get(stock) - originalWeights.get(stock)) * buyCosts.get(stock);
+        for (String stock : originalWeights.keySet()) {
+            double originalWeight = originalWeights.get(stock),
+                    newWeight = newWeights.get(stock);
+            if ((currCost = (originalWeight - newWeight)) > 0) //If buying a stock
+                sellCost += currCost * sellCosts.get(stock);
+            else if (currCost < 0) //If selling a stock
+                buyCost += Math.abs(currCost) * buyCosts.get(stock);
+        }
 
         return sellCost + buyCost;
     }

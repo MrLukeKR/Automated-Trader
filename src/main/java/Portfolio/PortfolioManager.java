@@ -140,7 +140,7 @@ public class PortfolioManager {
      * @throws SQLException Throws SQLException if there is an error with accessing the MySQL/MariaDB database
      */
     static public Map<String, Double> optimisePortfolio(OptimisationMethod method, EvaluationMethod em, int holdPeriod, TreeMap<String, TreeMap<Date, Double>> prices, Map<String, Double> currentPortfolio, boolean showDebug) throws SQLException {
-        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol FROM indices ORDER BY Symbol ASC;");
+        ArrayList<String> stocks = dh.executeQuery("SELECT Symbol FROM stocks ORDER BY Symbol ASC;");
         Map<String, Stock> calcStocks = new TreeMap<>();
 
         Map<String, Double> expectedReturns = new TreeMap<>();

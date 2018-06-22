@@ -1,0 +1,1425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="1061ef2c-acbd-44b2-9590-84b6cee7656a" name="Default" comment="Refactored: Converted primitive Covariance Matrix to a stock-ticker accessible 2D Map" />
+    <ignored path="$PROJECT_DIR$/out/" />
+    <ignored path="$PROJECT_DIR$/target/" />
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CoverageDataManager">
+    <SUITE FILE_PATH="coverage/Automated_Trading$Main.coverage" NAME="Main Coverage Results" MODIFIED="1522249390580" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
+      <FILTER>sample.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/Automated_Trading$Main__1_.coverage" NAME="Main (1) Coverage Results" MODIFIED="1519852863417" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
+    <SUITE FILE_PATH="coverage/Automated_Trading$Main.ic" NAME="Main Coverage Results" MODIFIED="1522620644921" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false">
+      <FILTER>sample.*</FILTER>
+    </SUITE>
+  </component>
+  <component name="FavoritesManager">
+    <favorites_list name="Automated-Trading" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file leaf-file-name="Controller.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Default/Controller.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="18989">
+              <caret line="1159" selection-start-line="1159" selection-end-line="1159" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/.gitignore">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="51">
+              <caret line="3" column="5" selection-start-line="3" selection-start-column="5" selection-end-line="3" selection-end-column="5" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="GAOptimiser.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/GAOptimiser.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="527">
+              <caret line="38" column="34" selection-start-line="38" selection-start-column="34" selection-end-line="38" selection-end-column="34" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="PortfolioUtils.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Utility/PortfolioUtils.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="561">
+              <caret line="35" column="40" selection-start-line="35" selection-start-column="40" selection-end-line="35" selection-end-column="40" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="DatabaseHandler.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Default/DatabaseHandler.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="3553">
+              <caret line="213" selection-start-line="213" selection-end-line="213" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="TradingUtils.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Utility/TradingUtils.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="3519">
+              <caret line="215" column="10" selection-start-line="215" selection-start-column="10" selection-end-line="215" selection-end-column="10" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Genome.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/Genome.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="952">
+              <caret line="68" column="5" selection-start-line="68" selection-start-column="5" selection-end-line="68" selection-end-column="5" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="EvaluationFunction.java" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/EvaluationFunction.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="253">
+              <caret line="64" column="63" lean-forward="true" selection-start-line="64" selection-start-column="63" selection-end-line="64" selection-end-column="63" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="PortfolioManager.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/PortfolioManager.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="3145">
+              <caret line="191" column="56" selection-start-line="191" selection-start-column="56" selection-end-line="191" selection-end-column="56" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="DeterministicOptimiser.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/DeterministicOptimiser.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="289">
+              <caret line="20" selection-start-line="20" selection-end-line="20" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>Formatlinechart</find>
+      <find>format</find>
+      <find>autotrade</find>
+      <find>sellall</find>
+      <find>updateinvest</find>
+      <find>simulate(</find>
+      <find>trainsimulat</find>
+      <find>simulate</find>
+      <find>formatlinechart</find>
+      <find>updatesystem</find>
+      <find>splitfactor</find>
+      <find>updateInvest</find>
+      <find>singleton</find>
+      <find>tradestock</find>
+      <find>splitfact</find>
+      <find>reset</find>
+      <find>read to,</find>
+      <find>timed</find>
+      <find>timed out</find>
+      <find>downloadarticle</find>
+      <find>20</find>
+      <find>expectedreturns</find>
+      <find>scale</find>
+      <find>optimiseportfo</find>
+      <find>mutate</find>
+      <find>evaluate</find>
+      <find>setfitness</find>
+      <find>math.max</find>
+      <find>covariancematrix =</find>
+      <find>historicpricechart</find>
+    </findStrings>
+    <replaceStrings>
+      <replace>float</replace>
+    </replaceStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
+    </option>
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/src/main/java/Main.java" />
+        <option value="$PROJECT_DIR$/src/main/java/NaturalLanguageProcessor.java" />
+        <option value="$PROJECT_DIR$/src/main/java/DatabaseHandler.java" />
+        <option value="$PROJECT_DIR$/src/main/java/TrainingFileUtils.java" />
+        <option value="$APPLICATION_CONFIG_DIR$/idea.vmoptions" />
+        <option value="$PROJECT_DIR$/res/sparkhome/spark-defaults.conf" />
+        <option value="$PROJECT_DIR$/res/sparkhome/conf/spark-defaults.conf" />
+        <option value="$PROJECT_DIR$/src/main/java/AlphaVantageHandler.java" />
+        <option value="$PROJECT_DIR$/src/main/java/StockPredictor.java" />
+        <option value="$PROJECT_DIR$/src/main/java/AIOptimisation/SAOptimiser.java" />
+        <option value="$PROJECT_DIR$/src/main/resources/view.fxml" />
+        <option value="$PROJECT_DIR$/src/main/java/PortfolioManager.java" />
+        <option value="$PROJECT_DIR$/src/main/java/TradingSimulator.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Controller.java" />
+        <option value="$PROJECT_DIR$/src/main/java/AIOptimisation/GAOptimiser.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Records/NewsRecord.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Records/PredictionBox.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Records/StockClock.java" />
+        <option value="$PROJECT_DIR$/src/main/java/AIOptimisation/PortfolioManager.java" />
+        <option value="$PROJECT_DIR$/src/main/java/APIHandler/NewsAPIHandler.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Processing/NaturalLanguageProcessor.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Utility/Utils.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Utility/PortfolioUtils.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Processing/TechnicalAnalyser.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Utility/SmoothingUtils.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Records/LiveStockRecord.java" />
+        <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/src/main/java/Default/Main.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Records/SimulatorPredictionBox.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Utility/TrainingFileUtils.java" />
+        <option value="$PROJECT_DIR$/src/main/java/APIHandler/NewsDownloader.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Default/DatabaseHandler.java" />
+        <option value="$PROJECT_DIR$/src/main/java/APIHandler/AlphaVantageHandler.java" />
+        <option value="$PROJECT_DIR$/src/main/java/APIHandler/BarChartHandler.java" />
+        <option value="$PROJECT_DIR$/src/main/java/APIHandler/StockQuoteDownloader.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Utility/ChartUtils.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Prediction/StockPredictor.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Prediction/Investment.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Prediction/TradingSimulator.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Prediction/SimulationModel.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Processing/StockRecordParser.java" />
+        <option value="$PROJECT_DIR$/src/main/java/APIHandler/INTRINIOHandler.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Portfolio/PortfolioManager.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Portfolio/SAOptimiser.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Portfolio/DeterministicOptimiser.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Portfolio/Genome.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Portfolio/GAOptimiser.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Default/Controller.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Utility/TradingUtils.java" />
+        <option value="$PROJECT_DIR$/.gitignore" />
+        <option value="$PROJECT_DIR$/src/main/java/Portfolio/EvaluationFunction.java" />
+      </list>
+    </option>
+  </component>
+  <component name="JsBuildToolGruntFileManager" detection-done="true" sorting="DEFINITION_ORDER" />
+  <component name="JsBuildToolPackageJson" detection-done="true" sorting="DEFINITION_ORDER" />
+  <component name="JsGulpfileManager">
+    <detection-done>true</detection-done>
+    <sorting>DEFINITION_ORDER</sorting>
+  </component>
+  <component name="LogFilters">
+    <option name="FILTER_ERRORS" value="false" />
+    <option name="FILTER_WARNINGS" value="false" />
+    <option name="FILTER_INFO" value="true" />
+    <option name="FILTER_DEBUG" value="true" />
+    <option name="CUSTOM_FILTER" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="importingSettings">
+      <MavenImportingSettings>
+        <option name="importAutomatically" value="true" />
+      </MavenImportingSettings>
+    </option>
+  </component>
+  <component name="MavenProjectNavigator">
+    <treeState>
+      <expand>
+        <path>
+          <item name="" type="16c1761:MavenProjectsStructure$RootNode" />
+          <item name="Automated-Trading" type="9519ce18:MavenProjectsStructure$ProjectNode" />
+        </path>
+        <path>
+          <item name="" type="16c1761:MavenProjectsStructure$RootNode" />
+          <item name="Automated-Trading" type="9519ce18:MavenProjectsStructure$ProjectNode" />
+          <item name="Lifecycle" type="58874e2:MavenProjectsStructure$LifecycleNode" />
+        </path>
+      </expand>
+      <select />
+    </treeState>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="224" />
+    <option name="y" value="218" />
+    <option name="width" value="1566" />
+    <option name="height" value="1057" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="AndroidView" />
+      <pane id="Scope" />
+      <pane id="PackagesPane" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="APIHandler" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="Default" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="Portfolio" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="Prediction" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="Processing" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="Records" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="java" type="462c0819:PsiDirectoryNode" />
+              <item name="Utility" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Automated-Trading" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Automated-Trading" type="462c0819:PsiDirectoryNode" />
+              <item name="target" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="SearchEverywhereHistoryKey" value="&#9;FILE&#9;file:///Users/lukerose/IdeaProjects/Automated-Trading/src/main/java/Utility/TradingUtils.java" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="project.structure.last.edited" value="Modules" />
+    <property name="project.structure.proportion" value="0.0" />
+    <property name="project.structure.side.proportion" value="0.2" />
+    <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/res/sparkhome/conf" />
+      <recent name="$PROJECT_DIR$/src/main/java" />
+      <recent name="$PROJECT_DIR$/res/historicstocks" />
+      <recent name="$PROJECT_DIR$/res/historicstocks/LSE" />
+      <recent name="$PROJECT_DIR$/lib" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="Records" />
+      <recent name="" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/res/historicstocks" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="RunManager">
+    <configuration default="true" type="Applet" factoryName="Applet">
+      <option name="POLICY_FILE" value="$APPLICATION_HOME_DIR$/bin/appletviewer.policy" />
+    </configuration>
+    <configuration name="Main" type="Application" factoryName="Application" nameIsGenerated="true">
+      <output_file path="E:/Desktop/console.log" is_save="true" />
+      <log_file alias="Default" path="E:/Desktop" />
+      <option name="MAIN_CLASS_NAME" value="Default.Main" />
+      <module name="Automated-Trading" />
+      <option name="PROGRAM_PARAMETERS" value="-DSU" />
+      <option name="VM_PARAMETERS" value="-Xmx14g" />
+      <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="sample.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+    </configuration>
+    <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
+      <option name="MAIN_CLASS_NAME" value="Main" />
+      <option name="VM_PARAMETERS" value="-Xms4096m -Xmx4096m" />
+      <option name="PROGRAM_PARAMETERS" value="" />
+      <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="ENABLE_SWING_INSPECTOR" value="false" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <module name="Automated-Trading" />
+      <envs />
+    </configuration>
+    <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
+      <option name="MAIN_CLASS_NAME" value="Main" />
+      <option name="VM_PARAMETERS" value="-Xms4096m -Xmx4096m" />
+      <option name="PROGRAM_PARAMETERS" value="" />
+      <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="ENABLE_SWING_INSPECTOR" value="false" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <module name="Automated-Trading" />
+      <envs />
+    </configuration>
+    <configuration default="true" type="Application" factoryName="Application">
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    </configuration>
+    <configuration default="true" type="JUnit" factoryName="JUnit">
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="PACKAGE_NAME" />
+      <option name="MAIN_CLASS_NAME" />
+      <option name="METHOD_NAME" />
+      <option name="TEST_OBJECT" value="class" />
+      <option name="VM_PARAMETERS" value="-ea" />
+      <option name="PARAMETERS" />
+      <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <option name="TEST_SEARCH_SCOPE">
+        <value defaultName="singleModule" />
+      </option>
+      <patterns />
+    </configuration>
+    <configuration default="true" type="TestNG" factoryName="TestNG">
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="SUITE_NAME" />
+      <option name="PACKAGE_NAME" />
+      <option name="MAIN_CLASS_NAME" />
+      <option name="METHOD_NAME" />
+      <option name="GROUP_NAME" />
+      <option name="TEST_OBJECT" value="CLASS" />
+      <option name="VM_PARAMETERS" value="-ea" />
+      <option name="PARAMETERS" />
+      <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
+      <option name="OUTPUT_DIRECTORY" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <option name="TEST_SEARCH_SCOPE">
+        <value defaultName="singleModule" />
+      </option>
+      <option name="USE_DEFAULT_REPORTERS" value="false" />
+      <option name="PROPERTIES_FILE" />
+      <properties />
+      <listeners />
+    </configuration>
+    <configuration default="true" type="Remote" factoryName="Remote">
+      <option name="USE_SOCKET_TRANSPORT" value="true" />
+      <option name="SERVER_MODE" value="false" />
+      <option name="SHMEM_ADDRESS" value="javadebug" />
+      <option name="HOST" value="localhost" />
+      <option name="PORT" value="5005" />
+    </configuration>
+    <configuration default="true" type="#org.jetbrains.idea.devkit.run.PluginConfigurationType" factoryName="Plugin">
+      <module name="" />
+      <option name="VM_PARAMETERS" value="-Xmx512m -Xms256m -XX:MaxPermSize=250m -ea" />
+      <option name="PROGRAM_PARAMETERS" />
+      <predefined_log_file id="idea.log" enabled="true" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.Main" />
+        <item itemvalue="Application.Main" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SbtLocalSettings">
+    <option name="externalProjectsViewState">
+      <projects_view />
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1061ef2c-acbd-44b2-9590-84b6cee7656a" name="Default" comment="" />
+      <created>1508420650677</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1508420650677</updated>
+      <workItem from="1520612685555" duration="7202000" />
+      <workItem from="1520639459791" duration="157000" />
+      <workItem from="1520775538399" duration="25546000" />
+      <workItem from="1520880401649" duration="2715000" />
+      <workItem from="1520984413970" duration="1865000" />
+      <workItem from="1521121235672" duration="810000" />
+      <workItem from="1521122327252" duration="959000" />
+      <workItem from="1521545010326" duration="1539000" />
+      <workItem from="1521547381852" duration="760000" />
+      <workItem from="1521564188562" duration="335000" />
+      <workItem from="1521576012612" duration="1006000" />
+      <workItem from="1521639462267" duration="1593000" />
+      <workItem from="1521986234679" duration="92000" />
+      <workItem from="1521988630428" duration="990000" />
+      <workItem from="1521993310020" duration="714000" />
+      <workItem from="1522009745283" duration="34354000" />
+      <workItem from="1522136259889" duration="31703000" />
+      <workItem from="1522223474374" duration="13734000" />
+      <workItem from="1522424259881" duration="136000" />
+      <workItem from="1522426039216" duration="5539000" />
+      <workItem from="1522590201266" duration="51766000" />
+      <workItem from="1523056211471" duration="957000" />
+      <workItem from="1523098477237" duration="942000" />
+      <workItem from="1523136313448" duration="2257000" />
+    </task>
+    <task id="LOCAL-00043" summary="Refactored: Removed \r\n from print statement to disallow status bar resizing">
+      <created>1521121436202</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121436202</updated>
+    </task>
+    <task id="LOCAL-00044" summary="Refactored: Renamed NewsAPIHandler class to INTRINIOHandler">
+      <created>1521121473771</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121473771</updated>
+    </task>
+    <task id="LOCAL-00045" summary="Refactored: Migrated news downloading functions to a new class">
+      <created>1521121517153</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121517153</updated>
+    </task>
+    <task id="LOCAL-00046" summary="Refactored: Migrated Barchart handler from Controller to StockQuoteDownloader">
+      <created>1521121552533</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121552533</updated>
+    </task>
+    <task id="LOCAL-00047" summary="Refactored: Migrated various variables and methods to specialised classes">
+      <created>1521121603700</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121603700</updated>
+    </task>
+    <task id="LOCAL-00048" summary="Refactored: Added indexes to database tables to speed up access">
+      <created>1521121667201</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121667201</updated>
+    </task>
+    <task id="LOCAL-00049" summary="Refactored: Specialised Utils class into separate utility classes">
+      <created>1521121699356</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121699356</updated>
+    </task>
+    <task id="LOCAL-00050" summary="Refactored: Altered import to allow access to new Portfolio utility class">
+      <created>1521121728908</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121728909</updated>
+    </task>
+    <task id="LOCAL-00051" summary="Refactored: Increased memory allowance of Spark library">
+      <created>1521121762015</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121762015</updated>
+    </task>
+    <task id="LOCAL-00052" summary="Implemented: Added progress bar for selecting useless sentences (since this can take a long time -&gt; May benefit from query optimisation)">
+      <created>1521121822196</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121822196</updated>
+    </task>
+    <task id="LOCAL-00053" summary="Refactored: Migrated Yahoo file processing to StockRecordParser class">
+      <created>1521121858158</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121858158</updated>
+    </task>
+    <task id="LOCAL-00054" summary="Refactored: Changed System.println to GUI status update function">
+      <created>1521121904260</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121904260</updated>
+    </task>
+    <task id="LOCAL-00055" summary="Refactored: Specialised Utils class into separate utility classes">
+      <created>1521121925291</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121925292</updated>
+    </task>
+    <task id="LOCAL-00056" summary="Refactored: Changed System.println to GUI status update function">
+      <created>1521121948114</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121948114</updated>
+    </task>
+    <task id="LOCAL-00057" summary="Implemented: Trading Utility class (deals with buy/sell logic)">
+      <created>1521121977034</created>
+      <option name="number" value="00057" />
+      <option name="presentableId" value="LOCAL-00057" />
+      <option name="project" value="LOCAL" />
+      <updated>1521121977034</updated>
+    </task>
+    <task id="LOCAL-00058" summary="Refactored: Altered database access methods">
+      <created>1521122008658</created>
+      <option name="number" value="00058" />
+      <option name="presentableId" value="LOCAL-00058" />
+      <option name="project" value="LOCAL" />
+      <updated>1521122008658</updated>
+    </task>
+    <task id="LOCAL-00059" summary="Updated GUI">
+      <created>1521122029230</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1521122029230</updated>
+    </task>
+    <task id="LOCAL-00060" summary="Fixed: Unicode values were converted from literal symbol to code value">
+      <created>1522055848981</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1522055848982</updated>
+    </task>
+    <task id="LOCAL-00061" summary="Fixed: Incorrect thread availability counting">
+      <created>1522235349718</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235349720</updated>
+    </task>
+    <task id="LOCAL-00062" summary="Debug: Added exception printing">
+      <created>1522235388590</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235388590</updated>
+    </task>
+    <task id="LOCAL-00063" summary="Refactored: Remove unnecessary brackets">
+      <created>1522235423450</created>
+      <option name="number" value="00063" />
+      <option name="presentableId" value="LOCAL-00063" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235423450</updated>
+    </task>
+    <task id="LOCAL-00064" summary="Implemented: Added simulation portfolio visualisation charts">
+      <created>1522235463530</created>
+      <option name="number" value="00064" />
+      <option name="presentableId" value="LOCAL-00064" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235463530</updated>
+    </task>
+    <task id="LOCAL-00065" summary="Fixed: Daytime savings affects how MySQL is loaded - this has been rectified within the connection URL">
+      <created>1522235512495</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235512495</updated>
+    </task>
+    <task id="LOCAL-00066" summary="Fixed: Hadoop home directory is only required when running from a non Unix/Linux machine">
+      <created>1522235552151</created>
+      <option name="number" value="00066" />
+      <option name="presentableId" value="LOCAL-00066" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235552151</updated>
+    </task>
+    <task id="LOCAL-00067" summary="Refactored: Migrated repetitive simulation code to SimulationModel class">
+      <created>1522235579606</created>
+      <option name="number" value="00067" />
+      <option name="presentableId" value="LOCAL-00067" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235579606</updated>
+    </task>
+    <task id="LOCAL-00068" summary="Reverted: Using Apache Spark instead of WEKA due to better memory handling and core utilisation">
+      <created>1522235647383</created>
+      <option name="number" value="00068" />
+      <option name="presentableId" value="LOCAL-00068" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235647383</updated>
+    </task>
+    <task id="LOCAL-00069" summary="Refactored: Separated training file generation from model training process">
+      <created>1522235724446</created>
+      <option name="number" value="00069" />
+      <option name="presentableId" value="LOCAL-00069" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235724446</updated>
+    </task>
+    <task id="LOCAL-00070" summary="Implemented: Simulation prediction value visualisations">
+      <created>1522235743461</created>
+      <option name="number" value="00070" />
+      <option name="presentableId" value="LOCAL-00070" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235743464</updated>
+    </task>
+    <task id="LOCAL-00071" summary="Added: Started implementing multi-day investments (i.e. 30, 200 day)">
+      <created>1522235804654</created>
+      <option name="number" value="00071" />
+      <option name="presentableId" value="LOCAL-00071" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235804654</updated>
+    </task>
+    <task id="LOCAL-00072" summary="Fixed: Single stock training file generation was not correctly using COALESCE (the database would still return &quot;null&quot; instead of 0)">
+      <created>1522235890709</created>
+      <option name="number" value="00072" />
+      <option name="presentableId" value="LOCAL-00072" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235890709</updated>
+    </task>
+    <task id="LOCAL-00073" summary="Updated project workspace configuration files">
+      <created>1522235910611</created>
+      <option name="number" value="00073" />
+      <option name="presentableId" value="LOCAL-00073" />
+      <option name="project" value="LOCAL" />
+      <updated>1522235910611</updated>
+    </task>
+    <task id="LOCAL-00074" summary="Fixed: News downloading could enter an infinite loop if the website can be connected to but not read">
+      <created>1522595654759</created>
+      <option name="number" value="00074" />
+      <option name="presentableId" value="LOCAL-00074" />
+      <option name="project" value="LOCAL" />
+      <updated>1522595654760</updated>
+    </task>
+    <task id="LOCAL-00075" summary="Refactored: Started code cleanup">
+      <created>1522595784532</created>
+      <option name="number" value="00075" />
+      <option name="presentableId" value="LOCAL-00075" />
+      <option name="project" value="LOCAL" />
+      <updated>1522595784532</updated>
+    </task>
+    <task id="LOCAL-00076" summary="Refactored: Reformatted code and removed unused declarations">
+      <created>1522873225115</created>
+      <option name="number" value="00076" />
+      <option name="presentableId" value="LOCAL-00076" />
+      <option name="project" value="LOCAL" />
+      <updated>1522873225115</updated>
+    </task>
+    <task id="LOCAL-00077" summary="Refactored: Reformatted code and removed unused declarations">
+      <created>1522873267096</created>
+      <option name="number" value="00077" />
+      <option name="presentableId" value="LOCAL-00077" />
+      <option name="project" value="LOCAL" />
+      <updated>1522873267096</updated>
+    </task>
+    <task id="LOCAL-00078" summary="Refactored: Reformatted code and removed unused dependencies">
+      <created>1522873356190</created>
+      <option name="number" value="00078" />
+      <option name="presentableId" value="LOCAL-00078" />
+      <option name="project" value="LOCAL" />
+      <updated>1522873356190</updated>
+    </task>
+    <task id="LOCAL-00079" summary="Refactored: Reformatted code and removed unused declarations">
+      <created>1522874108434</created>
+      <option name="number" value="00079" />
+      <option name="presentableId" value="LOCAL-00079" />
+      <option name="project" value="LOCAL" />
+      <updated>1522874108435</updated>
+    </task>
+    <task id="LOCAL-00080" summary="Added: Investment class to contain all information required for multi-day investments during trading simulations">
+      <created>1522874143798</created>
+      <option name="number" value="00080" />
+      <option name="presentableId" value="LOCAL-00080" />
+      <option name="project" value="LOCAL" />
+      <updated>1522874143798</updated>
+    </task>
+    <task id="LOCAL-00081" summary="Added: Chart utils class to manage reformatting the visual style of charts">
+      <created>1522874166828</created>
+      <option name="number" value="00081" />
+      <option name="presentableId" value="LOCAL-00081" />
+      <option name="project" value="LOCAL" />
+      <updated>1522874166828</updated>
+    </task>
+    <task id="LOCAL-00082" summary="Fixed: News downloading could enter an infinite loop due to a mismatch of expected download threads and actual download threads">
+      <created>1523053038632</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1523053038632</updated>
+    </task>
+    <task id="LOCAL-00083" summary="Added: .gitignore file">
+      <created>1523056368231</created>
+      <option name="number" value="00083" />
+      <option name="presentableId" value="LOCAL-00083" />
+      <option name="project" value="LOCAL" />
+      <updated>1523056368231</updated>
+    </task>
+    <task id="LOCAL-00084" summary="Refactored: Removed unused JavaFX object">
+      <created>1523056399747</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1523056399747</updated>
+    </task>
+    <task id="LOCAL-00085" summary="Refactored: Converted primitive Covariance Matrix to a stock-ticker accessible 2D Map">
+      <created>1523056454789</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1523056454789</updated>
+    </task>
+    <task id="LOCAL-00086" summary="Refactored: Converted primitive Covariance Matrix to a stock-ticker accessible 2D Map">
+      <created>1523056466433</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1523056466433</updated>
+    </task>
+    <task id="LOCAL-00087" summary="Refactored: Converted primitive Covariance Matrix to a stock-ticker accessible 2D Map">
+      <created>1523057221668</created>
+      <option name="number" value="00087" />
+      <option name="presentableId" value="LOCAL-00087" />
+      <option name="project" value="LOCAL" />
+      <updated>1523057221668</updated>
+    </task>
+    <task id="LOCAL-00088" summary="Fixed: Date parsing failed if the value contained a timestamp">
+      <created>1523057256090</created>
+      <option name="number" value="00088" />
+      <option name="presentableId" value="LOCAL-00088" />
+      <option name="project" value="LOCAL" />
+      <updated>1523057256090</updated>
+    </task>
+    <task id="LOCAL-00089" summary="Fixed: Disallowed division by zero in the even that no multi-day investments are predicted to rise">
+      <created>1523057288041</created>
+      <option name="number" value="00089" />
+      <option name="presentableId" value="LOCAL-00089" />
+      <option name="project" value="LOCAL" />
+      <updated>1523057288041</updated>
+    </task>
+    <task id="LOCAL-00090" summary="Implemented: Transaction cost constraint calculation">
+      <created>1523137549017</created>
+      <option name="number" value="00090" />
+      <option name="presentableId" value="LOCAL-00090" />
+      <option name="project" value="LOCAL" />
+      <updated>1523137549018</updated>
+    </task>
+    <task id="LOCAL-00091" summary="Updated project file">
+      <created>1523137631695</created>
+      <option name="number" value="00091" />
+      <option name="presentableId" value="LOCAL-00091" />
+      <option name="project" value="LOCAL" />
+      <updated>1523137631695</updated>
+    </task>
+    <option name="localTasksCounter" value="92" />
+    <servers />
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="187864000" />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="-8" y="-8" width="1936" height="1096" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info anchor="right" id="Palette" order="3" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="right" id="Palette&#9;" order="8" />
+      <window_info id="Image Layers" order="6" />
+      <window_info anchor="bottom" id="Java Enterprise" order="12" />
+      <window_info anchor="right" id="Capture Analysis" order="5" />
+      <window_info anchor="bottom" id="Event Log" order="7" sideWeight="0.0765625" side_tool="true" weight="0.34314722" />
+      <window_info anchor="right" id="Maven Projects" order="4" sideWeight="0.48710167" weight="0.18541667" />
+      <window_info anchor="bottom" id="Database Changes" order="8" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="8" weight="0.328934" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49791667" weight="0.34964323" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.31637844" />
+      <window_info id="Capture Tool" order="2" />
+      <window_info id="Designer" order="3" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49392098" visible="true" weight="0.2" />
+      <window_info anchor="right" id="Bean Validation" order="10" />
+      <window_info anchor="right" id="Database" order="9" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info id="UI Designer" order="4" />
+      <window_info anchor="right" id="Theme Preview" order="6" />
+      <window_info id="Favorites" order="5" sideWeight="0.506079" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Debug" order="3" sideWeight="0.9234375" weight="0.32925585" />
+      <window_info anchor="bottom" id="Messages" order="10" sideWeight="0.496875" visible="true" weight="0.34250763" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32858595" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="right" id="Coverage" order="7" sideWeight="0.5128983" side_tool="true" weight="0.18541667" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection Results" order="11" weight="0.32925585" />
+    </layout>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
+    <MESSAGE value="Refactored: Remove unnecessary brackets" />
+    <MESSAGE value="Implemented: Added simulation portfolio visualisation charts" />
+    <MESSAGE value="Fixed: Daytime savings affects how MySQL is loaded - this has been rectified within the connection URL" />
+    <MESSAGE value="Fixed: Hadoop home directory is only required when running from a non Unix/Linux machine" />
+    <MESSAGE value="Refactored: Migrated repetitive simulation code to SimulationModel class" />
+    <MESSAGE value="Reverted: Using Apache Spark instead of WEKA due to better memory handling and core utilisation" />
+    <MESSAGE value="Refactored: Separated training file generation from model training process" />
+    <MESSAGE value="Implemented: Simulation prediction value visualisations" />
+    <MESSAGE value="Added: Started implementing multi-day investments (i.e. 30, 200 day)" />
+    <MESSAGE value="Fixed: Single stock training file generation was not correctly using COALESCE (the database would still return &quot;null&quot; instead of 0)" />
+    <MESSAGE value="Updated project workspace configuration files" />
+    <MESSAGE value="Fixed: News downloading could enter an infinite loop if the website can be connected to but not read" />
+    <MESSAGE value="Refactored: Started code cleanup" />
+    <MESSAGE value="Refactored: Reformatted code and removed unused dependencies" />
+    <MESSAGE value="Refactored: Reformatted code and removed unused declarations" />
+    <MESSAGE value="Added: Investment class to contain all information required for multi-day investments during trading simulations" />
+    <MESSAGE value="Added: Chart utils class to manage reformatting the visual style of charts" />
+    <MESSAGE value="Fixed: News downloading could enter an infinite loop due to a mismatch of expected download threads and actual download threads" />
+    <MESSAGE value="Added: .gitignore file" />
+    <MESSAGE value="Refactored: Removed unused JavaFX object" />
+    <MESSAGE value="Refactored: Converted primitive Covariance Matrix to a stock-ticker accessible 2D Map" />
+    <MESSAGE value="Fixed: Date parsing failed if the value contained a timestamp" />
+    <MESSAGE value="Fixed: Disallowed division by zero in the even that no multi-day investments are predicted to rise" />
+    <MESSAGE value="Implemented: Transaction cost constraint calculation" />
+    <MESSAGE value="Updated project file" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated project file" />
+    <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
+    <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
+    <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/TrainingFileUtils.java</url>
+          <line>243</line>
+          <properties />
+          <option name="timeStamp" value="172" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/TradingSimulator.java</url>
+          <line>301</line>
+          <properties />
+          <option name="timeStamp" value="173" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/APIHandler/BarChartHandler.java</url>
+          <line>143</line>
+          <properties />
+          <option name="timeStamp" value="259" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/APIHandler/BarChartHandler.java</url>
+          <line>194</line>
+          <properties />
+          <option name="timeStamp" value="262" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/APIHandler/INTRINIOHandler.java</url>
+          <line>426</line>
+          <properties />
+          <option name="timeStamp" value="438" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/APIHandler/INTRINIOHandler.java</url>
+          <line>383</line>
+          <properties />
+          <option name="timeStamp" value="443" />
+        </line-breakpoint>
+      </breakpoints>
+      <option name="time" value="463" />
+    </breakpoint-manager>
+  </component>
+  <component name="antWorkspaceConfiguration">
+    <option name="IS_AUTOSCROLL_TO_SOURCE" value="false" />
+    <option name="FILTER_TARGETS" value="false" />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/Genome.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="952">
+          <caret line="68" column="5" selection-start-line="68" selection-start-column="5" selection-end-line="68" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/EvaluationFunction.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1258">
+          <caret line="74" column="14" lean-forward="true" selection-start-line="74" selection-start-column="14" selection-end-line="74" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/PortfolioManager.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3145">
+          <caret line="191" column="56" selection-start-line="191" selection-start-column="56" selection-end-line="191" selection-end-column="56" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/DeterministicOptimiser.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="289">
+          <caret line="20" lean-forward="true" selection-start-line="20" selection-end-line="20" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/TrainingFileUtils.java" />
+    <entry file="file://$PROJECT_DIR$/src/main/resources/view.fxml" />
+    <entry file="file://$PROJECT_DIR$/src/main/java/PortfolioManager.java" />
+    <entry file="file://$PROJECT_DIR$/res/Simulator/AAL/TrainingFile.csv" />
+    <entry file="file://$PROJECT_DIR$/res/Simulator/AAL/TrainingRecords.csv" />
+    <entry file="file://$PROJECT_DIR$/src/main/java/TradingSimulator.java" />
+    <entry file="file://$PROJECT_DIR$/src/main/java/Records/NewsRecord.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="60">
+          <caret line="11" column="7" selection-start-line="11" selection-start-column="7" selection-end-line="11" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Records/StockClock.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="60">
+          <caret line="17" column="7" selection-start-line="17" selection-start-column="7" selection-end-line="17" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_101.jdk/Contents/Home/src.zip!/java/lang/String.java" />
+    <entry file="file://$PROJECT_DIR$/src/main/java/Processing/NaturalLanguageProcessor.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="411">
+          <caret line="160" column="34" selection-start-line="160" selection-start-column="34" selection-end-line="160" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Processing/TechnicalAnalyser.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4641">
+          <caret line="284" column="24" selection-start-line="284" selection-start-column="24" selection-end-line="284" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Utility/SmoothingUtils.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="935">
+          <caret line="64" column="9" selection-start-line="64" selection-start-column="9" selection-end-line="64" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/res/TrainingFiles/SmoothedNASDAQTraining.csv" />
+    <entry file="file://$PROJECT_DIR$/pom.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="254">
+          <caret line="53" column="44" selection-start-line="53" selection-start-column="44" selection-end-line="53" selection-end-column="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Default/Main.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="11" column="13" selection-start-line="11" selection-start-column="13" selection-end-line="11" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Records/PredictionBox.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret column="16" selection-start-column="16" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Records/LiveStockRecord.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1683">
+          <caret line="118" column="43" selection-start-line="118" selection-start-column="37" selection-end-line="118" selection-end-column="43" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Records/SimulatorPredictionBox.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="357">
+          <caret line="26" column="54" selection-start-line="26" selection-start-column="54" selection-end-line="26" selection-end-column="54" />
+          <folding>
+            <element signature="e#1670#1671#0" />
+            <element signature="e#1704#1705#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/res/TrainingFiles/AAPL/SmooothedNASDAQTraining.csv" />
+    <entry file="file://$PROJECT_DIR$/res/TrainingFiles/AAPL/SmooothedNASDAQTraining.libsvm" />
+    <entry file="file://$PROJECT_DIR$/res/TrainingFiles/AAL/SmooothedNASDAQTraining.csv" />
+    <entry file="file://$PROJECT_DIR$/res/TrainingFiles/AAL/SmooothedNASDAQTraining.libsvm" />
+    <entry file="file://$PROJECT_DIR$/src/main/java/Utility/TrainingFileUtils.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2125">
+          <caret line="137" column="40" selection-start-line="137" selection-start-column="40" selection-end-line="137" selection-end-column="40" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/APIHandler/AlphaVantageHandler.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-153">
+          <caret line="19" column="102" selection-start-line="19" selection-start-column="102" selection-end-line="19" selection-end-column="102" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/APIHandler/BarChartHandler.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="203">
+          <caret line="163" selection-start-line="163" selection-end-line="163" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Utility/ChartUtils.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="969">
+          <caret line="57" column="77" selection-start-line="57" selection-start-column="77" selection-end-line="57" selection-end-column="77" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/res/Simulator/MultiStock/TrainingFile.libsvm">
+      <provider selected="true" editor-type-id="LargeFileEditor">
+        <state relative-caret-position="595">
+          <caret line="35" column="352" selection-start-line="35" selection-start-column="352" selection-end-line="35" selection-end-column="352" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Prediction/StockPredictor.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="543">
+          <caret line="114" selection-start-line="114" selection-end-line="114" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/APIHandler/StockQuoteDownloader.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2701">
+          <caret line="323" column="25" selection-start-line="323" selection-start-column="25" selection-end-line="323" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Prediction/TradingSimulator.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1214">
+          <caret line="400" column="46" selection-start-line="400" selection-start-column="46" selection-end-line="400" selection-end-column="46" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Prediction/Investment.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="34">
+          <caret line="8" column="13" selection-start-line="8" selection-start-column="13" selection-end-line="8" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Prediction/SimulationModel.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="17">
+          <caret line="81" column="7" lean-forward="true" selection-start-line="81" selection-start-column="7" selection-end-line="81" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Processing/StockRecordParser.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="221">
+          <caret line="269" column="95" selection-start-line="269" selection-start-column="95" selection-end-line="269" selection-end-column="95" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/APIHandler/NewsDownloader.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="561">
+          <caret line="35" column="32" selection-start-line="35" selection-start-column="32" selection-end-line="35" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://C:/Program Files/Java/jdk1.8.0_162/src.zip!/java/net/Authenticator.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="211">
+          <caret line="396" column="37" selection-start-line="396" selection-start-column="37" selection-end-line="396" selection-end-column="37" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/APIHandler/INTRINIOHandler.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-6374">
+          <caret line="48" column="30" selection-start-line="48" selection-start-column="30" selection-end-line="48" selection-end-column="30" />
+          <folding>
+            <element signature="e#1728#1972#0" expanded="true" />
+            <element signature="e#1971#1972#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/SAOptimiser.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="272">
+          <caret line="31" column="4" selection-start-line="31" selection-start-column="4" selection-end-line="31" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Utility/PortfolioUtils.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="561">
+          <caret line="35" column="40" selection-start-line="35" selection-start-column="40" selection-end-line="35" selection-end-column="40" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/Genome.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="952">
+          <caret line="68" column="5" selection-start-line="68" selection-start-column="5" selection-end-line="68" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/GAOptimiser.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="527">
+          <caret line="38" column="34" selection-start-line="38" selection-start-column="34" selection-end-line="38" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/PortfolioManager.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3145">
+          <caret line="191" column="56" selection-start-line="191" selection-start-column="56" selection-end-line="191" selection-end-column="56" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Default/DatabaseHandler.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3553">
+          <caret line="213" selection-start-line="213" selection-end-line="213" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Default/Controller.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="18989">
+          <caret line="1159" selection-start-line="1159" selection-end-line="1159" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Utility/TradingUtils.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3519">
+          <caret line="215" column="10" selection-start-line="215" selection-start-column="10" selection-end-line="215" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="51">
+          <caret line="3" column="5" selection-start-line="3" selection-start-column="5" selection-end-line="3" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/DeterministicOptimiser.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="289">
+          <caret line="20" selection-start-line="20" selection-end-line="20" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Portfolio/EvaluationFunction.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="253">
+          <caret line="64" column="63" lean-forward="true" selection-start-line="64" selection-start-column="63" selection-end-line="64" selection-end-column="63" />
+        </state>
+      </provider>
+    </entry>
+  </component>
+  <component name="masterDetails">
+    <states>
+      <state key="ArtifactsStructureConfigurable.UI">
+        <settings>
+          <artifact-editor />
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+      <state key="FacetStructureConfigurable.UI">
+        <settings>
+          <last-edited>No facets are configured</last-edited>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+      <state key="GlobalLibrariesConfigurable.UI">
+        <settings>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+      <state key="JdkListConfigurable.UI">
+        <settings>
+          <last-edited>1.8</last-edited>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+      <state key="ModuleStructureConfigurable.UI">
+        <settings>
+          <last-edited>Automated-Trading</last-edited>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+                <option value="0.6" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+      <state key="ProjectJDKs.UI">
+        <settings>
+          <last-edited>1.8</last-edited>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+      <state key="ProjectLibrariesConfigurable.UI">
+        <settings>
+          <last-edited>Maven: com.chuusai:shapeless_2.11:2.3.2</last-edited>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+    </states>
+  </component>
+</project>
